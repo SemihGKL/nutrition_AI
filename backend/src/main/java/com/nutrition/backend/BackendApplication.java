@@ -10,8 +10,4 @@ public class BackendApplication {
 		SpringApplication.run(BackendApplication.class, args);
 	}
 
-	private static void startAppHello() {
-		System.out.println("hello");
-	}
-
 }
