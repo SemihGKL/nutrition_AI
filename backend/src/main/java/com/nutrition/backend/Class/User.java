@@ -15,7 +15,6 @@ public class User {
     private Long id;
     private String username;
     private String email;
-
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private Profile profile;
+    private int dailyCalorieGoal;
+    private int weightGoal;
 }
