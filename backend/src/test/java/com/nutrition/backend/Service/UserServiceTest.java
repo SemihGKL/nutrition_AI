@@ -40,7 +40,17 @@ public class UserServiceTest {
     }
 
     @Test
-    public void should_update_user() {
+    public void should_update_user_name_and_email() {
+
+    }
+
+    @Test
+    public void should_update_user_kcalGoal() {
+
+    }
+
+    @Test
+    public void should_update_user_global_informations() {
 
     }
 
