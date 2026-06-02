@@ -1,0 +1,104 @@
+/* kaloriim — design tokens
+   Warm minimal system: cream paper background, hand-set headings,
+   tabular Inter for all numerics, oklch palette. */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+
+:root {
+  /* —— Light —— */
+  --paper:        oklch(0.985 0.012 75);   /* warm off-white */
+  --paper-2:      oklch(0.965 0.018 70);   /* card recess */
+  --paper-3:      oklch(0.945 0.022 68);   /* deeper recess */
+  --ink:          oklch(0.22  0.020 60);   /* warm near-black */
+  --ink-2:        oklch(0.42  0.018 60);   /* secondary */
+  --ink-3:        oklch(0.62  0.015 65);   /* tertiary */
+  --ink-4:        oklch(0.82  0.010 70);   /* hairline / placeholder */
+
+  --orange:       oklch(0.66  0.175 42);
+  --orange-soft:  oklch(0.92  0.055 50);
+  --orange-tint:  oklch(0.96  0.030 55);
+
+  --green:        oklch(0.62  0.115 145);
+  --green-soft:   oklch(0.92  0.045 145);
+  --green-tint:   oklch(0.965 0.025 145);
+
+  --red:          oklch(0.60  0.165 25);
+  --red-soft:     oklch(0.93  0.055 25);
+
+  --amber:        oklch(0.76  0.130 78);
+  --amber-soft:   oklch(0.94  0.060 80);
+
+  --hairline:     oklch(0.88  0.012 70);
+  --hairline-2:   oklch(0.93  0.012 70);
+
+  --shadow-sm:    0 1px 2px rgba(60, 40, 20, 0.04), 0 4px 12px rgba(60, 40, 20, 0.04);
+  --shadow-md:    0 1px 2px rgba(60, 40, 20, 0.05), 0 8px 24px rgba(60, 40, 20, 0.06);
+  --shadow-lg:    0 1px 3px rgba(60, 40, 20, 0.06), 0 18px 40px rgba(60, 40, 20, 0.08);
+
+  --radius-sm: 8px;
+  --radius:    12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --font-display: 'Fraunces', 'Söhne', ui-serif, Georgia, serif;
+  --font-body:    'Inter', -apple-system, system-ui, sans-serif;
+  --font-script:  'Instrument Serif', 'Fraunces', serif;
+}
+
+[data-theme="dark"] {
+  --paper:        oklch(0.18  0.012 60);
+  --paper-2:      oklch(0.22  0.014 60);
+  --paper-3:      oklch(0.26  0.014 60);
+  --ink:          oklch(0.96  0.012 75);
+  --ink-2:        oklch(0.78  0.014 70);
+  --ink-3:        oklch(0.58  0.014 70);
+  --ink-4:        oklch(0.40  0.014 65);
+
+  --orange:       oklch(0.72  0.165 45);
+  --orange-soft:  oklch(0.32  0.085 45);
+  --orange-tint:  oklch(0.26  0.045 50);
+
+  --green:        oklch(0.70  0.115 145);
+  --green-soft:   oklch(0.30  0.060 145);
+  --green-tint:   oklch(0.24  0.035 145);
+
+  --red:          oklch(0.68  0.155 25);
+  --red-soft:     oklch(0.30  0.080 25);
+
+  --amber:        oklch(0.80  0.130 78);
+  --amber-soft:   oklch(0.32  0.075 80);
+
+  --hairline:     oklch(0.30  0.012 65);
+  --hairline-2:   oklch(0.26  0.012 65);
+
+  --shadow-sm:    0 1px 2px rgba(0, 0, 0, 0.30), 0 4px 12px rgba(0, 0, 0, 0.20);
+  --shadow-md:    0 1px 2px rgba(0, 0, 0, 0.30), 0 10px 28px rgba(0, 0, 0, 0.30);
+  --shadow-lg:    0 1px 3px rgba(0, 0, 0, 0.35), 0 20px 44px rgba(0, 0, 0, 0.40);
+}
+
+/* base */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  background: #EFEAE2;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+.display { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.02em; }
+.script  { font-family: var(--font-script); font-style: italic; font-weight: 400; }
+
+/* —— small utility blocks —— */
+.k-stage {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}

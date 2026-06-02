@@ -1,0 +1,43 @@
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  dailyCalorieGoal: number;
+  weightGoal: number;
+  gender: string;
+  age: number;
+  height: number;
+  activityLevel: string;
+  startWeight: number;
+  currentWeight: number;
+}
+
+export interface DailyCalories {
+  id?: number;
+  date: string;
+  caloriesConsumed: number;
+  caloriesBurned: number;
+  steps: number;
+  confirmed: boolean;
+  user: { id: number };
+}
+
+export interface DailyRecap {
+  date: string;
+  caloriesConsumed: number;
+  caloriesBurned: number;
+  steps: number;
+  netCalories: number;
+  dailyCalorieGoal: number;
+  mbr: number;
+  tdee: number;
+  deficit: number;
+  deficitPercentage: number;
+  confirmed: boolean;
+}
+
+export interface AuthTokens {
+  token: string;
+}
+
+export type DayStatus = 'hit' | 'miss' | 'today' | 'future';

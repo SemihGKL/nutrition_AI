@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>kaloriim — Hi-fi · tous écrans</title>
+  <link rel="stylesheet" href="tokens.css"/>
+  <style>
+    body { background: #EFEAE2; }
+    .phone-frame {
+      width: 390px; height: 780px;
+      border-radius: 44px;
+      background: #1a1a1a;
+      padding: 8px;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.06) inset,
+        0 30px 60px -20px rgba(60, 40, 20, 0.25),
+        0 0 0 1px rgba(0,0,0,0.18);
+      overflow: hidden; position: relative;
+    }
+    .phone-screen {
+      width: 100%; height: 100%; border-radius: 36px;
+      overflow: hidden; position: relative; background: var(--paper);
+    }
+    .phone-frame::before {
+      content: ''; position: absolute; top: 18px; left: 50%;
+      transform: translateX(-50%);
+      width: 110px; height: 30px; border-radius: 18px;
+      background: #000; z-index: 100; pointer-events: none;
+    }
+    .desktop-frame {
+      width: 1280px; height: 800px;
+      border-radius: 14px;
+      background: var(--paper);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.06) inset,
+        0 30px 60px -20px rgba(60, 40, 20, 0.22),
+        0 0 0 1px rgba(0,0,0,0.10);
+      overflow: hidden; position: relative;
+    }
+    .desktop-chrome {
+      height: 40px; background: var(--paper-2);
+      border-bottom: 1px solid var(--hairline-2);
+      display: flex; align-items: center; gap: 8px; padding: 0 16px;
+    }
+    .desktop-chrome .dot { width: 11px; height: 11px; border-radius: 999px; }
+    .desktop-chrome .url {
+      flex: 1; max-width: 320px; height: 22px; border-radius: 6px;
+      background: var(--paper-3);
+      font-family: 'Inter', sans-serif; font-size: 11px; color: var(--ink-3);
+      display: flex; align-items: center; justify-content: center; margin: 0 auto;
+    }
+    .desktop-content { width: 100%; height: calc(100% - 40px); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="kaloriim-ui.jsx"></script>
+  <script type="text/babel" src="dashboard-mobile.jsx"></script>
+  <script type="text/babel" src="login.jsx"></script>
+  <script type="text/babel" src="onboarding.jsx"></script>
+  <script type="text/babel" src="desktop-and-weekly.jsx"></script>
+  <script type="text/babel" src="bilan-profil.jsx"></script>
+
+  <script type="text/babel">
+    function Phone({ children }) {
+      return <div className="phone-frame"><div className="phone-screen">{children}</div></div>;
+    }
+    function Desktop({ children }) {
+      return (
+        <div className="desktop-frame">
+          <div className="desktop-chrome">
+            <span className="dot" style={{ background: '#FF5F57' }}/>
+            <span className="dot" style={{ background: '#FEBC2E' }}/>
+            <span className="dot" style={{ background: '#28C840' }}/>
+            <div className="url">kaloriim.app</div>
+            <span style={{ width: 60 }}/>
+          </div>
+          <div className="desktop-content">{children}</div>
+        </div>
+      );
+    }
+
+    function App() {
+      return (
+        <DesignCanvas
+          title="kaloriim · Hi-fi"
+          subtitle="6 sections · mobile-first PWA, light + dark, états clés. Direction warm-cream calibrée sur le Dashboard."
+        >
+
+          <DCSection id="login" title="1 · Login" subtitle="Stack mobile + hero desktop. Hook 'ta série t'attend' pour user existant.">
+            <DCArtboard id="lm-fresh" label="Mobile · fresh user" width={406} height={796}>
+              <Phone><LoginMobile mode="fresh"/></Phone>
+            </DCArtboard>
+            <DCArtboard id="lm-returning" label="Mobile · returning · streak hook" width={406} height={796}>
+              <Phone><LoginMobile mode="returning"/></Phone>
+            </DCArtboard>
+            <DCArtboard id="lm-error" label="Mobile · erreur inline" width={406} height={796}>
+              <Phone><LoginMobile mode="error"/></Phone>
+            </DCArtboard>
+            <DCArtboard id="lm-dark" label="Mobile · dark" width={406} height={796}>
+              <Phone><LoginMobile mode="returning" dark/></Phone>
+            </DCArtboard>
+            <DCArtboard id="ld" label="Desktop · split hero" width={1296} height={820}>
+              <Desktop><LoginDesktop/></Desktop>
+            </DCArtboard>
+            <DCArtboard id="ld-dark" label="Desktop · dark" width={1296} height={820}>
+              <Desktop><LoginDesktop dark/></Desktop>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="onboarding" title="2 · Onboarding" subtitle="3 étapes : physique → activité → résultat. MBR/TDEE calculés, slider d'ajustement.">
+            <DCArtboard id="ob1" label="Mobile · étape 1 · physique" width={406} height={796}>
+              <Phone><OnboardingMobile step={1}/></Phone>
+            </DCArtboard>
+            <DCArtboard id="ob2" label="Mobile · étape 2 · activité" width={406} height={796}>
+              <Phone><OnboardingMobile step={2}/></Phone>
+            </DCArtboard>
+            <DCArtboard id="ob3" label="Mobile · étape 3 · résultat" width={406} height={796}>
+              <Phone><OnboardingMobile step={3}/></Phone>
+            </DCArtboard>
+            <DCArtboard id="obd2" label="Desktop · étape 2 · wizard sidebar" width={1296} height={820}>
+              <Desktop><OnboardingDesktop step={2}/></Desktop>
+            </DCArtboard>
+            <DCArtboard id="obd3" label="Desktop · étape 3 · plan calorique" width={1296} height={820}>
+              <Desktop><OnboardingDesktop step={3}/></Desktop>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="dashboard" title="3 · Dashboard quotidien" subtitle="Ring hero, saisie stepper, jauge MBR, célébration confirmée. Direction validée.">
+            <DCArtboard id="dm-empty" label="Mobile · empty" width={406} height={796}>
+              <Phone><DashboardMobile state="empty"/></Phone>
+            </DCArtboard>
+            <DCArtboard id="dm-progress" label="Mobile · en cours · vert" width={406} height={796}>
+              <Phone><DashboardMobile state="progress"/></Phone>
+            </DCArtboard>
+            <DCArtboard id="dm-over" label="Mobile · dépassement · rouge" width={406} height={796}>
+              <Phone><DashboardMobile state="over"/></Phone>
+            </DCArtboard>
+            <DCArtboard id="dm-confirmed" label="Mobile · confirmé · célébration" width={406} height={796}>
+              <Phone><DashboardMobileConfirmed/></Phone>
+            </DCArtboard>
+            <DCArtboard id="dm-progress-d" label="Mobile · dark" width={406} height={796}>
+              <Phone><DashboardMobile state="progress" dark/></Phone>
+            </DCArtboard>
+            <DCArtboard id="dm-confirmed-d" label="Mobile · confirmé · dark" width={406} height={796}>
+              <Phone><DashboardMobileConfirmed dark/></Phone>
+            </DCArtboard>
+            <DCArtboard id="dd" label="Desktop · sidebar + grille" width={1296} height={820}>
+              <Desktop><DashboardDesktop/></Desktop>
+            </DCArtboard>
+            <DCArtboard id="dd-dark" label="Desktop · dark" width={1296} height={820}>
+              <Desktop><DashboardDesktop dark/></Desktop>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="weekly" title="4 · Semaine" subtitle="Barres verticales lun→dim, ligne d'objectif pointillée, pip strip 14j sous le graphe.">
+            <DCArtboard id="wm" label="Mobile · vue hebdomadaire" width={406} height={796}>
+              <Phone><WeeklyMobile/></Phone>
+            </DCArtboard>
+            <DCArtboard id="wm-dark" label="Mobile · dark" width={406} height={796}>
+              <Phone><WeeklyMobile dark/></Phone>
+            </DCArtboard>
+            <DCArtboard id="wd" label="Desktop · barres + 3 stats" width={1296} height={820}>
+              <Desktop><WeeklyDesktop/></Desktop>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="bilan" title="5 · Bilan / Récap" subtitle="Headline kg perdu, table jour/jour, lecture de cohérence auto-générée.">
+            <DCArtboard id="bm" label="Mobile · récap semaine" width={406} height={796}>
+              <Phone><BilanMobile/></Phone>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="profil" title="6 · Profil" subtitle="Liste lecture · 2 actions principales (modifier · recalculer MBR).">
+            <DCArtboard id="pm" label="Mobile · liste lecture" width={406} height={796}>
+              <Phone><ProfilMobile/></Phone>
+            </DCArtboard>
+            <DCArtboard id="pd" label="Desktop · 2 colonnes" width={1296} height={820}>
+              <Desktop><ProfilDesktop/></Desktop>
+            </DCArtboard>
+          </DCSection>
+
+          <DCPostIt x={40} y={40} width={320}>
+            <strong>Système · validé sur Dashboard</strong><br/><br/>
+            <em>Type</em> · Fraunces (display, italic pour wordmark) + Inter (body, tabular nums)<br/>
+            <em>Palette</em> · cream <code>oklch(.985 .012 75)</code> · ink <code>oklch(.22 .02 60)</code> · accent orange <code>oklch(.66 .175 42)</code><br/>
+            <em>Composants</em> · Ring · StreakChip · PipStrip 14j · MBRGauge 4 zones · Stepper · BottomNav · SidebarNav · Card<br/><br/>
+            <strong>Micro-interactions clés</strong><br/>
+            • Confirmation : ring se fige, checkmark anime, série pulse une fois, célébration card monte (Bilan §3)<br/>
+            • Atteinte palier : confetti statique sur cream-tint card<br/>
+            • Recalcul MBR : modal step-by-step avec slider de finalisation<br/>
+            • Reprise douce : pas de modale, juste un message neutre + CTA "redémarrer ma série"
+          </DCPostIt>
+
+        </DesignCanvas>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

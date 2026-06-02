@@ -1,9 +1,9 @@
 package com.nutrition.backend.Class;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
-
 
 @Entity
 @Getter
@@ -13,8 +13,43 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @NotNull
+    @Column(name = "username", nullable = false)
     private String username;
+
+    @NotNull(message = "Le mail est obligatoire")
+    @Column(name = "email", nullable = false)
     private String email;
+
+    @Column(name = "daily_calorie_goal")
     private int dailyCalorieGoal;
+
+    @Column(name = "weight_goal")
     private int weightGoal;
+
+    @NotNull(message = "Le genre est obligatoire")
+    @Column(name = "gender", nullable = false)
+    private String gender;
+
+    @NotNull(message = "L'age est obligatoire")
+    @Column(name = "age", nullable = false)
+    private int age;
+
+    @NotNull(message = "La taille est obligatoire")
+    @Column(name = "height", nullable = false)
+    private double height;
+
+    @NotNull(message = "Le niveau d'acitivte est obligatoire")
+    @Column(name = "activity_level", nullable = false)
+    private String activityLevel;
+
+    @Column(name = "start_weight")
+    private double startWeight;
+
+    @Column(name = "current_weight")
+    private double currentWeight;
+
+    @Column(name = "password")
+    private String password;
 }
