@@ -2,7 +2,7 @@ package com.nutrition.backend.Service;
 
 import com.nutrition.backend.Class.DailyCalories;
 import com.nutrition.backend.Class.User;
-import com.nutrition.backend.Controller.DailyRecapResponse;
+import com.nutrition.backend.web.dto.DailyRecapResponse;
 import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ class DailyRecapServiceTest {
 
     @BeforeEach
     void setUp() {
-        dailyRecapService = new DailyRecapService(userService, dailyCaloriesService);
+        dailyRecapService = new DailyRecapService(userService, dailyCaloriesService, new com.nutrition.backend.domain.service.MbrCalculator());
     }
 
     @Test

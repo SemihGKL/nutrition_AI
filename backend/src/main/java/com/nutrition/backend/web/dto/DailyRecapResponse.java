@@ -1,4 +1,4 @@
-package com.nutrition.backend.Controller;
+package com.nutrition.backend.web.dto;
 
 import java.time.LocalDate;
 
@@ -14,5 +14,4 @@ public record DailyRecapResponse(
         double deficit,
         double deficitPercentage,
         boolean isConfirmed
-) {
-}
+) {}

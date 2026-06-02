@@ -1,10 +1,12 @@
 package com.nutrition.backend.Config;
 
-import com.nutrition.backend.domain.service.JwtService;
+import com.nutrition.backend.domain.ports.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
@@ -17,10 +19,12 @@ import java.util.Collections;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
-        this.jwtService = jwtService;
+    private final TokenService tokenService;
+
+    public JwtAuthenticationFilter(TokenService tokenService) {
+        this.tokenService = tokenService;
     }
 
     @Override
@@ -37,12 +41,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
-            String username = jwtService.extractUsername(token);
+            String subject = tokenService.extractSubject(token);
 
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                if (jwtService.isTokenValid(token, username)) {
+            if (subject != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                if (tokenService.isTokenValid(token, subject)) {
                     UserDetails userDetails = User.builder()
-                            .username(username)
+                            .username(subject)
                             .password("")
                             .authorities(Collections.emptyList())
                             .build();
@@ -53,8 +57,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
-        } catch (Exception ignored) {
-            // Invalid token — proceed unauthenticated
+        } catch (Exception e) {
+            log.warn("Invalid JWT token: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);

@@ -2,7 +2,7 @@ package com.nutrition.backend.Service;
 
 import com.nutrition.backend.Class.DailyCalories;
 import com.nutrition.backend.Class.User;
-import com.nutrition.backend.Controller.DailyRecapResponse;
+import com.nutrition.backend.web.dto.DailyRecapResponse;
 import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
 import com.nutrition.backend.domain.model.ActivityLevel;
 import com.nutrition.backend.domain.model.Gender;
@@ -10,18 +10,22 @@ import com.nutrition.backend.domain.model.Mbr;
 import com.nutrition.backend.domain.model.UserProfile;
 import com.nutrition.backend.domain.service.MbrCalculator;
 
+import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
 import java.util.List;
 
+@Service
 public class DailyRecapService {
 
     private final UserService userService;
     private final DailyCaloriesService dailyCaloriesService;
-    private final MbrCalculator mbrCalculator = new MbrCalculator();
+    private final MbrCalculator mbrCalculator;
 
-    public DailyRecapService(UserService userService, DailyCaloriesService dailyCaloriesService) {
+    public DailyRecapService(UserService userService, DailyCaloriesService dailyCaloriesService, MbrCalculator mbrCalculator) {
         this.userService = userService;
         this.dailyCaloriesService = dailyCaloriesService;
+        this.mbrCalculator = mbrCalculator;
     }
 
     public DailyRecapResponse getRecap(Long userId, LocalDate date) {

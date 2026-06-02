@@ -1,6 +1,7 @@
 package com.nutrition.backend.Config;
 
-import com.nutrition.backend.domain.service.JwtService;
+import com.nutrition.backend.domain.ports.TokenService;
+import com.nutrition.backend.infrastructure.security.JwtTokenService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,20 +18,20 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Value("${jwt.secret:defaultSecretKeyThatIsAtLeast256BitsLongForHmacSha256Algorithm}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
     @Value("${jwt.expiration:86400000}")
     private long jwtExpiration;
 
     @Bean
-    public JwtService jwtService() {
-        return new JwtService(jwtSecret, jwtExpiration);
+    public TokenService tokenService() {
+        return new JwtTokenService(jwtSecret, jwtExpiration);
     }
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtService());
+        return new JwtAuthenticationFilter(tokenService());
     }
 
     @Bean

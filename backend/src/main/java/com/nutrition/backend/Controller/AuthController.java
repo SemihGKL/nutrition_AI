@@ -5,7 +5,8 @@ import com.nutrition.backend.Repository.UserRepository;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.domain.model.ActivityLevel;
 import com.nutrition.backend.domain.model.Gender;
-import com.nutrition.backend.domain.service.JwtService;
+import com.nutrition.backend.domain.ports.TokenService;
+import com.nutrition.backend.web.dto.CreateUserRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,12 +21,12 @@ public class AuthController {
 
     private final UserService userService;
     private final UserRepository userRepository;
-    private final JwtService jwtService;
+    private final TokenService jwtService;
     private final PasswordEncoder passwordEncoder;
 
     public AuthController(UserService userService,
                           UserRepository userRepository,
-                          JwtService jwtService,
+                          TokenService jwtService,
                           PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.userRepository = userRepository;
@@ -34,7 +35,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<Map<String, String>> register(@RequestBody CreateUserRequest request) {
         Gender gender = Gender.valueOf(request.gender().toUpperCase());
         ActivityLevel activityLevel = ActivityLevel.valueOf(request.activityLevel().toUpperCase());
 
@@ -49,8 +50,7 @@ public class AuthController {
                 request.startWeight()
         );
 
-        String hashedPassword = passwordEncoder.encode(request.password());
-        user.setPassword(hashedPassword);
+        user.setPassword(passwordEncoder.encode(request.password()));
         userRepository.save(user);
 
         String token = jwtService.generateToken(user.getEmail());
@@ -66,7 +66,6 @@ public class AuthController {
         }
 
         User user = userOpt.get();
-
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -74,18 +73,6 @@ public class AuthController {
         String token = jwtService.generateToken(user.getEmail());
         return ResponseEntity.ok(Map.of("token", token));
     }
-
-    public record RegisterRequest(
-            String username,
-            String email,
-            String password,
-            String gender,
-            int age,
-            double height,
-            String activityLevel,
-            double startWeight,
-            int weightGoal
-    ) {}
 
     public record LoginRequest(String email, String password) {}
 }

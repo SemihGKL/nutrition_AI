@@ -1,10 +1,13 @@
 package com.nutrition.backend.Controller;
 
 import com.nutrition.backend.Class.DailyCalories;
-import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
+import com.nutrition.backend.Class.User;
+import com.nutrition.backend.Repository.UserRepository;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.DailyRecapService;
-import com.nutrition.backend.Service.UserService;
+import com.nutrition.backend.Exception.UserNotFoundException;
+import com.nutrition.backend.web.dto.CreateDailyCaloriesRequest;
+import com.nutrition.backend.web.dto.DailyRecapResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,18 +17,22 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/daily-kcal")
 public class DailyCaloriesController {
+
     private final DailyCaloriesService dailyCaloriesService;
     private final DailyRecapService dailyRecapService;
+    private final UserRepository userRepository;
 
-    public DailyCaloriesController(DailyCaloriesService dailyCaloriesService, UserService userService) {
+    public DailyCaloriesController(DailyCaloriesService dailyCaloriesService,
+                                   DailyRecapService dailyRecapService,
+                                   UserRepository userRepository) {
         this.dailyCaloriesService = dailyCaloriesService;
-        this.dailyRecapService = new DailyRecapService(userService, dailyCaloriesService);
+        this.dailyRecapService = dailyRecapService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/{userId}/{date}")
     public List<DailyCalories> getDailyCalories(@PathVariable Long userId, @PathVariable String date) {
-        LocalDate localDate = LocalDate.parse(date);
-        return dailyCaloriesService.getDailyCalories(userId, localDate);
+        return dailyCaloriesService.getDailyCalories(userId, LocalDate.parse(date));
     }
 
     @GetMapping("/{userId}")
@@ -34,21 +41,23 @@ public class DailyCaloriesController {
     }
 
     @PostMapping
-    public DailyCalories createDailyCalories(@RequestBody DailyCalories dailyCalories) {
-        return dailyCaloriesService.saveDailyCalories(dailyCalories);
+    public ResponseEntity<DailyCalories> createDailyCalories(@RequestBody CreateDailyCaloriesRequest request) {
+        User user = userRepository.findById(request.userId())
+                .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable avec l'ID : " + request.userId()));
+
+        DailyCalories entry = new DailyCalories();
+        entry.setUser(user);
+        entry.setDate(request.date());
+        entry.setCaloriesConsumed(request.caloriesConsumed());
+        entry.setSteps(request.steps());
+        entry.setCaloriesBurned(request.caloriesBurned());
+
+        return ResponseEntity.ok(dailyCaloriesService.saveDailyCalories(entry));
     }
 
     @GetMapping("/{userId}/recap")
-    public ResponseEntity<DailyRecapResponse> getRecap(
-            @PathVariable Long userId,
-            @RequestParam String date) {
-        LocalDate localDate = LocalDate.parse(date);
-        DailyRecapResponse recap = dailyRecapService.getRecap(userId, localDate);
+    public ResponseEntity<DailyRecapResponse> getRecap(@PathVariable Long userId, @RequestParam String date) {
+        DailyRecapResponse recap = dailyRecapService.getRecap(userId, LocalDate.parse(date));
         return ResponseEntity.ok(recap);
-    }
-
-    @ExceptionHandler(DailyCaloriesNotFoundException.class)
-    public ResponseEntity<String> handleDailyCaloriesNotFound(DailyCaloriesNotFoundException ex) {
-        return ResponseEntity.notFound().build();
     }
 }
