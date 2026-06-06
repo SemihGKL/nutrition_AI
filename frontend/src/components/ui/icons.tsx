@@ -118,3 +118,15 @@ export function NavUser({ active }: { active: boolean }) {
     </svg>
   );
 }
+
+export function NavAgenda({ active }: { active: boolean }) {
+  const c = active ? 'var(--orange)' : 'var(--ink-3)';
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="6" width="18" height="14" rx="2" stroke={c} strokeWidth="1.6" />
+      <path d="M3 11h18" stroke={c} strokeWidth="1.4" />
+      <path d="M8 4v4M16 4v4" stroke={c} strokeWidth="1.6" strokeLinecap="round" />
+      {active && <rect x="7" y="14" width="3.5" height="3.5" rx="0.8" fill={c} />}
+    </svg>
+  );
+}

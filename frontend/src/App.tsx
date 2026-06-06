@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { DashboardPage } from './pages/DashboardPage';
 import { SemainePage } from './pages/SemainePage';
 import { BilanPage } from './pages/BilanPage';
+import { AgendaPage } from './pages/AgendaPage';
 import { ProfilPage } from './pages/ProfilPage';
 import { LoginPage } from './pages/LoginPage';
 import { OnboardingPage } from './pages/OnboardingPage';
@@ -41,6 +42,8 @@ function AppTabs() {
       return <SemainePage onTabChange={setTab} streakCount={streak.current} streak={streak} allEntries={allEntries} />;
     case 'bilan':
       return <BilanPage onTabChange={setTab} allEntries={allEntries} />;
+    case 'agenda':
+      return <AgendaPage onTabChange={setTab} />;
     case 'profil':
       return <ProfilPage onTabChange={setTab} streakCount={streak.current} />;
     default:

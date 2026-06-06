@@ -1,6 +1,6 @@
-import { NavRing, NavBars, NavReport, NavUser } from './icons';
+import { NavRing, NavBars, NavReport, NavUser, NavAgenda } from './icons';
 
-export type NavTab = 'jour' | 'semaine' | 'bilan' | 'profil';
+export type NavTab = 'jour' | 'semaine' | 'bilan' | 'agenda' | 'profil';
 
 interface NavItem {
   id: NavTab;
@@ -12,6 +12,7 @@ const ITEMS: NavItem[] = [
   { id: 'jour',    label: 'Jour',    Icon: NavRing },
   { id: 'semaine', label: 'Semaine', Icon: NavBars },
   { id: 'bilan',   label: 'Bilan',   Icon: NavReport },
+  { id: 'agenda',  label: 'Agenda',  Icon: NavAgenda },
   { id: 'profil',  label: 'Profil',  Icon: NavUser },
 ];
 
