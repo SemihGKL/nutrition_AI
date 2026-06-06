@@ -46,11 +46,13 @@ public class DailyCaloriesController {
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable avec l'ID : " + request.userId()));
 
         DailyCalories entry = new DailyCalories();
+        if (request.id() != null) entry.setId(request.id());
         entry.setUser(user);
         entry.setDate(request.date());
         entry.setCaloriesConsumed(request.caloriesConsumed());
         entry.setSteps(request.steps());
         entry.setCaloriesBurned(request.caloriesBurned());
+        entry.setConfirmed(request.confirmed());
 
         return ResponseEntity.ok(dailyCaloriesService.saveDailyCalories(entry));
     }

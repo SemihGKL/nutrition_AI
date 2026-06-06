@@ -71,7 +71,7 @@ class DailyRecapServiceTest {
         assertThat(recap.tdee()).isEqualTo(2136.0);
         assertThat(recap.deficit()).isEqualTo(600.0);
         assertThat(recap.deficitPercentage()).isCloseTo(33.71, org.assertj.core.data.Offset.offset(0.01));
-        assertThat(recap.isConfirmed()).isFalse();
+        assertThat(recap.confirmed()).isFalse();
     }
 
     @Test

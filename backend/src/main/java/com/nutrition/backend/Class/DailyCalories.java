@@ -21,7 +21,7 @@ public class DailyCalories {
     private int caloriesConsumed;
 
     @Column(name = "is_confirmed")
-    private boolean isConfirmed;
+    private boolean confirmed;
 
 
     @Column(name = "steps")

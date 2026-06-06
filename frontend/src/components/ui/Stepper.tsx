@@ -1,6 +1,5 @@
-import type { CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { Plus, Minus } from './icons';
-import { formatNumber } from '../../utils/format';
 
 interface Props {
   label: string;
@@ -23,6 +22,7 @@ const BTN_STYLE: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   color: 'var(--ink-2)',
+  flexShrink: 0,
 };
 
 export function Stepper({
@@ -34,7 +34,20 @@ export function Stepper({
   min = 0,
   hint,
 }: Props) {
-  const set = (v: number) => onChange(Math.max(min, v));
+  const [raw, setRaw] = useState(String(value));
+
+  useEffect(() => {
+    setRaw(String(value));
+  }, [value]);
+
+  const commit = (str: string) => {
+    const parsed = parseInt(str, 10);
+    const next = isNaN(parsed) ? min : Math.max(min, parsed);
+    onChange(next);
+    setRaw(String(next));
+  };
+
+  const step_ = (delta: number) => onChange(Math.max(min, value + delta));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -53,34 +66,39 @@ export function Stepper({
         height: 48,
         padding: '0 4px',
       }}>
-        <button
-          style={BTN_STYLE}
-          onClick={() => set(value - step)}
-          aria-label="diminuer"
-        >
+        <button style={BTN_STYLE} onClick={() => step_(-step)} aria-label="diminuer">
           <Minus size={16} color="var(--ink-2)" sw={1.8} />
         </button>
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'baseline',
-          justifyContent: 'center',
-          gap: 6,
-        }}>
-          <span className="display tabular" style={{ fontSize: 22, fontWeight: 500, color: 'var(--ink)' }}>
-            {formatNumber(value)}
-          </span>
+
+        <div style={{ flex: 1, display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6 }}>
+          <input
+            inputMode="numeric"
+            value={raw}
+            onChange={e => setRaw(e.target.value)}
+            onFocus={e => e.currentTarget.select()}
+            onBlur={e => commit(e.currentTarget.value)}
+            onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              textAlign: 'center',
+              fontFamily: 'var(--font-display, var(--font-body))',
+              fontSize: 22,
+              fontWeight: 500,
+              color: 'var(--ink)',
+              width: '100%',
+              minWidth: 0,
+            }}
+          />
           {suffix && (
-            <span className="tabular" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+            <span className="tabular" style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>
               {suffix}
             </span>
           )}
         </div>
-        <button
-          style={BTN_STYLE}
-          onClick={() => set(value + step)}
-          aria-label="augmenter"
-        >
+
+        <button style={BTN_STYLE} onClick={() => step_(step)} aria-label="augmenter">
           <Plus size={16} color="var(--ink-2)" sw={1.8} />
         </button>
       </div>

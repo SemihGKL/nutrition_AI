@@ -20,8 +20,8 @@ export function LoginPage({ onRegister }: Props) {
     setIsLoading(true);
 
     try {
-      const { token } = await authApi.login({ email, password });
-      await login(token);
+      const { token, user } = await authApi.login({ email, password });
+      login(token, user);
     } catch (err) {
       if (err instanceof TypeError) {
         setError("Impossible de joindre le serveur — vérifie qu'il est démarré");

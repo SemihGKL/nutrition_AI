@@ -38,6 +38,7 @@ export interface DailyRecap {
 
 export interface AuthTokens {
   token: string;
+  user: User;
 }
 
 export type DayStatus = 'hit' | 'miss' | 'today' | 'future';

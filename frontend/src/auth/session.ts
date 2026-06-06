@@ -18,6 +18,10 @@ export function readPersistedUser(): User | null {
   }
 }
 
+export function persistTokenOnly(token: string): void {
+  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+}
+
 export function persistAuthSession(token: string, user: User): void {
   localStorage.setItem(TOKEN_STORAGE_KEY, token);
   localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));

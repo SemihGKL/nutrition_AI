@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import { usersApi } from '../api/users';
 import type { User } from '../types/api';
 import {
   hasActiveSession,
@@ -7,8 +6,8 @@ import {
   readPersistedUser,
   persistAuthSession,
   clearAuthSession,
-  extractEmailFromToken,
 } from '../auth/session';
+
 import { sessionBus } from '../auth/sessionBus';
 
 interface AuthState {
@@ -19,8 +18,9 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (token: string) => Promise<void>;
+  login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -57,24 +57,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionBus.onSessionExpired(expireSession);
   }, [expireSession]);
 
-  const login = useCallback(async (token: string) => {
-    setState(s => ({ ...s, token, isLoading: true, sessionExpired: false }));
-
-    const email = extractEmailFromToken(token);
-    if (!email) throw new Error('Token invalide');
-
-    const users = await usersApi.getAll();
-    const user = users.find(u => u.email === email) ?? null;
-
-    if (user) {
-      persistAuthSession(token, user);
-    }
-
+  const login = useCallback((token: string, user: User) => {
+    persistAuthSession(token, user);
     setState({ token, user, isLoading: false, sessionExpired: false });
   }, []);
 
+  const updateUser = useCallback((user: User) => {
+    const token = readPersistedToken()!;
+    persistAuthSession(token, user);
+    setState(s => ({ ...s, user }));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

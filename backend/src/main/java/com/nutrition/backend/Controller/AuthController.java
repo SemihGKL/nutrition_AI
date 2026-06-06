@@ -6,13 +6,14 @@ import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.domain.model.ActivityLevel;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
+import com.nutrition.backend.web.dto.AuthResponse;
 import com.nutrition.backend.web.dto.CreateUserRequest;
+import com.nutrition.backend.web.dto.UserDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -35,7 +36,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@RequestBody CreateUserRequest request) {
+    public ResponseEntity<AuthResponse> register(@RequestBody CreateUserRequest request) {
         Gender gender = Gender.valueOf(request.gender().toUpperCase());
         ActivityLevel activityLevel = ActivityLevel.valueOf(request.activityLevel().toUpperCase());
 
@@ -54,11 +55,11 @@ public class AuthController {
         userRepository.save(user);
 
         String token = jwtService.generateToken(user.getEmail());
-        return ResponseEntity.ok(Map.of("token", token));
+        return ResponseEntity.ok(new AuthResponse(token, toDto(user)));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         Optional<User> userOpt = userRepository.findByEmail(request.email());
 
         if (userOpt.isEmpty()) {
@@ -71,7 +72,23 @@ public class AuthController {
         }
 
         String token = jwtService.generateToken(user.getEmail());
-        return ResponseEntity.ok(Map.of("token", token));
+        return ResponseEntity.ok(new AuthResponse(token, toDto(user)));
+    }
+
+    private UserDto toDto(User user) {
+        return new UserDto(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getDailyCalorieGoal(),
+                user.getWeightGoal(),
+                user.getGender(),
+                user.getAge(),
+                user.getHeight(),
+                user.getActivityLevel(),
+                user.getStartWeight(),
+                user.getCurrentWeight()
+        );
     }
 
     public record LoginRequest(String email, String password) {}

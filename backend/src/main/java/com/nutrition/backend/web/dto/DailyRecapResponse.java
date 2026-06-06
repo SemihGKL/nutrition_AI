@@ -13,5 +13,5 @@ public record DailyRecapResponse(
         double tdee,
         double deficit,
         double deficitPercentage,
-        boolean isConfirmed
+        boolean confirmed
 ) {}

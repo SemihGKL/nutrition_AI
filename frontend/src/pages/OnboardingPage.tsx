@@ -94,7 +94,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      const { token } = await authApi.register({
+      const { token, user } = await authApi.register({
         username: form.username.trim(),
         email: form.email.trim(),
         password: form.password,
@@ -105,7 +105,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
         startWeight: parseFloat(form.weight),
         weightGoal: 0,
       });
-      await login(token);
+      login(token, user);
       onDone();
     } catch (err) {
       if (err instanceof TypeError) {

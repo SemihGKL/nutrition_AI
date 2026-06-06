@@ -5,6 +5,8 @@ import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.domain.model.ActivityLevel;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.web.dto.CreateUserRequest;
+import com.nutrition.backend.web.dto.UpdateUserRequest;
+import com.nutrition.backend.web.dto.UserDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,5 +47,31 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UserDto> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest request) {
+        Gender gender = Gender.valueOf(request.gender().toUpperCase());
+        ActivityLevel activityLevel = ActivityLevel.valueOf(request.activityLevel().toUpperCase());
+        User user = userService.updateBodyMetrics(id, gender, request.age(), request.height(), activityLevel, request.currentWeight());
+        userService.updateProfile(id, java.util.Optional.of(request.username()), java.util.Optional.empty());
+        User updated = userService.getUserById(id);
+        return ResponseEntity.ok(toDto(updated));
+    }
+
+    private UserDto toDto(User user) {
+        return new UserDto(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getDailyCalorieGoal(),
+                user.getWeightGoal(),
+                user.getGender(),
+                user.getAge(),
+                user.getHeight(),
+                user.getActivityLevel(),
+                user.getStartWeight(),
+                user.getCurrentWeight()
+        );
     }
 }
