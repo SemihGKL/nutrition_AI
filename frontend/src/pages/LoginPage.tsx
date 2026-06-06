@@ -39,7 +39,7 @@ export function LoginPage({ onRegister }: Props) {
     <div style={{
       width: '100%',
       maxWidth: 480,
-      minHeight: '100dvh',
+      height: '100dvh',
       background: 'var(--paper)',
       color: 'var(--ink)',
       fontFamily: 'var(--font-body)',
@@ -48,6 +48,7 @@ export function LoginPage({ onRegister }: Props) {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '0 28px',
+      overflowY: 'auto',
     }}>
       {sessionExpired && (
         <div style={{

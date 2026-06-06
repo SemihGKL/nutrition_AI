@@ -82,7 +82,7 @@ export function DashboardPage({ onTabChange }: Props) {
         onNext={() => setViewedDate(d => addDays(d, 1))}
       />
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px 20px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8, marginBottom: 10 }}>
           <ProgressRing
             value={calories}
@@ -134,7 +134,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
     <div style={{
       width: '100%',
       maxWidth: 480,
-      minHeight: '100dvh',
+      height: '100dvh',
       background: 'var(--paper)',
       color: 'var(--ink)',
       fontFamily: 'var(--font-body)',

@@ -83,7 +83,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px 20px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '14px 20px 20px' }}>
         {/* Weight headline */}
         {latestWeighIn && (
           <div style={{
@@ -278,7 +278,7 @@ function BarRow({ label, value, pct, color }: {
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      width: '100%', maxWidth: 480, minHeight: '100dvh',
+      width: '100%', maxWidth: 480, height: '100dvh',
       background: 'var(--paper)', color: 'var(--ink)',
       fontFamily: 'var(--font-body)',
       display: 'flex', flexDirection: 'column', overflow: 'hidden',

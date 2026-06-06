@@ -46,7 +46,7 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
     <PageShell>
       <StatusBar />
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px 20px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 20px' }}>
         {/* Avatar header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
           <div style={{
@@ -174,7 +174,7 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
     <PageShell>
       <StatusBar />
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px 20px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 20px' }}>
         <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--ink)', marginBottom: 24 }}>
           Modifier mon profil
         </div>
@@ -378,7 +378,7 @@ function InfoRow({ label, value, last = false }: { label: string; value: string;
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      width: '100%', maxWidth: 480, minHeight: '100dvh',
+      width: '100%', maxWidth: 480, height: '100dvh',
       background: 'var(--paper)', color: 'var(--ink)',
       fontFamily: 'var(--font-body)',
       display: 'flex', flexDirection: 'column', overflow: 'hidden',

@@ -84,7 +84,7 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
         <StreakChip count={streakCount} size="md" />
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '12px 20px 20px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '12px 20px 20px' }}>
         <div style={{
           background: 'var(--paper-2)', borderRadius: 'var(--radius-md)',
           border: '1px solid var(--hairline-2)', padding: 16, marginBottom: 14,
@@ -233,7 +233,7 @@ function MiniStat({ label, value, suffix, tone, muted }: {
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      width: '100%', maxWidth: 480, minHeight: '100dvh',
+      width: '100%', maxWidth: 480, height: '100dvh',
       background: 'var(--paper)', color: 'var(--ink)',
       fontFamily: 'var(--font-body)',
       display: 'flex', flexDirection: 'column', overflow: 'hidden',

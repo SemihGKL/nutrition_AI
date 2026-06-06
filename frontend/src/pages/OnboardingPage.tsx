@@ -126,7 +126,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
     <div style={{
       width: '100%',
       maxWidth: 480,
-      minHeight: '100dvh',
+      height: '100dvh',
       background: 'var(--paper)',
       color: 'var(--ink)',
       fontFamily: 'var(--font-body)',
@@ -154,7 +154,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '24px' }}>
         {step === 1 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <SectionLabel>ton compte</SectionLabel>

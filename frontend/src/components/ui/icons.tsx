@@ -119,7 +119,7 @@ export function NavUser({ active }: { active: boolean }) {
   );
 }
 
-export function NavAgenda({ active }: { active: boolean }) {
+export function NavObjectifs({ active }: { active: boolean }) {
   const c = active ? 'var(--orange)' : 'var(--ink-3)';
   return (
     <svg width={22} height={22} viewBox="0 0 24 24" fill="none">

@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { StatusBar } from '../components/dashboard/StatusBar';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { Check, Plus } from '../components/ui/icons';
-import { isoToday } from '../utils/format';
+import { isoToday, weekStart, addDays } from '../utils/format';
 
-interface AgendaTask {
+interface ObjectifTask {
   id: string;
   dayOfWeek: number;
   label: string;
@@ -29,9 +29,9 @@ interface Props {
   onTabChange: (tab: NavTab) => void;
 }
 
-export function AgendaPage({ onTabChange }: Props) {
-  const [tasks, setTasks] = useState<AgendaTask[]>(() =>
-    loadFromStorage<AgendaTask[]>('nia_agenda_tasks', [])
+export function ObjectifsPage({ onTabChange }: Props) {
+  const [tasks, setTasks] = useState<ObjectifTask[]>(() =>
+    loadFromStorage<ObjectifTask[]>('nia_agenda_tasks', [])
   );
   const [completions, setCompletions] = useState<Record<string, string[]>>(() =>
     loadFromStorage<Record<string, string[]>>('nia_agenda_completions', {})
@@ -42,7 +42,7 @@ export function AgendaPage({ onTabChange }: Props) {
   const today = isoToday();
   const todayDow = currentDayOfWeek();
 
-  function persistTasks(next: AgendaTask[]) {
+  function persistTasks(next: ObjectifTask[]) {
     setTasks(next);
     localStorage.setItem('nia_agenda_tasks', JSON.stringify(next));
   }
@@ -55,7 +55,7 @@ export function AgendaPage({ onTabChange }: Props) {
   function addTask(dow: number) {
     const trimmed = newLabel.trim();
     if (!trimmed) return;
-    const task: AgendaTask = {
+    const task: ObjectifTask = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       dayOfWeek: dow,
       label: trimmed,
@@ -75,12 +75,12 @@ export function AgendaPage({ onTabChange }: Props) {
     persistCompletions(nextCompletions);
   }
 
-  function toggleComplete(taskId: string) {
-    const current = completions[today] ?? [];
+  function toggleComplete(taskId: string, date: string) {
+    const current = completions[date] ?? [];
     const next = current.includes(taskId)
       ? current.filter(id => id !== taskId)
       : [...current, taskId];
-    persistCompletions({ ...completions, [today]: next });
+    persistCompletions({ ...completions, [date]: next });
   }
 
   const totalToday = tasks.filter(t => t.dayOfWeek === todayDow).length;
@@ -88,15 +88,34 @@ export function AgendaPage({ onTabChange }: Props) {
     tasks.some(t => t.id === id && t.dayOfWeek === todayDow)
   ).length;
 
+  const monday = weekStart(today);
+  const weekStats = (() => {
+    let succeeded = 0;
+    let failed = 0;
+    for (let dow = 0; dow < 7; dow++) {
+      const dayDate = addDays(monday, dow);
+      const dayTasks = tasks.filter(t => t.dayOfWeek === dow);
+      const completedIds = completions[dayDate] ?? [];
+      for (const task of dayTasks) {
+        if (completedIds.includes(task.id)) {
+          succeeded++;
+        } else if (dayDate < today) {
+          failed++;
+        }
+      }
+    }
+    return { succeeded, failed };
+  })();
+
   return (
     <PageShell>
       <StatusBar />
 
-      <div style={{ padding: '12px 20px 8px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+      <div style={{ padding: '12px 20px 6px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.4 }}>organisation</div>
           <h1 className="display" style={{ fontSize: 24, fontWeight: 500, margin: '2px 0 0', letterSpacing: '-0.02em' }}>
-            Mon agenda
+            Mes objectifs
           </h1>
         </div>
         {totalToday > 0 && (
@@ -111,18 +130,43 @@ export function AgendaPage({ onTabChange }: Props) {
         )}
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '8px 20px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {(weekStats.succeeded > 0 || weekStats.failed > 0) && (
+        <div style={{ padding: '6px 20px 2px', display: 'flex', gap: 8 }}>
+          {weekStats.succeeded > 0 && (
+            <div style={{
+              padding: '3px 10px', borderRadius: 999,
+              background: 'var(--green-tint)', fontSize: 12, fontWeight: 600, color: 'var(--green)',
+            }}>
+              ✓ {weekStats.succeeded} réussie{weekStats.succeeded > 1 ? 's' : ''}
+            </div>
+          )}
+          {weekStats.failed > 0 && (
+            <div style={{
+              padding: '3px 10px', borderRadius: 999,
+              background: 'var(--red-soft)', fontSize: 12, fontWeight: 600, color: 'var(--red)',
+            }}>
+              ✗ {weekStats.failed} échouée{weekStats.failed > 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '8px 20px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {DAYS.map((dayName, dow) => {
+          const dayDate = addDays(monday, dow);
           const dayTasks = tasks.filter(t => t.dayOfWeek === dow);
           const isToday = dow === todayDow;
-          const completedIds = isToday ? (completions[today] ?? []) : [];
+          const isPast = dayDate < today;
+          const completedIds = completions[dayDate] ?? [];
           const isAdding = addingForDay === dow;
 
           return (
             <DayCard
               key={dow}
               dayName={dayName}
+              dayDate={dayDate}
               isToday={isToday}
+              isPast={isPast}
               tasks={dayTasks}
               completedIds={completedIds}
               isAdding={isAdding}
@@ -138,7 +182,7 @@ export function AgendaPage({ onTabChange }: Props) {
         })}
       </div>
 
-      <BottomNav active="agenda" onChange={onTabChange} />
+      <BottomNav active="objectifs" onChange={onTabChange} />
       <HomeIndicator />
     </PageShell>
   );
@@ -146,12 +190,14 @@ export function AgendaPage({ onTabChange }: Props) {
 
 interface DayCardProps {
   dayName: string;
+  dayDate: string;
   isToday: boolean;
-  tasks: AgendaTask[];
+  isPast: boolean;
+  tasks: ObjectifTask[];
   completedIds: string[];
   isAdding: boolean;
   newLabel: string;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, date: string) => void;
   onDelete: (id: string) => void;
   onStartAdd: () => void;
   onCancelAdd: () => void;
@@ -160,7 +206,7 @@ interface DayCardProps {
 }
 
 function DayCard({
-  dayName, isToday, tasks, completedIds, isAdding,
+  dayName, dayDate, isToday, isPast, tasks, completedIds, isAdding,
   newLabel, onToggle, onDelete, onStartAdd, onCancelAdd, onConfirmAdd, onLabelChange,
 }: DayCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -173,6 +219,7 @@ function DayCard({
 
   return (
     <div style={{
+      flexShrink: 0,
       background: isToday ? 'var(--orange-tint)' : 'var(--paper-2)',
       border: `1px solid ${isToday ? 'var(--orange)' : 'var(--hairline-2)'}`,
       borderRadius: 'var(--radius-md)',
@@ -201,7 +248,7 @@ function DayCard({
           </span>
           {tasks.length > 0 && (
             <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>
-              {isToday ? `${doneCount}/${tasks.length}` : `${tasks.length}`}
+              {`${doneCount}/${tasks.length}`}
             </span>
           )}
         </div>
@@ -230,32 +277,27 @@ function DayCard({
                   padding: '7px 14px',
                 }}
               >
-                {isToday ? (
-                  <button
-                    onClick={() => onToggle(task.id)}
-                    aria-label={done ? 'Marquer comme non fait' : 'Marquer comme fait'}
-                    style={{
-                      width: 20, height: 20,
-                      borderRadius: 6,
-                      border: done ? 'none' : '1.5px solid var(--hairline)',
-                      background: done ? 'var(--orange)' : 'transparent',
-                      cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, padding: 0,
-                    }}
-                  >
-                    {done && <Check size={11} color="white" strokeWidth={2.5} />}
-                  </button>
-                ) : (
-                  <div style={{
-                    width: 20, height: 20, borderRadius: 6,
-                    border: '1.5px solid var(--hairline)',
-                    flexShrink: 0,
-                  }} />
-                )}
+                <button
+                  onClick={() => onToggle(task.id, dayDate)}
+                  aria-label={done ? 'Marquer comme non fait' : 'Marquer comme fait'}
+                  style={{
+                    width: 20, height: 20,
+                    borderRadius: 6,
+                    border: done ? 'none' : isPast ? '1.5px solid var(--red)' : '1.5px solid var(--hairline)',
+                    background: done ? 'var(--orange)' : isPast ? 'var(--red-soft)' : 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, padding: 0,
+                    fontSize: 13, color: 'var(--red)', fontWeight: 700, lineHeight: 1,
+                  }}
+                >
+                  {done
+                    ? <Check size={11} color="white" strokeWidth={2.5} />
+                    : isPast ? '✕' : null}
+                </button>
                 <span style={{
                   flex: 1, fontSize: 14,
-                  color: done ? 'var(--ink-3)' : 'var(--ink)',
+                  color: done ? 'var(--ink-3)' : isPast ? 'var(--ink-3)' : 'var(--ink)',
                   textDecoration: done ? 'line-through' : 'none',
                 }}>
                   {task.label}
@@ -339,7 +381,7 @@ function DayCard({
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      width: '100%', maxWidth: 480, minHeight: '100dvh',
+      width: '100%', maxWidth: 480, height: '100dvh',
       background: 'var(--paper)', color: 'var(--ink)',
       fontFamily: 'var(--font-body)',
       display: 'flex', flexDirection: 'column', overflow: 'hidden',
