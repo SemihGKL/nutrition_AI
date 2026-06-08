@@ -5,16 +5,23 @@ export interface WeighIn {
   date: string;
   weight: number;
   note?: string;
-  user: { id: number };
+}
+
+export interface WeighInRequest {
+  date: string;
+  weight: number;
+  userId: number;
+  note?: string;
 }
 
 export const weighInApi = {
   getAll: (userId: number) =>
     api.get<WeighIn[]>(`/api/weighin/${userId}`),
 
-  getLatest: (userId: number) =>
-    api.get<WeighIn>(`/api/weighin/${userId}/latest`),
+  getLatest: (userId: number): Promise<WeighIn | null> =>
+    api.get<WeighIn | undefined>(`/api/weighin/${userId}/latest`)
+      .then(data => data ?? null),
 
-  save: (data: WeighIn) =>
+  save: (data: WeighInRequest) =>
     api.post<WeighIn>('/api/weighin', data),
 };

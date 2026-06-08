@@ -3,7 +3,6 @@ package com.nutrition.backend.Service;
 import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Exception.UserNotFoundException;
 import com.nutrition.backend.Repository.UserRepository;
-import com.nutrition.backend.domain.model.ActivityLevel;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.service.MbrCalculator;
 import org.junit.jupiter.api.Test;
@@ -47,7 +46,7 @@ class UserServiceTest {
         saved.setDailyCalorieGoal(1736);
         when(userRepository.save(any(User.class))).thenReturn(saved);
 
-        User result = userService.createUser(username, email, 75, Gender.MALE, 30, 180.0, ActivityLevel.SEDENTARY, startWeight);
+        User result = userService.createUser(username, email, 75, Gender.MALE, 30, 180.0, startWeight, null);
 
         assertThat(result.getDailyCalorieGoal()).isEqualTo(1736);
         assertThat(result.getUsername()).isEqualTo(username);
@@ -126,7 +125,7 @@ class UserServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(existing));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        User result = userService.updateBodyMetrics(userId, Gender.FEMALE, 28, 165.0, ActivityLevel.LIGHTLY_ACTIVE, 65.0);
+        User result = userService.updateBodyMetrics(userId, Gender.FEMALE, 28, 165.0, 65.0, null);
 
         assertThat(result.getDailyCalorieGoal()).isEqualTo(1640);
         assertThat(result.getCurrentWeight()).isEqualTo(65.0);

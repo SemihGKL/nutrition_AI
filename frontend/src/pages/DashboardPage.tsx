@@ -6,15 +6,15 @@ import { Check } from '../components/ui/icons';
 import { StatusBar } from '../components/dashboard/StatusBar';
 import { DayHeader } from '../components/dashboard/DayHeader';
 import { ContextMessage } from '../components/dashboard/ContextMessage';
-import { MBRGaugeCard } from '../components/dashboard/MBRGaugeCard';
 import { EntrySection } from '../components/dashboard/EntrySection';
 import { NetBalanceRow } from '../components/dashboard/NetBalanceRow';
+import { DeficitBanner } from '../components/dashboard/DeficitBanner';
 import { ConfirmationView } from '../components/dashboard/ConfirmationView';
 import { useAuth } from '../hooks/useAuth';
 import { useDailyEntry } from '../hooks/useDailyEntry';
 import { computeStreak } from '../hooks/useStreak';
 import { dailyApi } from '../api/daily';
-import { isoToday, addDays } from '../utils/format';
+import { isoToday, addDays, stepsToKcal } from '../utils/format';
 import type { DailyCalories } from '../types/api';
 import type { StreakInfo } from '../hooks/useStreak';
 
@@ -28,7 +28,10 @@ export function DashboardPage({ onTabChange }: Props) {
   const { user } = useAuth();
   const [viewedDate, setViewedDate] = useState(isoToday);
   const [allEntries, setAllEntries] = useState<DailyCalories[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
   const today = isoToday();
+
+  useEffect(() => { setIsEditing(false); }, [viewedDate]);
 
   const { entry, recap, isLoading, isSaving, setCalories, setSteps, setBurned, confirm } =
     useDailyEntry(user?.id, viewedDate);
@@ -45,26 +48,32 @@ export function DashboardPage({ onTabChange }: Props) {
   const burned   = entry?.caloriesBurned ?? 0;
   const target   = user?.dailyCalorieGoal ?? 1800;
 
-  const ratio  = calories / target;
-  const status = ratio <= 1 ? 'good' : ratio <= 1.15 ? 'warn' : 'over';
+  const stepsKcal = stepsToKcal(steps, user?.currentWeight ?? 70);
+  const net       = calories - stepsKcal - burned;
 
-  const deficitPct = recap ? -recap.deficitPercentage : null;
 
   const handleConfirm = async () => {
     await confirm();
     const fresh = await dailyApi.getAll(user!.id);
     setAllEntries(fresh);
+    setIsEditing(false);
   };
 
   if (isLoading) {
     return <PageShell><LoadingState /></PageShell>;
   }
 
-  if (entry?.confirmed && recap) {
+  if (entry?.confirmed && recap && !isEditing) {
     return (
       <PageShell>
         <StatusBar />
-        <ConfirmationView date={viewedDate} recap={recap} streak={streak} />
+        <ConfirmationView
+          date={viewedDate}
+          recap={recap}
+          streak={streak}
+          weightKg={user?.currentWeight ?? 70}
+          onEdit={() => setIsEditing(true)}
+        />
         <BottomNav active="jour" onChange={onTabChange} />
         <HomeIndicator />
       </PageShell>
@@ -85,30 +94,34 @@ export function DashboardPage({ onTabChange }: Props) {
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8, marginBottom: 10 }}>
           <ProgressRing
-            value={calories}
+            value={Math.max(0, net)}
             target={target}
             size={232}
             stroke={14}
-            status={calories === 0 ? 'good' : status}
+            label="kcal net"
           />
         </div>
 
-        <ContextMessage calories={calories} target={target} />
-
-        <MBRGaugeCard deficitPct={deficitPct} status={status} />
+        <ContextMessage calories={net} target={target} />
 
         <EntrySection
+          key={viewedDate}
           calories={calories}
           steps={steps}
           burned={burned}
+          weightKg={user?.currentWeight ?? 70}
           isSaving={isSaving}
           onCalories={setCalories}
           onSteps={setSteps}
           onBurned={setBurned}
         />
 
-        {burned > 0 && calories > 0 && (
-          <NetBalanceRow net={calories - burned} />
+        {(steps > 0 || burned > 0) && calories > 0 && (
+          <NetBalanceRow calories={calories} stepsKcal={stepsKcal} burned={burned} target={target} />
+        )}
+
+        {calories > 0 && (
+          <DeficitBanner net={net} target={target} />
         )}
 
         <PrimaryCTA
@@ -117,7 +130,7 @@ export function DashboardPage({ onTabChange }: Props) {
           disabled={calories === 0}
           onClick={handleConfirm}
         >
-          Confirmer ma journée
+          {isEditing ? 'Mettre à jour' : 'Confirmer ma journée'}
         </PrimaryCTA>
 
         <div style={{ height: 12 }} />

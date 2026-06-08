@@ -2,13 +2,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { StatusBar } from '../components/dashboard/StatusBar';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { Check } from '../components/ui/icons';
+import { Stepper } from '../components/ui/Stepper';
 import { useAuth } from '../hooks/useAuth';
 import { weighInApi, type WeighIn } from '../api/weighIn';
+import { useWeighInContext } from '../hooks/useWeighIn';
 import type { DailyCalories } from '../types/api';
 import {
   isoToday, addDays, weekStart, weekNumber, frenchDateShort, weekEnd,
-  formatNumber, formatDecimal, frenchDayShort,
+  formatNumber, formatDecimal, frenchDayShort, stepsToKcal,
 } from '../utils/format';
+import { computeMbr } from '../utils/mbr';
 
 interface Props {
   onTabChange: (tab: NavTab) => void;
@@ -19,16 +22,34 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const { user } = useAuth();
   const today = isoToday();
   const target = user?.dailyCalorieGoal ?? 1800;
-  const tdee = user?.dailyCalorieGoal ? user.dailyCalorieGoal + 300 : 2100;
+  const mbr = user
+    ? Math.round(computeMbr(user.currentWeight, user.height, user.age, user.gender as 'MALE' | 'FEMALE'))
+    : 1800;
   const monday = weekStart(today);
   const weekNum = weekNumber(today);
 
   const [weighIns, setWeighIns] = useState<WeighIn[]>([]);
+  const [weighInWeight, setWeighInWeight] = useState(user?.currentWeight ?? 70);
+  const [savingWeighIn, setSavingWeighIn] = useState(false);
+  const { refresh: refreshBadge } = useWeighInContext();
 
   useEffect(() => {
     if (!user) return;
     weighInApi.getAll(user.id).then(setWeighIns).catch(() => {});
   }, [user]);
+
+  const handleWeighIn = async () => {
+    if (!user) return;
+    setSavingWeighIn(true);
+    try {
+      await weighInApi.save({ date: isoToday(), weight: weighInWeight, userId: user.id });
+      const updated = await weighInApi.getAll(user.id);
+      setWeighIns(updated);
+      await refreshBadge();
+    } finally {
+      setSavingWeighIn(false);
+    }
+  };
 
   const entryMap = useMemo(() => {
     const m = new Map<string, DailyCalories>();
@@ -41,7 +62,9 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
       const date = addDays(monday, i);
       const entry = entryMap.get(date);
       const isFuture = date > today;
-      const net = entry ? entry.caloriesConsumed - (entry.caloriesBurned ?? 0) : null;
+      const weightKg = user?.currentWeight ?? 70;
+      const steps = stepsToKcal(entry?.steps ?? 0, weightKg);
+      const net = entry ? entry.caloriesConsumed - (entry.caloriesBurned ?? 0) - steps : null;
       const delta = net !== null ? net - target : null;
       return {
         label: frenchDayShort(date),
@@ -56,9 +79,9 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   [monday, entryMap, target, today]);
 
   const confirmedDays = weekDays.filter(d => !d.future && d.net !== null && d.confirmed);
-  const totalRealDeficit = confirmedDays.reduce((s, d) => s + (target - (d.net ?? 0)), 0);
-  const theoreticalWeekDeficit = (target - tdee) * 7;
-  const maxBarVal = Math.max(Math.abs(totalRealDeficit), Math.abs(theoreticalWeekDeficit), 1);
+  const totalRealDeficit = confirmedDays.reduce((s, d) => s + (mbr - (d.net ?? 0)), 0);
+  const theoreticalForConfirmedDays = (mbr - target) * confirmedDays.length;
+  const maxBarVal = Math.max(Math.abs(totalRealDeficit), Math.abs(theoreticalForConfirmedDays), 1);
 
   const sortedWeighIns = [...weighIns].sort((a, b) => a.date > b.date ? -1 : 1);
   const latestWeighIn = sortedWeighIns[0] ?? null;
@@ -121,12 +144,37 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
 
         {!latestWeighIn && (
           <div style={{
-            background: 'var(--paper-2)', border: '1px solid var(--hairline-2)',
+            background: 'var(--orange-tint)', border: '1px solid var(--orange-soft)',
             borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 14,
-            textAlign: 'center',
           }}>
-            <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>aucune pesée cette semaine</div>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>enregistre ton poids dans le profil</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.3, marginBottom: 2 }}>
+              pesée hebdomadaire
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>
+              aucune pesée cette semaine
+            </div>
+            <Stepper
+              label="Poids"
+              suffix="kg"
+              value={weighInWeight}
+              onChange={setWeighInWeight}
+              min={30} step={0.1}
+            />
+            <button
+              onClick={handleWeighIn}
+              disabled={savingWeighIn}
+              style={{
+                marginTop: 12, width: '100%',
+                padding: '12px 0', borderRadius: 'var(--radius)',
+                background: 'var(--orange)', color: '#fff',
+                border: 'none', fontSize: 15, fontWeight: 700,
+                cursor: savingWeighIn ? 'default' : 'pointer',
+                opacity: savingWeighIn ? 0.7 : 1,
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {savingWeighIn ? 'Enregistrement…' : 'Enregistrer ma pesée'}
+            </button>
           </div>
         )}
 
@@ -225,16 +273,30 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
             background: 'var(--paper-2)', borderRadius: 'var(--radius-md)',
             border: '1px solid var(--hairline-2)', padding: 16, marginBottom: 14,
           }}>
-            <div className="display" style={{ fontSize: 15, fontWeight: 500, marginBottom: 14 }}>théorique vs réel</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <div className="display" style={{ fontSize: 15, fontWeight: 500 }}>plan vs réel</div>
+              <div style={{
+                fontSize: 12, fontWeight: 700,
+                color: 'var(--orange)',
+                background: 'var(--orange-tint)',
+                borderRadius: 999,
+                padding: '3px 10px',
+              }}>
+                {confirmedDays.length} / 7 j
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 14 }}>
+              comparaison sur les {confirmedDays.length} jour{confirmedDays.length > 1 ? 's' : ''} confirmé{confirmedDays.length > 1 ? 's' : ''}
+            </div>
             <BarRow
-              label="déficit théorique"
-              value={`${theoreticalWeekDeficit >= 0 ? '−' : '+'}${formatNumber(Math.abs(theoreticalWeekDeficit))} kcal`}
-              pct={Math.round((Math.abs(theoreticalWeekDeficit) / maxBarVal) * 100)}
-              color="var(--ink-2)"
+              label="si plan de base suivi à la lettre"
+              value={`${theoreticalForConfirmedDays >= 0 ? '−' : '+'}${formatNumber(Math.abs(theoreticalForConfirmedDays))} kcal`}
+              pct={Math.round((Math.abs(theoreticalForConfirmedDays) / maxBarVal) * 100)}
+              color="var(--ink-3)"
             />
             <div style={{ height: 10 }} />
             <BarRow
-              label="déficit réel"
+              label="déficit réel accumulé"
               value={`${totalRealDeficit >= 0 ? '−' : '+'}${formatNumber(Math.abs(totalRealDeficit))} kcal`}
               pct={Math.round((Math.abs(totalRealDeficit) / maxBarVal) * 100)}
               color={totalRealDeficit >= 0 ? 'var(--green)' : 'var(--red)'}

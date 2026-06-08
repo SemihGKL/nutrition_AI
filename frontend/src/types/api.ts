@@ -7,9 +7,16 @@ export interface User {
   gender: string;
   age: number;
   height: number;
-  activityLevel: string;
   startWeight: number;
   currentWeight: number;
+  weighInDay: string | null;
+}
+
+export interface WeighIn {
+  id: number;
+  date: string;
+  weight: number;
+  note?: string;
 }
 
 export interface DailyCalories {

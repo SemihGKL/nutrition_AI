@@ -119,6 +119,14 @@ export function NavUser({ active }: { active: boolean }) {
   );
 }
 
+export function Pencil({ size = 14, color = 'currentColor', sw = 1.6 }: SvgProps & { sw?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M15.5 4.5l4 4L7 21H3v-4L15.5 4.5z" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function NavObjectifs({ active }: { active: boolean }) {
   const c = active ? 'var(--orange)' : 'var(--ink-3)';
   return (

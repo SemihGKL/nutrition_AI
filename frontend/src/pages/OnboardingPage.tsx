@@ -6,20 +6,23 @@ import { authApi } from '../api/auth';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
 import { formatNumber } from '../utils/format';
-import { computeMbr, computeTdee, suggestedTarget } from '../utils/mbr';
+import { computeMbr, suggestedTarget } from '../utils/mbr';
 
-const ACTIVITIES = [
-  { value: 'SEDENTARY',         label: 'Sédentaire',       hint: 'peu / pas de sport' },
-  { value: 'LIGHTLY_ACTIVE',    label: 'Légèrement actif', hint: '1–3 j/sem' },
-  { value: 'MODERATELY_ACTIVE', label: 'Modérément actif', hint: '3–5 j/sem' },
-  { value: 'VERY_ACTIVE',       label: 'Très actif',       hint: '6–7 j/sem' },
-  { value: 'EXTREMELY_ACTIVE',  label: 'Extrême',          hint: 'sportif·ve pro' },
-];
 
 interface Props {
   onDone: () => void;
   onBack: () => void;
 }
+
+const DAYS = [
+  { value: 'MONDAY',    label: 'Lun' },
+  { value: 'TUESDAY',   label: 'Mar' },
+  { value: 'WEDNESDAY', label: 'Mer' },
+  { value: 'THURSDAY',  label: 'Jeu' },
+  { value: 'FRIDAY',    label: 'Ven' },
+  { value: 'SATURDAY',  label: 'Sam' },
+  { value: 'SUNDAY',    label: 'Dim' },
+];
 
 interface FormState {
   username: string;
@@ -29,7 +32,7 @@ interface FormState {
   height: string;
   weight: string;
   gender: 'MALE' | 'FEMALE';
-  activity: string;
+  weighInDay: string;
   target: number;
 }
 
@@ -51,7 +54,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
     height: '',
     weight: '',
     gender: 'MALE',
-    activity: 'MODERATELY_ACTIVE',
+    weighInDay: 'MONDAY',
     target: 1800,
   });
 
@@ -63,8 +66,6 @@ export function OnboardingPage({ onDone, onBack }: Props) {
   const mbr = form.age && form.height && form.weight
     ? computeMbr(parseFloat(form.weight), parseFloat(form.height), parseInt(form.age), form.gender)
     : 0;
-
-  const tdee = mbr ? computeTdee(mbr, form.activity) : 0;
 
   const validateStep1 = (): boolean => {
     const errs: Errors = {};
@@ -83,8 +84,8 @@ export function OnboardingPage({ onDone, onBack }: Props) {
 
   const handleNext = () => {
     if (step === 1 && !validateStep1()) return;
-    if (step === 2) {
-      const computed = suggestedTarget(mbr, tdee);
+    if (step === 1) {
+      const computed = suggestedTarget(mbr);
       set('target', computed);
     }
     setStep(s => s + 1);
@@ -101,9 +102,9 @@ export function OnboardingPage({ onDone, onBack }: Props) {
         gender: form.gender,
         age: parseInt(form.age),
         height: parseFloat(form.height),
-        activityLevel: form.activity,
         startWeight: parseFloat(form.weight),
         weightGoal: 0,
+        weighInDay: form.weighInDay,
       });
       login(token, user);
       onDone();
@@ -144,12 +145,11 @@ export function OnboardingPage({ onDone, onBack }: Props) {
       <div style={{ padding: '12px 24px 0' }}>
         <StepBar step={step} />
         <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 14, letterSpacing: 0.4 }}>
-          étape {step} / 3
+          étape {step} / 2
         </div>
         <div className="display" style={{ fontSize: 28, fontWeight: 500, marginTop: 4, letterSpacing: '-0.02em' }}>
           {step === 1 && 'tes infos'}
-          {step === 2 && "niveau d'activité"}
-          {step === 3 && 'voici tes chiffres'}
+          {step === 2 && 'voici tes chiffres'}
         </div>
       </div>
 
@@ -175,27 +175,34 @@ export function OnboardingPage({ onDone, onBack }: Props) {
                 options={[{ value: 'MALE', label: 'Homme' }, { value: 'FEMALE', label: 'Femme' }]}
               />
             </div>
+
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, marginBottom: 6 }}>Jour de pesée hebdomadaire</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {DAYS.map(d => (
+                  <button
+                    key={d.value}
+                    onClick={() => set('weighInDay', d.value)}
+                    style={{
+                      flex: 1, height: 36, border: 'none', borderRadius: 8,
+                      background: form.weighInDay === d.value ? 'var(--orange)' : 'var(--paper-3)',
+                      color: form.weighInDay === d.value ? '#fff' : 'var(--ink-2)',
+                      fontWeight: form.weighInDay === d.value ? 700 : 500,
+                      fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                      transition: 'all 120ms',
+                    }}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {step === 2 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {ACTIVITIES.map(a => (
-              <ActivityCard
-                key={a.value}
-                label={a.label}
-                hint={a.hint}
-                selected={form.activity === a.value}
-                onClick={() => set('activity', a.value)}
-              />
-            ))}
-          </div>
-        )}
-
-        {step === 3 && (
           <Step3
             mbr={mbr}
-            tdee={tdee}
             target={form.target}
             onTargetChange={v => set('target', v)}
             submitError={submitError}
@@ -258,10 +265,10 @@ export function OnboardingPage({ onDone, onBack }: Props) {
           <PrimaryCTA
             tone="orange"
             icon={<Chevron dir="right" size={16} color="#fff" sw={2} />}
-            onClick={step === 3 ? handleSubmit : handleNext}
+            onClick={step === 2 ? handleSubmit : handleNext}
             disabled={isSubmitting}
           >
-            {step === 3 ? (isSubmitting ? 'création…' : "c'est parti") : 'continuer'}
+            {step === 2 ? (isSubmitting ? 'création…' : "c'est parti") : 'continuer'}
           </PrimaryCTA>
         </div>
       </div>
@@ -278,7 +285,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
 function StepBar({ step }: { step: number }) {
   return (
     <div style={{ display: 'flex', gap: 6, padding: '0 4px' }}>
-      {[1, 2, 3].map(i => (
+      {[1, 2].map(i => (
         <div key={i} style={{
           flex: 1,
           height: 4,
@@ -353,125 +360,58 @@ function SegmentedToggle({
   );
 }
 
-function ActivityCard({
-  label,
-  hint,
-  selected,
-  onClick,
-}: {
-  label: string;
-  hint: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-        width: '100%',
-        height: 64,
-        padding: '0 16px',
-        background: selected ? 'var(--orange-tint)' : 'var(--paper-2)',
-        border: `1px solid ${selected ? 'var(--orange)' : 'var(--hairline-2)'}`,
-        borderRadius: 'var(--radius)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 140ms linear',
-        fontFamily: 'var(--font-body)',
-      }}
-    >
-      <div style={{
-        width: 22,
-        height: 22,
-        borderRadius: 999,
-        border: `2px solid ${selected ? 'var(--orange)' : 'var(--hairline)'}`,
-        background: selected ? 'var(--orange)' : 'transparent',
-        position: 'relative',
-        flexShrink: 0,
-      }}>
-        {selected && (
-          <div style={{ position: 'absolute', inset: 4, borderRadius: 999, background: 'var(--paper)' }} />
-        )}
-      </div>
-      <div style={{ flex: 1, lineHeight: 1.25 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{label}</div>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>{hint}</div>
-      </div>
-    </button>
-  );
-}
-
 function Step3({
   mbr,
-  tdee,
   target,
   onTargetChange,
   submitError,
 }: {
   mbr: number;
-  tdee: number;
   target: number;
   onTargetChange: (v: number) => void;
   submitError: string | null;
 }) {
-  const dailyDeficit = tdee - target;
-  const weeklyLossKg = (dailyDeficit * 7) / 7700;
-  const belowMbr = target < mbr;
+  // Food deficit = how much below MBR the user plans to eat
+  const foodDeficit = mbr - target;
+  // Minimum weekly loss from food restriction alone (activity adds on top)
+  const minWeeklyLossKg = (foodDeficit * 7) / 7700;
 
-  type Zone = 'danger' | 'flat' | 'light' | 'recommended' | 'intensive' | 'aggressive';
-  const zone: Zone = belowMbr ? 'danger'
-    : dailyDeficit < 100 ? 'flat'
-    : dailyDeficit < 300 ? 'light'
-    : dailyDeficit <= 500 ? 'recommended'
-    : dailyDeficit <= 750 ? 'intensive'
-    : 'aggressive';
+  type Zone = 'light' | 'recommended' | 'intensive';
+  const zone: Zone = foodDeficit < 100 ? 'light'
+    : foodDeficit < 250 ? 'recommended'
+    : 'intensive';
 
   const zoneLabel: Record<Zone, string> = {
-    danger:      'en dessous du MBR',
-    flat:        'sans déficit',
     light:       'déficit léger',
     recommended: 'recommandé',
     intensive:   'intensif',
-    aggressive:  'trop agressif',
   };
   const zoneHint: Record<Zone, string> = {
-    danger:      'risque de carences',
-    flat:        'maintien du poids',
-    light:       '< 300 kcal / j de déficit',
-    recommended: '300 – 500 kcal / j de déficit',
-    intensive:   '500 – 750 kcal / j de déficit',
-    aggressive:  'risque de carences',
+    light:       "l'activité crée l'essentiel du déficit",
+    recommended: '100 – 250 kcal / j depuis l\'assiette',
+    intensive:   '250 – 400 kcal / j depuis l\'assiette',
   };
   const zoneColor: Record<Zone, string> = {
-    danger:      'var(--red)',
-    flat:        'var(--ink-3)',
     light:       'var(--ink-2)',
     recommended: 'var(--green)',
     intensive:   'var(--orange)',
-    aggressive:  'var(--red)',
   };
 
-  // Dynamic range anchored on the user's real numbers
-  const sliderMin = Math.round(mbr / 50) * 50;
-  const sliderMax = Math.round(tdee / 50) * 50;
+  // Slider anchored on MBR : from MBR−400 to MBR
+  const sliderMin = Math.round((mbr - 400) / 50) * 50;
+  const sliderMax = Math.round(mbr / 50) * 50;
   const sliderRange = sliderMax - sliderMin;
 
-  // Clamp target into range when component first mounts
   useEffect(() => {
     const clamped = Math.max(sliderMin, Math.min(sliderMax, target));
     if (clamped !== target) onTargetChange(clamped);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sliderMin, sliderMax]);
 
-  // Zone colour segments between sliderMin and sliderMax
   const ZONE_SEGMENTS = [
-    { upTo: tdee - 750, color: 'var(--red)',    label: 'agressif'    },
-    { upTo: tdee - 500, color: 'var(--orange)', label: 'intensif'    },
-    { upTo: tdee - 300, color: 'var(--green)',  label: 'recommandé'  },
-    { upTo: sliderMax,  color: 'var(--ink-3)',  label: 'léger'       },
+    { upTo: mbr - 250, color: 'var(--orange)', label: 'intensif'   },
+    { upTo: mbr - 100, color: 'var(--green)',  label: 'recommandé' },
+    { upTo: sliderMax, color: 'var(--ink-3)',  label: 'léger'      },
   ];
 
   type Segment = { from: number; to: number; color: string; label: string };
@@ -492,15 +432,15 @@ function Step3({
         <ResultStat
           label="MBR"
           sublabel="au repos"
-          tooltip="Métabolisme de Base au Repos — calories que ton corps brûle juste pour fonctionner (cœur, cerveau, chaleur). Ne jamais descendre en dessous."
+          tooltip="Métabolisme de Base au Repos — calories que ton corps brûle juste pour fonctionner (cœur, cerveau, chaleur). Tu trackeras toute activité au jour le jour."
           value={formatNumber(Math.round(mbr))}
           suffix="kcal"
         />
         <ResultStat
-          label="TDEE"
-          sublabel="avec activité"
-          tooltip="Total Daily Energy Expenditure — ton MBR multiplié par ton niveau d'activité. C'est ce que tu brûles vraiment par jour."
-          value={formatNumber(Math.round(tdee))}
+          label="déficit alim. / j"
+          sublabel="depuis l'assiette"
+          tooltip="Déficit créé uniquement par ton alimentation (MBR − objectif). À ça s'ajoutent chaque jour tes pas et séances de sport."
+          value={foodDeficit > 0 ? `−${formatNumber(Math.round(foodDeficit))}` : `+${formatNumber(Math.round(-foodDeficit))}`}
           suffix="kcal"
         />
       </div>
@@ -514,7 +454,7 @@ function Step3({
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }}>objectif suggéré</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }}>objectif alimentaire</div>
             <div className="display tabular" style={{
               fontSize: 44, fontWeight: 500, color: 'var(--ink)',
               lineHeight: 1, letterSpacing: '-0.025em',
@@ -524,14 +464,14 @@ function Step3({
             <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 5 }}>kcal / jour</div>
           </div>
           <div style={{ textAlign: 'right', paddingBottom: 2 }}>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 5 }}>perte estimée</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 5 }}>perte min. alim.</div>
             <div className="display tabular" style={{
               fontSize: 26, fontWeight: 500, lineHeight: 1,
-              color: weeklyLossKg > 0.05 ? 'var(--green)' : weeklyLossKg < -0.05 ? 'var(--red)' : 'var(--ink-2)',
+              color: minWeeklyLossKg > 0.02 ? 'var(--green)' : 'var(--ink-2)',
             }}>
-              {weeklyLossKg > 0 ? '−' : '+'}{Math.abs(weeklyLossKg).toFixed(2).replace('.', ',')}
+              −{Math.abs(minWeeklyLossKg).toFixed(2).replace('.', ',')}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}>kg / semaine</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}>kg / sem. (alim.)</div>
           </div>
         </div>
 
@@ -599,8 +539,8 @@ function Step3({
           display: 'flex', justifyContent: 'space-between',
           fontSize: 11, color: 'var(--ink-3)', marginTop: 4,
         }}>
-          <span className="tabular">{formatNumber(sliderMin)} kcal · MBR</span>
-          <span className="tabular">TDEE · {formatNumber(sliderMax)} kcal</span>
+          <span className="tabular">{formatNumber(sliderMin)} kcal · déficit max</span>
+          <span className="tabular">MBR · {formatNumber(sliderMax)} kcal</span>
         </div>
       </div>
 

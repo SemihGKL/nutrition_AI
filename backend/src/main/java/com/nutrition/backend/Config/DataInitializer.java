@@ -24,7 +24,6 @@ public class DataInitializer {
             user.setGender("MALE");
             user.setAge(28);
             user.setHeight(178.0);
-            user.setActivityLevel("MODERATELY_ACTIVE");
             user.setStartWeight(82.0);
             user.setCurrentWeight(82.0);
             user.setWeightGoal(75);

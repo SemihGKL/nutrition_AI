@@ -5,6 +5,7 @@ public record UpdateUserRequest(
         String gender,
         int age,
         double height,
-        String activityLevel,
-        double currentWeight
+        double currentWeight,
+        String weighInDay,
+        Integer dailyCalorieGoal
 ) {}

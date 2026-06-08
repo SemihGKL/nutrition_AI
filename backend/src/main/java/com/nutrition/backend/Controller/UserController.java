@@ -2,7 +2,6 @@ package com.nutrition.backend.Controller;
 
 import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Service.UserService;
-import com.nutrition.backend.domain.model.ActivityLevel;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.web.dto.CreateUserRequest;
 import com.nutrition.backend.web.dto.UpdateUserRequest;
@@ -24,7 +23,6 @@ public class UserController {
     @PostMapping
     public ResponseEntity<User> createUser(@RequestBody CreateUserRequest request) {
         Gender gender = Gender.valueOf(request.gender().toUpperCase());
-        ActivityLevel activityLevel = ActivityLevel.valueOf(request.activityLevel().toUpperCase());
 
         User user = userService.createUser(
                 request.username(),
@@ -33,8 +31,8 @@ public class UserController {
                 gender,
                 request.age(),
                 request.height(),
-                activityLevel,
-                request.startWeight()
+                request.startWeight(),
+                request.weighInDay()
         );
         return ResponseEntity.ok(user);
     }
@@ -52,9 +50,11 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<UserDto> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest request) {
         Gender gender = Gender.valueOf(request.gender().toUpperCase());
-        ActivityLevel activityLevel = ActivityLevel.valueOf(request.activityLevel().toUpperCase());
-        User user = userService.updateBodyMetrics(id, gender, request.age(), request.height(), activityLevel, request.currentWeight());
+        userService.updateBodyMetrics(id, gender, request.age(), request.height(), request.currentWeight(), request.weighInDay());
         userService.updateProfile(id, java.util.Optional.of(request.username()), java.util.Optional.empty());
+        if (request.dailyCalorieGoal() != null) {
+            userService.updateCalorieGoal(id, request.dailyCalorieGoal());
+        }
         User updated = userService.getUserById(id);
         return ResponseEntity.ok(toDto(updated));
     }
@@ -69,9 +69,9 @@ public class UserController {
                 user.getGender(),
                 user.getAge(),
                 user.getHeight(),
-                user.getActivityLevel(),
                 user.getStartWeight(),
-                user.getCurrentWeight()
+                user.getCurrentWeight(),
+                user.getWeighInDay()
         );
     }
 }

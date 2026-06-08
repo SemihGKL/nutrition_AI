@@ -46,6 +46,6 @@ public class WeeklyWeighInController {
     @GetMapping("/{userId}/latest")
     public ResponseEntity<WeeklyWeighIn> getLatest(@PathVariable Long userId) {
         Optional<WeeklyWeighIn> latest = weeklyWeighInService.getLatestByUser(userId);
-        return latest.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        return latest.map(ResponseEntity::ok).orElse(ResponseEntity.noContent().build());
     }
 }

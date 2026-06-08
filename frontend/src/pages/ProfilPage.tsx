@@ -4,28 +4,50 @@ import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { StreakChip } from '../components/ui/StreakChip';
 import { useAuth } from '../hooks/useAuth';
 import { usersApi } from '../api/users';
+import { useWeighInContext } from '../hooks/useWeighIn';
+import { weighInApi } from '../api/weighIn';
+import { Stepper } from '../components/ui/Stepper';
+import { isoToday } from '../utils/format';
 
 interface Props {
   onTabChange: (tab: NavTab) => void;
   streakCount: number;
 }
 
-const ACTIVITIES = [
-  { value: 'SEDENTARY',          label: 'Sédentaire'         },
-  { value: 'LIGHTLY_ACTIVE',     label: 'Légèrement actif'   },
-  { value: 'MODERATELY_ACTIVE',  label: 'Modérément actif'   },
-  { value: 'VERY_ACTIVE',        label: 'Très actif'         },
-  { value: 'EXTREMELY_ACTIVE',   label: 'Extrême'            },
+const DAYS = [
+  { value: 'MONDAY',    label: 'Lun' },
+  { value: 'TUESDAY',   label: 'Mar' },
+  { value: 'WEDNESDAY', label: 'Mer' },
+  { value: 'THURSDAY',  label: 'Jeu' },
+  { value: 'FRIDAY',    label: 'Ven' },
+  { value: 'SATURDAY',  label: 'Sam' },
+  { value: 'SUNDAY',    label: 'Dim' },
 ];
 
-function formatActivity(level?: string): string {
-  return ACTIVITIES.find(a => a.value === level)?.label ?? level ?? '—';
-}
+const DAY_LABELS: Record<string, string> = {
+  MONDAY: 'Lundi', TUESDAY: 'Mardi', WEDNESDAY: 'Mercredi',
+  THURSDAY: 'Jeudi', FRIDAY: 'Vendredi', SATURDAY: 'Samedi', SUNDAY: 'Dimanche',
+};
+
 
 export function ProfilPage({ onTabChange, streakCount }: Props) {
   const { user, logout, updateUser } = useAuth();
+  const { needsBadge, refresh } = useWeighInContext();
   const initials = user?.username?.slice(0, 2).toUpperCase() ?? '?';
   const [editing, setEditing] = useState(false);
+  const [weighInWeight, setWeighInWeight] = useState(user?.currentWeight ?? 70);
+  const [savingWeighIn, setSavingWeighIn] = useState(false);
+
+  const handleWeighIn = async () => {
+    if (!user) return;
+    setSavingWeighIn(true);
+    try {
+      await weighInApi.save({ date: isoToday(), weight: weighInWeight, userId: user.id });
+      await refresh();
+    } finally {
+      setSavingWeighIn(false);
+    }
+  };
 
   if (editing && user) {
     return (
@@ -69,13 +91,52 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
           <StreakChip count={streakCount} size="md" />
         </div>
 
+        {/* Carte pesée en attente */}
+        {needsBadge && (
+          <div style={{
+            padding: '16px', marginBottom: 20,
+            background: 'var(--orange-tint)',
+            border: '1.5px solid var(--orange-soft)',
+            borderRadius: 'var(--radius-md)',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--orange)', marginBottom: 4 }}>
+              Pesée de la semaine
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 14 }}>
+              Ton jour de pesée ({DAY_LABELS[user?.weighInDay ?? ''] ?? '—'}) est passé.
+            </div>
+            <Stepper
+              label="Ton poids aujourd'hui"
+              value={weighInWeight}
+              onChange={setWeighInWeight}
+              suffix="kg"
+              step={0.1}
+            />
+            <button
+              onClick={handleWeighIn}
+              disabled={savingWeighIn}
+              style={{
+                width: '100%', height: 44, marginTop: 12,
+                borderRadius: 'var(--radius)', border: 'none',
+                background: 'var(--orange)', color: '#fff',
+                fontSize: 14, fontWeight: 600,
+                cursor: savingWeighIn ? 'default' : 'pointer',
+                opacity: savingWeighIn ? 0.7 : 1,
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {savingWeighIn ? 'Enregistrement…' : 'Enregistrer ma pesée'}
+            </button>
+          </div>
+        )}
+
         {/* Infos */}
         <Section label="tes infos">
           <InfoRow label="Âge"             value={user?.age ? `${user.age} ans` : '—'} />
           <InfoRow label="Taille"          value={user?.height ? `${user.height} cm` : '—'} />
           <InfoRow label="Poids actuel"    value={user?.currentWeight ? `${user.currentWeight} kg` : '—'} />
           <InfoRow label="Poids de départ" value={user?.startWeight ? `${user.startWeight} kg` : '—'} />
-          <InfoRow label="Activité"        value={formatActivity(user?.activityLevel)} last />
+          <InfoRow label="Jour de pesée"   value={DAY_LABELS[user?.weighInDay ?? ''] ?? '—'} last />
         </Section>
 
         {/* Calculs */}
@@ -122,7 +183,8 @@ interface EditViewProps {
   user: NonNullable<ReturnType<typeof useAuth>['user']>;
   onSave: (payload: {
     username: string; gender: string; age: number;
-    height: number; activityLevel: string; currentWeight: number;
+    height: number; currentWeight: number;
+    weighInDay: string; dailyCalorieGoal: number;
   }) => Promise<void>;
   onCancel: () => void;
   onTabChange: (tab: NavTab) => void;
@@ -130,12 +192,13 @@ interface EditViewProps {
 
 function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
   const [form, setForm] = useState({
-    username:      user.username,
-    age:           String(user.age),
-    height:        String(user.height),
-    currentWeight: String(user.currentWeight),
-    gender:        user.gender,
-    activityLevel: user.activityLevel,
+    username:          user.username,
+    age:               String(user.age),
+    height:            String(user.height),
+    currentWeight:     String(user.currentWeight),
+    gender:            user.gender,
+    weighInDay:        user.weighInDay ?? 'MONDAY',
+    dailyCalorieGoal:  String(user.dailyCalorieGoal),
   });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState<string | null>(null);
@@ -147,11 +210,13 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
     const age    = parseInt(form.age, 10);
     const height = parseFloat(form.height);
     const weight = parseFloat(form.currentWeight);
+    const goal   = parseInt(form.dailyCalorieGoal, 10);
 
     if (!form.username.trim())              return setError('Le prénom est requis');
     if (isNaN(age) || age < 13 || age > 100) return setError('Âge invalide (13–100)');
     if (isNaN(height) || height < 100 || height > 230) return setError('Taille invalide (100–230 cm)');
     if (isNaN(weight) || weight < 30 || weight > 300)  return setError('Poids invalide (30–300 kg)');
+    if (isNaN(goal) || goal < 800 || goal > 5000)      return setError('Objectif invalide (800–5000 kcal)');
 
     setSaving(true);
     setError(null);
@@ -161,8 +226,9 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
         gender: form.gender,
         age,
         height,
-        activityLevel: form.activityLevel,
         currentWeight: weight,
+        weighInDay: form.weighInDay,
+        dailyCalorieGoal: goal,
       });
     } catch {
       setError('Erreur lors de la mise à jour');
@@ -198,38 +264,31 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
           <EditField label="Poids actuel (kg)"  value={form.currentWeight} onChange={v => set('currentWeight', v)} type="number" last />
         </Section>
 
-        <Section label="activité">
-          <div style={{ padding: '8px 0' }}>
-            {ACTIVITIES.map((a, i) => (
-              <button
-                key={a.value}
-                onClick={() => set('activityLevel', a.value)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  width: '100%', padding: '12px 16px', background: 'transparent',
-                  border: 'none', borderBottom: i < ACTIVITIES.length - 1 ? '1px solid var(--hairline-2)' : 'none',
-                  cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-body)',
-                }}
-              >
-                <div style={{
-                  width: 18, height: 18, borderRadius: 999, flexShrink: 0,
-                  border: `2px solid ${form.activityLevel === a.value ? 'var(--orange)' : 'var(--hairline)'}`,
-                  background: form.activityLevel === a.value ? 'var(--orange)' : 'transparent',
-                  position: 'relative',
-                }}>
-                  {form.activityLevel === a.value && (
-                    <div style={{ position: 'absolute', inset: 3, borderRadius: 999, background: 'var(--paper)' }} />
-                  )}
-                </div>
-                <span style={{
-                  fontSize: 14,
-                  color: form.activityLevel === a.value ? 'var(--ink)' : 'var(--ink-2)',
-                  fontWeight: form.activityLevel === a.value ? 600 : 400,
-                }}>
-                  {a.label}
-                </span>
-              </button>
-            ))}
+        <Section label="objectif">
+          <EditField label="Objectif calorique (kcal/j)" value={form.dailyCalorieGoal} onChange={v => set('dailyCalorieGoal', v)} type="number" last />
+        </Section>
+
+        <Section label="pesée hebdomadaire">
+          <div style={{ padding: '12px 16px' }}>
+            <div style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, marginBottom: 8 }}>Jour de pesée</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {DAYS.map(d => (
+                <button
+                  key={d.value}
+                  onClick={() => set('weighInDay', d.value)}
+                  style={{
+                    flex: 1, height: 34, border: 'none', borderRadius: 7,
+                    background: form.weighInDay === d.value ? 'var(--orange)' : 'var(--paper-3)',
+                    color: form.weighInDay === d.value ? '#fff' : 'var(--ink-2)',
+                    fontWeight: form.weighInDay === d.value ? 700 : 500,
+                    fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                    transition: 'all 120ms',
+                  }}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
           </div>
         </Section>
 

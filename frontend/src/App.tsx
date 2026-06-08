@@ -13,6 +13,7 @@ import { useEffect } from 'react';
 import type { NavTab } from './components/ui/BottomNav';
 import type { DailyCalories } from './types/api';
 import { isoToday } from './utils/format';
+import { WeighInProvider } from './hooks/useWeighIn';
 
 type AuthPage = 'login' | 'register';
 
@@ -53,7 +54,12 @@ function AppTabs() {
 
 function AppRoutes() {
   const { token } = useAuth();
-  return token ? <AppTabs /> : <AuthRoutes />;
+  if (!token) return <AuthRoutes />;
+  return (
+    <WeighInProvider>
+      <AppTabs />
+    </WeighInProvider>
+  );
 }
 
 export function App() {

@@ -1,3 +1,8 @@
+// Pessimistic floor: slow walk (MET 2.0), long stride, weight-adjusted
+export function stepsToKcal(steps: number, weightKg: number): number {
+  return Math.round(steps * (weightKg / 70) * 0.025);
+}
+
 export function formatNumber(n: number): string {
   return Math.round(n).toLocaleString('fr-FR');
 }

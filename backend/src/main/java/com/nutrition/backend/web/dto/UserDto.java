@@ -9,7 +9,7 @@ public record UserDto(
         String gender,
         int age,
         double height,
-        String activityLevel,
         double startWeight,
-        double currentWeight
+        double currentWeight,
+        String weighInDay
 ) {}

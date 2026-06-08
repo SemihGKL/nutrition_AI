@@ -4,7 +4,6 @@ import com.nutrition.backend.Class.DailyCalories;
 import com.nutrition.backend.Class.User;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
 import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
-import com.nutrition.backend.domain.model.ActivityLevel;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.model.Mbr;
 import com.nutrition.backend.domain.model.UserProfile;
@@ -28,6 +27,10 @@ public class DailyRecapService {
         this.mbrCalculator = mbrCalculator;
     }
 
+    private static int stepsToKcal(int steps, double weightKg) {
+        return (int) Math.round(steps * (weightKg / 70.0) * 0.025);
+    }
+
     public DailyRecapResponse getRecap(Long userId, LocalDate date) {
         List<DailyCalories> entries = dailyCaloriesService.getDailyCalories(userId, date);
         if (entries.isEmpty()) {
@@ -41,13 +44,13 @@ public class DailyRecapService {
                 user.getCurrentWeight(),
                 user.getHeight(),
                 user.getAge(),
-                Gender.valueOf(user.getGender()),
-                ActivityLevel.valueOf(user.getActivityLevel())
+                Gender.valueOf(user.getGender())
         );
 
         Mbr mbr = mbrCalculator.calculate(profile);
 
-        int netCalories = entry.getCaloriesConsumed() - entry.getCaloriesBurned();
+        int stepsKcal = stepsToKcal(entry.getSteps(), user.getCurrentWeight());
+        int netCalories = entry.getCaloriesConsumed() - entry.getCaloriesBurned() - stepsKcal;
         double deficit = mbr.tdee() - netCalories;
         double deficitPercentage = mbr.deficitPercentage(netCalories);
 

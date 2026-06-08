@@ -3,7 +3,6 @@ package com.nutrition.backend.Service;
 import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Exception.UserNotFoundException;
 import com.nutrition.backend.Repository.UserRepository;
-import com.nutrition.backend.domain.model.ActivityLevel;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.model.UserProfile;
 import com.nutrition.backend.domain.service.MbrCalculator;
@@ -22,8 +21,8 @@ public class UserService {
         this.mbrCalculator = mbrCalculator;
     }
 
-    public User createUser(String username, String email, int weightGoal, Gender gender, int age, Double height, ActivityLevel activityLevel, double startWeight) {
-        UserProfile profile = new UserProfile(startWeight, height, age, gender, activityLevel);
+    public User createUser(String username, String email, int weightGoal, Gender gender, int age, Double height, double startWeight, String weighInDay) {
+        UserProfile profile = new UserProfile(startWeight, height, age, gender);
         int calculatedGoal = (int) mbrCalculator.calculate(profile).dailyCalorieGoal();
 
         User user = new User();
@@ -34,9 +33,9 @@ public class UserService {
         user.setAge(age);
         user.setGender(gender.name());
         user.setHeight(height);
-        user.setActivityLevel(activityLevel.name());
         user.setStartWeight(startWeight);
         user.setCurrentWeight(startWeight);
+        user.setWeighInDay(weighInDay);
         return userRepository.save(user);
     }
 
@@ -53,15 +52,17 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User updateBodyMetrics(Long id, Gender gender, int age, Double height, ActivityLevel activityLevel, double currentWeight) {
+    public User updateBodyMetrics(Long id, Gender gender, int age, Double height, double currentWeight, String weighInDay) {
         User user = getUserById(id);
         user.setGender(gender.name());
         user.setAge(age);
         user.setHeight(height);
-        user.setActivityLevel(activityLevel.name());
         user.setCurrentWeight(currentWeight);
+        if (weighInDay != null) {
+            user.setWeighInDay(weighInDay);
+        }
 
-        UserProfile profile = new UserProfile(currentWeight, height, age, gender, activityLevel);
+        UserProfile profile = new UserProfile(currentWeight, height, age, gender);
         int recalculatedGoal = (int) mbrCalculator.calculate(profile).dailyCalorieGoal();
         user.setDailyCalorieGoal(recalculatedGoal);
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { dailyApi } from '../api/daily';
 import { ApiError } from '../api/client';
+import { readPersistedToken } from '../auth/session';
 import type { DailyCalories, DailyRecap } from '../types/api';
 
 interface EntryState {
@@ -32,6 +33,33 @@ export function useDailyEntry(
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingEntryRef = useRef<DailyCalories | null>(null);
+
+  useEffect(() => {
+    const flushOnUnload = () => {
+      const toSave = pendingEntryRef.current;
+      if (!toSave || !userId) return;
+      const token = readPersistedToken();
+      fetch('/api/daily-kcal', {
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          id: toSave.id ?? null,
+          userId: toSave.user.id,
+          date: toSave.date,
+          caloriesConsumed: toSave.caloriesConsumed,
+          steps: toSave.steps,
+          caloriesBurned: toSave.caloriesBurned,
+          confirmed: toSave.confirmed,
+        }),
+      });
+    };
+    window.addEventListener('beforeunload', flushOnUnload);
+    return () => window.removeEventListener('beforeunload', flushOnUnload);
+  }, [userId]);
 
   const fetchEntry = useCallback(async () => {
     if (!userId) return;
@@ -136,6 +164,13 @@ export function useDailyEntry(
 
   const confirm = useCallback(async () => {
     if (!userId) return;
+
+    // Cancel any pending auto-save so it can't overwrite confirmed state or fetch a stale recap
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    pendingEntryRef.current = null;
 
     const toConfirm = buildEntry({ confirmed: true });
     setState(s => ({ ...s, isSaving: true }));

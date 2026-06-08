@@ -3,7 +3,6 @@ package com.nutrition.backend.Controller;
 import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Repository.UserRepository;
 import com.nutrition.backend.Service.UserService;
-import com.nutrition.backend.domain.model.ActivityLevel;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
 import com.nutrition.backend.web.dto.AuthResponse;
@@ -38,7 +37,6 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody CreateUserRequest request) {
         Gender gender = Gender.valueOf(request.gender().toUpperCase());
-        ActivityLevel activityLevel = ActivityLevel.valueOf(request.activityLevel().toUpperCase());
 
         User user = userService.createUser(
                 request.username(),
@@ -47,8 +45,8 @@ public class AuthController {
                 gender,
                 request.age(),
                 request.height(),
-                activityLevel,
-                request.startWeight()
+                request.startWeight(),
+                request.weighInDay()
         );
 
         user.setPassword(passwordEncoder.encode(request.password()));
@@ -85,9 +83,9 @@ public class AuthController {
                 user.getGender(),
                 user.getAge(),
                 user.getHeight(),
-                user.getActivityLevel(),
                 user.getStartWeight(),
-                user.getCurrentWeight()
+                user.getCurrentWeight(),
+                user.getWeighInDay()
         );
     }
 

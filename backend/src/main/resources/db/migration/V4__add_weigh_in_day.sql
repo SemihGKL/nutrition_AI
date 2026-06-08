@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN weigh_in_day VARCHAR(10);

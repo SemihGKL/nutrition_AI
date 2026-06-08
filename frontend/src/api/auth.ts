@@ -13,9 +13,9 @@ export interface RegisterPayload {
   gender: string;
   age: number;
   height: number;
-  activityLevel: string;
   startWeight: number;
   weightGoal: number;
+  weighInDay: string;
 }
 
 export const authApi = {

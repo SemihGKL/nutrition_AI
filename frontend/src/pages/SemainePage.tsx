@@ -8,7 +8,7 @@ import type { DailyCalories } from '../types/api';
 import type { StreakInfo } from '../hooks/useStreak';
 import {
   isoToday, addDays, weekStart, weekEnd, weekNumber,
-  frenchDateShort, formatNumber,
+  frenchDateShort, formatNumber, stepsToKcal,
 } from '../utils/format';
 
 interface Props {
@@ -48,7 +48,9 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
       const entry = entryMap.get(date);
       const isFuture = date > today;
       const isToday = date === today;
-      const net = entry ? entry.caloriesConsumed - (entry.caloriesBurned ?? 0) : 0;
+      const weightKg = user?.currentWeight ?? 70;
+      const steps = stepsToKcal(entry?.steps ?? 0, weightKg);
+      const net = entry ? entry.caloriesConsumed - (entry.caloriesBurned ?? 0) - steps : 0;
       const met = net > 0 && net <= target;
       const partial = isToday && !!entry && !entry.confirmed;
       return { label: DAY_LABELS[i], date, net, met, future: isFuture, partial };

@@ -7,7 +7,7 @@ interface Props {
 }
 
 export function ContextMessage({ calories, target }: Props) {
-  if (calories === 0) {
+  if (calories <= 0) {
     return (
       <div style={STYLE}>
         commence ta journée — saisis tes calories

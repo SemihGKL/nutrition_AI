@@ -44,7 +44,6 @@ class DailyRecapServiceTest {
         user.setCurrentWeight(80.0);
         user.setHeight(180.0);
         user.setAge(30);
-        user.setActivityLevel("SEDENTARY");
         user.setDailyCalorieGoal(1780);
 
         DailyCalories entry = new DailyCalories();
@@ -65,12 +64,14 @@ class DailyRecapServiceTest {
         assertThat(recap.caloriesConsumed()).isEqualTo(1736);
         assertThat(recap.caloriesBurned()).isEqualTo(200);
         assertThat(recap.steps()).isEqualTo(8000);
-        assertThat(recap.netCalories()).isEqualTo(1536);
+        // stepsKcal = round(8000 × (80/70) × 0.025) = 229
+        // netCalories = 1736 - 200 - 229 = 1307
+        assertThat(recap.netCalories()).isEqualTo(1307);
         assertThat(recap.dailyCalorieGoal()).isEqualTo(1780);
         assertThat(recap.mbr()).isEqualTo(1780.0);
         assertThat(recap.tdee()).isEqualTo(2136.0);
-        assertThat(recap.deficit()).isEqualTo(600.0);
-        assertThat(recap.deficitPercentage()).isCloseTo(33.71, org.assertj.core.data.Offset.offset(0.01));
+        assertThat(recap.deficit()).isEqualTo(829.0);
+        assertThat(recap.deficitPercentage()).isCloseTo(46.57, org.assertj.core.data.Offset.offset(0.01));
         assertThat(recap.confirmed()).isFalse();
     }
 
@@ -85,7 +86,6 @@ class DailyRecapServiceTest {
         user.setCurrentWeight(80.0);
         user.setHeight(180.0);
         user.setAge(30);
-        user.setActivityLevel("SEDENTARY");
         user.setDailyCalorieGoal(1780);
 
         DailyCalories entry = new DailyCalories();

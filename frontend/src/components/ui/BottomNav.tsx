@@ -1,4 +1,5 @@
 import { NavRing, NavBars, NavReport, NavUser, NavObjectifs } from './icons';
+import { useWeighInContext } from '../../hooks/useWeighIn';
 
 export type NavTab = 'jour' | 'semaine' | 'bilan' | 'objectifs' | 'profil';
 
@@ -22,6 +23,8 @@ interface Props {
 }
 
 export function BottomNav({ active, onChange }: Props) {
+  const { needsBadge } = useWeighInContext();
+
   return (
     <div style={{
       display: 'flex',
@@ -32,6 +35,7 @@ export function BottomNav({ active, onChange }: Props) {
     }}>
       {ITEMS.map(({ id, label, Icon }) => {
         const isActive = active === id;
+        const hasDot = id === 'profil' && needsBadge;
         return (
           <button
             key={id}
@@ -50,7 +54,21 @@ export function BottomNav({ active, onChange }: Props) {
               transition: 'color 100ms linear',
             }}
           >
-            <Icon active={isActive} />
+            <div style={{ position: 'relative' }}>
+              <Icon active={isActive} />
+              {hasDot && (
+                <div style={{
+                  position: 'absolute',
+                  top: -2,
+                  right: -2,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  background: 'var(--red)',
+                  border: '1.5px solid var(--paper)',
+                }} />
+              )}
+            </div>
             <span style={{
               fontSize: 11,
               fontWeight: isActive ? 600 : 500,

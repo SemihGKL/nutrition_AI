@@ -7,7 +7,7 @@ public record CreateUserRequest(
         String gender,
         int age,
         double height,
-        String activityLevel,
         double startWeight,
-        int weightGoal
+        int weightGoal,
+        String weighInDay
 ) {}

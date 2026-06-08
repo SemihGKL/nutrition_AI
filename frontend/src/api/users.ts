@@ -6,8 +6,9 @@ export interface UpdateUserPayload {
   gender: string;
   age: number;
   height: number;
-  activityLevel: string;
   currentWeight: number;
+  weighInDay: string;
+  dailyCalorieGoal: number;
 }
 
 export const usersApi = {

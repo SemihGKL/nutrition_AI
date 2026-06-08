@@ -40,10 +40,6 @@ public class User {
     @Column(name = "height", nullable = false)
     private double height;
 
-    @NotNull(message = "Le niveau d'acitivte est obligatoire")
-    @Column(name = "activity_level", nullable = false)
-    private String activityLevel;
-
     @Column(name = "start_weight")
     private double startWeight;
 
@@ -52,4 +48,7 @@ public class User {
 
     @Column(name = "password")
     private String password;
+
+    @Column(name = "weigh_in_day")
+    private String weighInDay;
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, type CSSProperties } from 'react';
 import { Plus, Minus } from './icons';
 
 interface Props {
@@ -34,20 +34,35 @@ export function Stepper({
   min = 0,
   hint,
 }: Props) {
-  const [raw, setRaw] = useState(String(value));
+  const decimals = step < 1 ? Math.round(-Math.log10(step)) : 0;
+  const round = (n: number) => parseFloat(n.toFixed(decimals));
+
+  const [raw, setRaw] = useState(() => round(value).toFixed(decimals));
+  const isFocusedRef = useRef(false);
 
   useEffect(() => {
-    setRaw(String(value));
-  }, [value]);
+    if (!isFocusedRef.current) {
+      setRaw(round(value).toFixed(decimals));
+    }
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const commit = (str: string) => {
-    const parsed = parseInt(str, 10);
-    const next = isNaN(parsed) ? min : Math.max(min, parsed);
+    const parsed = parseFloat(str);
+    const next = isNaN(parsed) ? min : Math.max(min, round(parsed));
     onChange(next);
     setRaw(String(next));
   };
 
-  const step_ = (delta: number) => onChange(Math.max(min, value + delta));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const str = e.target.value;
+    setRaw(str);
+    const parsed = parseFloat(str);
+    if (!isNaN(parsed)) {
+      onChange(Math.max(min, round(parsed)));
+    }
+  };
+
+  const step_ = (delta: number) => onChange(Math.max(min, round(value + delta)));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -74,9 +89,9 @@ export function Stepper({
           <input
             inputMode="numeric"
             value={raw}
-            onChange={e => setRaw(e.target.value)}
-            onFocus={e => e.currentTarget.select()}
-            onBlur={e => commit(e.currentTarget.value)}
+            onChange={handleChange}
+            onFocus={e => { isFocusedRef.current = true; e.currentTarget.select(); }}
+            onBlur={e => { isFocusedRef.current = false; commit(e.currentTarget.value); }}
             onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
             style={{
               background: 'transparent',
