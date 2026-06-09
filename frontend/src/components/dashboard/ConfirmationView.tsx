@@ -12,6 +12,7 @@ interface Props {
   recap: DailyRecap;
   streak: StreakInfo;
   weightKg: number;
+  canEdit?: boolean;
   onEdit: () => void;
 }
 
@@ -28,7 +29,7 @@ function milestoneLabel(days: number): string {
   return `${months} mois`;
 }
 
-export function ConfirmationView({ date, recap, streak, weightKg, onEdit }: Props) {
+export function ConfirmationView({ date, recap, streak, weightKg, canEdit = false, onEdit }: Props) {
   const [bilanOpen, setBilanOpen] = useState(false);
   const milestone   = nextMilestone(streak.current);
   const toMilestone = milestone - streak.current;
@@ -53,22 +54,24 @@ export function ConfirmationView({ date, recap, streak, weightKg, onEdit }: Prop
             {frenchDay(date)}
           </div>
         </div>
-        <button
-          onClick={onEdit}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '6px 12px', borderRadius: 999,
-            background: 'transparent',
-            border: '1.5px solid var(--hairline)',
-            color: 'var(--ink-2)',
-            fontSize: 13, fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'var(--font-body)',
-          }}
-        >
-          <Pencil size={13} color="var(--ink-2)" sw={1.8} />
-          Modifier
-        </button>
+        {canEdit && (
+          <button
+            onClick={onEdit}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 999,
+              background: 'transparent',
+              border: '1.5px solid var(--hairline)',
+              color: 'var(--ink-2)',
+              fontSize: 13, fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            <Pencil size={13} color="var(--ink-2)" sw={1.8} />
+            Modifier
+          </button>
+        )}
       </div>
 
       {/* Day result banner */}

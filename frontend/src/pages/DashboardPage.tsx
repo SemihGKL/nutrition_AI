@@ -30,6 +30,8 @@ export function DashboardPage({ onTabChange }: Props) {
   const [allEntries, setAllEntries] = useState<DailyCalories[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const today = isoToday();
+  const isToday = viewedDate === today;
+  const isPast  = viewedDate < today;
 
   useEffect(() => { setIsEditing(false); }, [viewedDate]);
 
@@ -72,8 +74,39 @@ export function DashboardPage({ onTabChange }: Props) {
           recap={recap}
           streak={streak}
           weightKg={user?.currentWeight ?? 70}
+          canEdit={isToday}
           onEdit={() => setIsEditing(true)}
         />
+        <BottomNav active="jour" onChange={onTabChange} />
+        <HomeIndicator />
+      </PageShell>
+    );
+  }
+
+  if (isPast && !isEditing) {
+    return (
+      <PageShell>
+        <StatusBar />
+        <DayHeader
+          date={viewedDate}
+          streakCount={streak.current}
+          canGoForward
+          onPrev={() => setViewedDate(d => addDays(d, -1))}
+          onNext={() => setViewedDate(d => addDays(d, 1))}
+        />
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 8, padding: '0 24px',
+        }}>
+          <div style={{ fontSize: 32 }}>📋</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
+            Journée non confirmée
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--ink-3)', textAlign: 'center', lineHeight: 1.5 }}>
+            Les jours passés ne peuvent plus être modifiés.
+          </div>
+        </div>
         <BottomNav active="jour" onChange={onTabChange} />
         <HomeIndicator />
       </PageShell>
