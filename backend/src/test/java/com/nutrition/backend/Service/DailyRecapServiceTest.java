@@ -64,14 +64,15 @@ class DailyRecapServiceTest {
         assertThat(recap.caloriesConsumed()).isEqualTo(1736);
         assertThat(recap.caloriesBurned()).isEqualTo(200);
         assertThat(recap.steps()).isEqualTo(8000);
-        // stepsKcal = round(8000 × (80/70) × 0.025) = 229
-        // netCalories = 1736 - 200 - 229 = 1307
-        assertThat(recap.netCalories()).isEqualTo(1307);
+        // effectiveSteps = max(0, 8000 - 4000) = 4000
+        // stepsKcal = round(4000 × (80/70) × 0.025) = 114
+        // netCalories = 1736 - 200 - 114 = 1422
+        assertThat(recap.netCalories()).isEqualTo(1422);
         assertThat(recap.dailyCalorieGoal()).isEqualTo(1780);
         assertThat(recap.mbr()).isEqualTo(1780.0);
         assertThat(recap.tdee()).isEqualTo(2136.0);
-        assertThat(recap.deficit()).isEqualTo(829.0);
-        assertThat(recap.deficitPercentage()).isCloseTo(46.57, org.assertj.core.data.Offset.offset(0.01));
+        assertThat(recap.deficit()).isEqualTo(714.0);
+        assertThat(recap.deficitPercentage()).isCloseTo(40.11, org.assertj.core.data.Offset.offset(0.01));
         assertThat(recap.confirmed()).isFalse();
     }
 

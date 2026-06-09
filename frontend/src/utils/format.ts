@@ -1,6 +1,7 @@
-// Pessimistic floor: slow walk (MET 2.0), long stride, weight-adjusted
+// Only steps above sedentary baseline (4000) count — baseline is already baked into MBR × 1.2
 export function stepsToKcal(steps: number, weightKg: number): number {
-  return Math.round(steps * (weightKg / 70) * 0.025);
+  const effectiveSteps = Math.max(0, steps - 4000);
+  return Math.round(effectiveSteps * (weightKg / 70) * 0.025);
 }
 
 export function formatNumber(n: number): string {

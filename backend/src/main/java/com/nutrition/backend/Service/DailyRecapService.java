@@ -28,7 +28,8 @@ public class DailyRecapService {
     }
 
     private static int stepsToKcal(int steps, double weightKg) {
-        return (int) Math.round(steps * (weightKg / 70.0) * 0.025);
+        int effectiveSteps = Math.max(0, steps - 4000);
+        return (int) Math.round(effectiveSteps * (weightKg / 70.0) * 0.025);
     }
 
     public DailyRecapResponse getRecap(Long userId, LocalDate date) {
