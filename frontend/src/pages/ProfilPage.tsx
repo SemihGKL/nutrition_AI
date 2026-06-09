@@ -8,6 +8,9 @@ import { useWeighInContext } from '../hooks/useWeighIn';
 import { weighInApi } from '../api/weighIn';
 import { Stepper } from '../components/ui/Stepper';
 import { isoToday } from '../utils/format';
+import { computeMbr } from '../utils/mbr';
+import { CalorieTargetStep } from '../components/onboarding/CalorieTargetStep';
+import { Chevron } from '../components/ui/icons';
 
 interface Props {
   onTabChange: (tab: NavTab) => void;
@@ -191,44 +194,57 @@ interface EditViewProps {
 }
 
 function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
+  const [step, setStep] = useState(1);
   const [form, setForm] = useState({
-    username:          user.username,
-    age:               String(user.age),
-    height:            String(user.height),
-    currentWeight:     String(user.currentWeight),
-    gender:            user.gender,
-    weighInDay:        user.weighInDay ?? 'MONDAY',
-    dailyCalorieGoal:  String(user.dailyCalorieGoal),
+    username:         user.username,
+    age:              String(user.age),
+    height:           String(user.height),
+    currentWeight:    String(user.currentWeight),
+    gender:           user.gender,
+    weighInDay:       user.weighInDay ?? 'MONDAY',
+    dailyCalorieGoal: user.dailyCalorieGoal,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState<string | null>(null);
 
-  const set = (key: keyof typeof form, value: string) =>
+  const setField = (key: keyof typeof form, value: string | number) =>
     setForm(f => ({ ...f, [key]: value }));
 
-  const handleSave = async () => {
+  const mbr = form.age && form.height && form.currentWeight
+    ? computeMbr(
+        parseFloat(String(form.currentWeight)),
+        parseFloat(String(form.height)),
+        parseInt(String(form.age), 10),
+        form.gender as 'MALE' | 'FEMALE',
+      )
+    : 0;
+
+  const handleNext = () => {
     const age    = parseInt(form.age, 10);
-    const height = parseFloat(form.height);
-    const weight = parseFloat(form.currentWeight);
-    const goal   = parseInt(form.dailyCalorieGoal, 10);
+    const height = parseFloat(String(form.height));
+    const weight = parseFloat(String(form.currentWeight));
 
-    if (!form.username.trim())              return setError('Le prénom est requis');
-    if (isNaN(age) || age < 13 || age > 100) return setError('Âge invalide (13–100)');
-    if (isNaN(height) || height < 100 || height > 230) return setError('Taille invalide (100–230 cm)');
-    if (isNaN(weight) || weight < 30 || weight > 300)  return setError('Poids invalide (30–300 kg)');
-    if (isNaN(goal) || goal < 800 || goal > 5000)      return setError('Objectif invalide (800–5000 kcal)');
+    if (!form.username.trim())                          return setError('Le prénom est requis');
+    if (isNaN(age) || age < 13 || age > 100)            return setError('Âge invalide (13–100)');
+    if (isNaN(height) || height < 100 || height > 230)  return setError('Taille invalide (100–230 cm)');
+    if (isNaN(weight) || weight < 30 || weight > 300)   return setError('Poids invalide (30–300 kg)');
 
+    setError(null);
+    setStep(2);
+  };
+
+  const handleSave = async () => {
     setSaving(true);
     setError(null);
     try {
       await onSave({
-        username: form.username.trim(),
-        gender: form.gender,
-        age,
-        height,
-        currentWeight: weight,
-        weighInDay: form.weighInDay,
-        dailyCalorieGoal: goal,
+        username:         form.username.trim(),
+        gender:           form.gender,
+        age:              parseInt(form.age, 10),
+        height:           parseFloat(String(form.height)),
+        currentWeight:    parseFloat(String(form.currentWeight)),
+        weighInDay:       form.weighInDay,
+        dailyCalorieGoal: form.dailyCalorieGoal,
       });
     } catch {
       setError('Erreur lors de la mise à jour');
@@ -240,93 +256,125 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
     <PageShell>
       <StatusBar />
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 20px' }}>
-        <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--ink)', marginBottom: 24 }}>
-          Modifier mon profil
+      {/* Step bar */}
+      <div style={{ padding: '8px 24px 0' }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[1, 2].map(i => (
+            <div key={i} style={{
+              flex: 1, height: 4, borderRadius: 999,
+              background: i <= step ? 'var(--orange)' : 'var(--hairline)',
+              transition: 'background 240ms linear',
+            }} />
+          ))}
         </div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 10 }}>
+          étape {step} / 2 · {step === 1 ? 'tes infos' : 'ton objectif'}
+        </div>
+      </div>
 
-        <Section label="identité">
-          <EditField label="Prénom / pseudo" value={form.username}
-            onChange={v => set('username', v)} />
-          <div style={{ padding: '12px 16px' }}>
-            <div style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, marginBottom: 8 }}>Genre</div>
-            <SegmentedToggle
-              value={form.gender}
-              onChange={v => set('gender', v)}
-              options={[{ value: 'MALE', label: 'Homme' }, { value: 'FEMALE', label: 'Femme' }]}
-            />
-          </div>
-        </Section>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 20px' }}>
+        {step === 1 && (
+          <>
+            <Section label="identité">
+              <EditField label="Prénom / pseudo" value={form.username}
+                onChange={v => setField('username', v)} />
+              <div style={{ padding: '12px 16px' }}>
+                <div style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, marginBottom: 8 }}>Genre</div>
+                <SegmentedToggle
+                  value={form.gender}
+                  onChange={v => setField('gender', v)}
+                  options={[{ value: 'MALE', label: 'Homme' }, { value: 'FEMALE', label: 'Femme' }]}
+                />
+              </div>
+            </Section>
 
-        <Section label="physique">
-          <EditField label="Âge"               value={form.age}           onChange={v => set('age', v)}           type="number" />
-          <EditField label="Taille (cm)"        value={form.height}        onChange={v => set('height', v)}        type="number" />
-          <EditField label="Poids actuel (kg)"  value={form.currentWeight} onChange={v => set('currentWeight', v)} type="number" last />
-        </Section>
+            <Section label="physique">
+              <EditField label="Âge"              value={String(form.age)}           onChange={v => setField('age', v)}           type="number" />
+              <EditField label="Taille (cm)"       value={String(form.height)}        onChange={v => setField('height', v)}        type="number" />
+              <EditField label="Poids actuel (kg)" value={String(form.currentWeight)} onChange={v => setField('currentWeight', v)} type="number" last />
+            </Section>
 
-        <Section label="objectif">
-          <EditField label="Objectif calorique (kcal/j)" value={form.dailyCalorieGoal} onChange={v => set('dailyCalorieGoal', v)} type="number" last />
-        </Section>
+            <Section label="pesée hebdomadaire">
+              <div style={{ padding: '12px 16px' }}>
+                <div style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, marginBottom: 8 }}>Jour de pesée</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {DAYS.map(d => (
+                    <button
+                      key={d.value}
+                      onClick={() => setField('weighInDay', d.value)}
+                      style={{
+                        flex: 1, height: 34, border: 'none', borderRadius: 7,
+                        background: form.weighInDay === d.value ? 'var(--orange)' : 'var(--paper-3)',
+                        color: form.weighInDay === d.value ? '#fff' : 'var(--ink-2)',
+                        fontWeight: form.weighInDay === d.value ? 700 : 500,
+                        fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                        transition: 'all 120ms',
+                      }}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </Section>
 
-        <Section label="pesée hebdomadaire">
-          <div style={{ padding: '12px 16px' }}>
-            <div style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, marginBottom: 8 }}>Jour de pesée</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {DAYS.map(d => (
-                <button
-                  key={d.value}
-                  onClick={() => set('weighInDay', d.value)}
-                  style={{
-                    flex: 1, height: 34, border: 'none', borderRadius: 7,
-                    background: form.weighInDay === d.value ? 'var(--orange)' : 'var(--paper-3)',
-                    color: form.weighInDay === d.value ? '#fff' : 'var(--ink-2)',
-                    fontWeight: form.weighInDay === d.value ? 700 : 500,
-                    fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font-body)',
-                    transition: 'all 120ms',
-                  }}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </Section>
-
-        {error && (
-          <div style={{
-            padding: '10px 14px', marginBottom: 16,
-            background: 'var(--red-soft)', borderRadius: 'var(--radius-sm)',
-            color: 'var(--red)', fontSize: 13,
-          }}>
-            {error}
-          </div>
+            {error && (
+              <div style={{
+                padding: '10px 14px', marginBottom: 16,
+                background: 'var(--red-soft)', borderRadius: 'var(--radius-sm)',
+                color: 'var(--red)', fontSize: 13,
+              }}>
+                {error}
+              </div>
+            )}
+          </>
         )}
 
-        <div style={{ display: 'flex', gap: 10 }}>
+        {step === 2 && (
+          <CalorieTargetStep
+            mbr={mbr}
+            target={form.dailyCalorieGoal}
+            onTargetChange={v => setField('dailyCalorieGoal', v)}
+            submitError={error}
+          />
+        )}
+      </div>
+
+      {/* Footer nav */}
+      <div style={{
+        display: 'flex', gap: 10,
+        padding: '16px 24px 20px',
+        borderTop: '1px solid var(--hairline-2)',
+      }}>
+        <button
+          onClick={step === 1 ? onCancel : () => setStep(1)}
+          style={{
+            height: 56, width: 80, borderRadius: 14,
+            background: 'transparent', border: '1px solid var(--hairline)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            color: 'var(--ink-2)', fontSize: 14, fontWeight: 500,
+            cursor: 'pointer', fontFamily: 'var(--font-body)',
+          }}
+        >
+          <Chevron dir="left" size={14} color="var(--ink-2)" />
+          retour
+        </button>
+        <div style={{ flex: 1 }}>
           <button
-            onClick={onCancel}
-            style={{
-              flex: 1, height: 48, borderRadius: 'var(--radius)',
-              background: 'transparent', border: '1px solid var(--hairline)',
-              color: 'var(--ink-2)', fontSize: 15, fontWeight: 500,
-              cursor: 'pointer', fontFamily: 'var(--font-body)',
-            }}
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleSave}
+            onClick={step === 1 ? handleNext : handleSave}
             disabled={saving}
             style={{
-              flex: 2, height: 48, borderRadius: 'var(--radius)',
+              width: '100%', height: 56, borderRadius: 14,
               background: 'var(--orange)', border: 'none',
               color: '#fff', fontSize: 15, fontWeight: 600,
               cursor: saving ? 'default' : 'pointer',
               opacity: saving ? 0.7 : 1,
               fontFamily: 'var(--font-body)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
-            {saving ? 'Enregistrement…' : 'Enregistrer'}
+            {step === 1 ? 'continuer' : (saving ? 'enregistrement…' : 'enregistrer')}
+            {step === 1 && <Chevron dir="right" size={16} color="#fff" sw={2} />}
           </button>
         </div>
       </div>

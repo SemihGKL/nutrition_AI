@@ -53,31 +53,16 @@ class MbrCalculatorTest {
     }
 
     @Test
-    void should_floor_daily_calorie_goal_at_mbr_when_sedentary() {
+    void should_calculate_daily_calorie_goal_as_mbr_minus_200_rounded_to_50() {
         // Given
-        // MBR = 1780, TDEE SEDENTARY = 2136 → TDEE - 500 = 1636 < MBR → goal = MBR = 1780
+        // MBR = 1780 → goal = round((1780 - 200) / 50) * 50 = round(31.6) * 50 = 32 * 50 = 1600
         var profile = new UserProfile(80.0, 180.0, 30, Gender.MALE);
 
         // When
         Mbr result = calculator.calculate(profile);
 
         // Then
-        assertEquals(1780.0, result.dailyCalorieGoal(), 0.001);
-    }
-
-    @Test
-    void should_apply_500_deficit_when_tdee_high_enough() {
-        // Given
-        // weight=150kg, height=200cm, age=25, MALE
-        // MBR = (10×150) + (6.25×200) − (5×25) + 5 = 1500 + 1250 − 125 + 5 = 2630
-        // TDEE = 2630 × 1.2 = 3156 → TDEE - 500 = 2656 > MBR → goal = 2656
-        var profile = new UserProfile(150.0, 200.0, 25, Gender.MALE);
-
-        // When
-        Mbr result = calculator.calculate(profile);
-
-        // Then
-        assertEquals(2656.0, result.dailyCalorieGoal(), 0.001);
+        assertEquals(1600.0, result.dailyCalorieGoal(), 0.001);
     }
 
     @Test
