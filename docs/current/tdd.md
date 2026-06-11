@@ -1,141 +1,170 @@
-# TDD Analysis — HTTP Boundary Tests (Controllers + Frontend API clients)
+# TDD Analysis — Persistance des objectifs utilisateur en base de données
 
-**Test Type:** Two separate test suites:
-- Backend: INTEGRATION (`@WebMvcTest` — HTTP layer + Spring Security filter, no full context)
-- Frontend: UNIT (Vitest + `vi.fn()` fetch mock — pure URL/body contract verification)
+**Test Type:** UNIT (Suite A — Mockito), E2E/@WebMvcTest (Suite B), UNIT/Vitest (Suite C)
 
-**Feature Area (Backend):**
-- `backend/src/test/java/com/nutrition/backend/Controller/`
+**Feature Area:**
+- Backend service: `backend/src/main/java/com/nutrition/backend/Service/`
+- Backend controller: `backend/src/main/java/com/nutrition/backend/Controller/`
+- Frontend API: `frontend/src/api/`
 
-**Feature Area (Frontend):**
-- `frontend/src/api/__tests__/`
-
-**Bounded Context:** monolith — `Controller/` + `Service/` + `Config/`
+**Bounded Context:** nutrition (monolithe — dette technique assumée, packages existants conservés)
 
 ---
 
-## EXPLORE Findings
+## Suite A — ObjectiveServiceTest (tests unitaires, Mockito)
 
-### Backend context
+**Fichier cible:** `backend/src/test/java/com/nutrition/backend/Service/ObjectiveServiceTest.java`
 
-| Item | Detail |
-|---|---|
-| Security | Stateless JWT. `JwtAuthenticationFilter` reads `Authorization: Bearer <token>` header, calls `TokenService.extractSubject` + `isTokenValid`, sets `Authentication` in `SecurityContextHolder`. All routes except `/api/auth/**` are protected. |
-| Auth injection | Controllers receive `Authentication auth` — `auth.getName()` returns the email extracted from the JWT. |
-| Exception to HTTP mapping | `GlobalExceptionHandler` (@RestControllerAdvice): `UserNotFoundException` → 404, `DailyCaloriesNotFoundException` → 404, `IllegalArgumentException` → 400, `DateTimeParseException` → 400. |
-| Date parsing | `LocalDate.parse(date)` is called inside the controller method body — an invalid segment (e.g. `"19"`) throws `DateTimeParseException` which the advice maps to 400. |
-| Upsert behaviour | `DailyCaloriesService.saveDailyCalories` looks up by `(userId, date)`; if found it updates in-place, if not it inserts. The controller always responds 200 regardless of insert/update. |
-| `UserService.getByEmail` | Throws `UserNotFoundException` (→ 404) when no user matches the JWT email. Already covered by `UserServiceTest` at the service layer. |
-| DTO shapes | `CreateDailyCaloriesRequest(Long id, LocalDate date, int caloriesConsumed, int steps, int caloriesBurned, boolean confirmed)` — no `userId` field. `CreateWeighInRequest(LocalDate date, double weight, String note)` — no `userId` field. |
-| Response shapes | `DailyCalories` entity (id, date, caloriesConsumed, steps, caloriesBurned, confirmed — `user` is @JsonIgnore). `WeeklyWeighIn` entity (id, date, weight, note — `user` is @JsonIgnore). `UserDto` record (id, username, email, dailyCalorieGoal, weightGoal, gender, age, height, startWeight, currentWeight, weighInDay). `DailyRecapResponse` record (date, caloriesConsumed, caloriesBurned, steps, netCalories, dailyCalorieGoal, mbr, tdee, deficit, deficitPercentage, confirmed). |
-| Existing test style | `@ExtendWith(MockitoExtension.class)`, `@Mock`, `@InjectMocks`, AssertJ assertions (`assertThat`, `assertThatThrownBy`). No `@WebMvcTest` tests exist yet. |
+**Wiring:** `@ExtendWith(MockitoExtension.class)`, `@Mock UserObjectiveRepository`, `@Mock ObjectiveCompletionRepository`, `@InjectMocks ObjectiveService`
 
-### Frontend context
-
-| Item | Detail |
-|---|---|
-| HTTP client | `client.ts` — a thin `fetch` wrapper. `api.get`, `api.post`, `api.put`, `api.patch`. Reads JWT from `readPersistedToken()`. Throws `ApiError(status, message)` on non-2xx. Returns `undefined` (cast as T) on 204 or empty `content-length`. |
-| `daily.ts` | `getByDate(date)` → `GET /api/daily-kcal/{date}`, catches 404 → null. `getAll()` → `GET /api/daily-kcal`. `save(entry)` → `POST /api/daily-kcal` with body `{id, date, caloriesConsumed, steps, caloriesBurned, confirmed}` — no `userId`. `getRecap(date)` → `GET /api/daily-kcal/{date}/recap`. |
-| `weighIn.ts` | `getAll()` → `GET /api/weighin`. `getLatest()` → `GET /api/weighin/latest`, catches any error → null. `save(data)` → `POST /api/weighin` with body `{date, weight, note}` — no `userId`. |
-| Test tooling | Vitest and `@vitest/globals` are **not yet installed** — `package.json` has no test dependencies. The test plan must note the required setup step. |
-| `DailyCalories` type (`types/api.ts`) | Has a `user: { id: number }` field. The `save` call in `daily.ts` correctly omits it from the POST body — this is the contract the test must pin. |
+| # | Test Name | TPP | Contradiction | Status |
+|---|-----------|-----|---------------|--------|
+| A1 | `should_return_empty_list_when_user_has_no_objectives` | nil → constant (2) | Baseline — peut être satisfait par `return List.of()` | ✅ GREEN |
+| A2 | `should_return_all_objectives_when_user_has_objectives` | constant → variable (3) | La liste vide constante est fausse quand le repository retourne des objectifs — force la délégation à `findByUserId` | ✅ GREEN |
+| A3 | `should_create_objective_and_return_it_when_day_of_week_and_label_are_valid` | unconditional → conditional (4) | `getObjectives` ne persiste rien — `createObjective` doit appeler `save` sur le repository et retourner l'entité persistée → introduit une nouvelle branche | ✅ GREEN |
+| A4 | `should_delete_objective_when_objective_belongs_to_the_authenticated_user` | unconditional → conditional (4) | La création ne supprime pas — force `deleteById` après vérification d'existence et d'ownership | ✅ GREEN |
+| A5 | `should_prevent_deletion_when_objective_does_not_belong_to_the_authenticated_user` | unconditional → conditional (4) | La suppression sans contrôle réussit même pour un objectif étranger — force la comparaison de `userId` et le lancement d'une exception d'accès | ✅ GREEN |
+| A6 | `should_prevent_deletion_when_objective_does_not_exist` | unconditional → conditional (4) | L'ownership check suppose que `findById` retourne quelque chose — force la gestion du cas `Optional.empty()` avec une exception de not-found | ✅ GREEN |
+| A7 | `should_mark_objective_as_done_when_no_completion_exists_for_that_date` | nil → constant (2) | Les tests précédents ne touchent pas aux completions — baseline du toggle : introduit `save` sur `ObjectiveCompletionRepository` | ✅ GREEN |
+| A8 | `should_not_create_duplicate_completion_when_objective_is_already_marked_done_for_that_date` | unconditional → conditional (4) | Un deuxième `markDone` sans guard créerait un doublon (contrainte UNIQUE en base) — force `existsByObjectiveIdAndDate` avant `save` | ✅ GREEN |
+| A9 | `should_remove_completion_when_objective_is_marked_undone_for_a_date` | unconditional → conditional (4) | `markDone` ne supprime pas — force `deleteByObjectiveIdAndDate` | ✅ GREEN |
+| A10 | `should_return_empty_map_when_no_completions_exist_in_date_range` | nil → constant (2) | Baseline pour `getCompletions` — satisfait par `return Map.of()` quand le repository retourne une liste vide | ✅ GREEN |
+| A11 | `should_return_completions_map_indexed_by_date_when_completions_exist_in_date_range` | scalar → collection (5) | La map vide constante est fausse pour des completions existantes — force l'agrégation en `Map<String, List<Long>>` groupée par date ISO | ✅ GREEN |
 
 ---
 
-## Suite A — Backend `@WebMvcTest` controller tests
+## Suite B — ObjectiveControllerTest (@WebMvcTest)
 
-### Ordered Test List — `DailyCaloriesControllerTest`
+**Fichier cible:** `backend/src/test/java/com/nutrition/backend/Controller/ObjectiveControllerTest.java`
 
-| # | Test Name | TPP | Contradiction | Status |
-|---|-----------|-----|---------------|--------|
-| 1 | should return all daily entries for the authenticated user when a valid JWT is provided | nil → constant (2) | Baseline — can be satisfied by the real controller + mocked service returning any list | ✅ GREEN |
-| 2 | should return 401 when no JWT token is provided to any daily-kcal endpoint | unconditional → conditional (4) | The always-200 baseline from Test 1 must now branch on the presence of a valid token — forces security filter wiring to be validated | ✅ GREEN |
-| 3 | should return the daily entry for a valid date when the entry exists for the authenticated user | nil → constant (2) | New endpoint variant (`GET /{date}`) — baseline can be satisfied by the mock returning a fixed entry | ✅ GREEN |
-| 4 | should return 404 when no entry exists for the given date for the authenticated user | unconditional → conditional (4) | The constant-return from Test 3 cannot handle the absent case — forces `DailyCaloriesNotFoundException` path to propagate as 404 | ✅ GREEN |
-| 5 | should return 400 when the date segment in the URL cannot be parsed as a calendar date | unconditional → conditional (4) | Contradicts Test 3's assumption that the path segment is always a valid date — forces `DateTimeParseException` to 400 mapping to be exercised at the HTTP layer (the bug: `GET /api/daily-kcal/19`) | ✅ GREEN |
-| 6 | should save a new daily entry and return the saved entry when the POST body contains valid fields without a userId | nil → constant (2) | New endpoint (`POST /`) — baseline satisfied by mock returning the entry | ✅ GREEN |
-| 7 | should apply upsert behaviour and return the updated entry when POSTing for a date that already has an entry | unconditional → conditional (4) | The constant-return from Test 6 cannot distinguish insert from update — forces the mock to reflect the update path and the response to carry the existing entry's id | ✅ GREEN |
-| 8 | should return the daily recap for the authenticated user when a valid date is provided | nil → constant (2) | New endpoint (`GET /{date}/recap`) — satisfied by mocked `DailyRecapService.getRecap` returning a fixed response | ✅ GREEN |
-
-### Ordered Test List — `WeeklyWeighInControllerTest`
+**Wiring (pattern hérité de `DailyCaloriesControllerTest`) :**
+- `@WebMvcTest(ObjectiveController.class)`
+- `@TestPropertySource(properties = { "jwt.secret=test-secret-key-that-is-at-least-32-characters-long", "jwt.expiration=86400000" })`
+- `@MockBean TokenService tokenService`
+- `@MockBean UserService userService`
+- `@MockBean ObjectiveService objectiveService`
+- Dans `@BeforeEach` : stub `tokenService.extractSubject` + `tokenService.isTokenValid` + `userService.getByEmail("user")`
+- Chaque test authentifié porte `@WithMockUser(username = "user")`
+- DELETE et POST portent `.with(csrf())`
 
 | # | Test Name | TPP | Contradiction | Status |
 |---|-----------|-----|---------------|--------|
-| 1 | should return all weigh-ins for the authenticated user when a valid JWT is provided | nil → constant (2) | Baseline — can be satisfied by mocked service returning a fixed list | ✅ GREEN |
-| 2 | should return the latest weigh-in for the authenticated user when at least one weigh-in exists | nil → constant (2) | New endpoint (`GET /latest`) — the constant list from Test 1 does not cover this route; satisfied by mock returning one entry | ✅ GREEN |
-| 3 | should return 204 when no weigh-in has ever been recorded for the authenticated user | unconditional → conditional (4) | The always-200 from Test 2 is wrong when the service returns an empty Optional — forces the `noContent()` branch to be exercised | ✅ GREEN |
-| 4 | should save a new weigh-in and return the saved entry when the POST body contains valid fields without a userId | nil → constant (2) | New endpoint (`POST /`) — forces POST route to be wired and the absence of `userId` in the accepted request body to be verified | ✅ GREEN |
-
-### Ordered Test List — `UserControllerTest`
-
-| # | Test Name | TPP | Contradiction | Status |
-|---|-----------|-----|---------------|--------|
-| 1 | should return the profile of the authenticated user when a valid JWT is provided | nil → constant (2) | Baseline — satisfied by mocked service returning a fixed User and UserMapper producing a UserDto | ✅ GREEN |
-| 2 | should return the updated profile when a PUT request contains all required body fields for the authenticated user | nil → constant (2) | New endpoint (`PUT /me`) — the GET-only baseline from Test 1 does not cover this route; forces the three `userService` calls and the final `getUserById` fetch to be wired | ✅ GREEN |
-| 3 | should skip updating the calorie goal when the dailyCalorieGoal field is absent from the PUT body | unconditional → conditional (4) | The always-update logic from Test 2 is wrong when `dailyCalorieGoal` is null — forces the `if (request.dailyCalorieGoal() != null)` branch to be visible at the contract level | ✅ GREEN |
+| B1 | `should_return_401_when_request_has_no_jwt_token` | nil → constant (2) | Baseline sécurité — Spring Security rejette sans header `Authorization` | ✅ GREEN |
+| B2 | `should_return_empty_list_when_authenticated_user_has_no_objectives` | constant → variable (3) | Le 401 constant ne peut pas retourner 200 avec un body JSON — force le routing `GET /api/objectives` avec l'utilisateur authentifié | ✅ GREEN |
+| B3 | `should_return_list_of_objectives_when_authenticated_user_has_objectives` | constant → variable (3) | La liste vide insatisfaisante quand le service retourne des objectifs — force la sérialisation JSON de `id`, `dayOfWeek`, `label`, `position` | ✅ GREEN |
+| B4 | `should_return_201_when_authenticated_user_creates_a_valid_objective` | unconditional → conditional (4) | `GET` retourne 200 ; `POST /api/objectives` doit retourner 201 avec l'objet créé — introduit la route POST et le status `CREATED` | ✅ GREEN |
+| B5 | `should_return_204_when_authenticated_user_deletes_their_own_objective` | unconditional → conditional (4) | POST crée — `DELETE /api/objectives/{id}` doit retourner 204 sans body — introduit la route DELETE | ✅ GREEN |
+| B6 | `should_return_404_when_authenticated_user_deletes_an_objective_that_does_not_exist` | unconditional → conditional (4) | La suppression réussit toujours dans les tests précédents — force la propagation de `ObjectiveNotFoundException` → 404 via `GlobalExceptionHandler` | ✅ GREEN |
+| B7 | `should_return_403_when_authenticated_user_deletes_an_objective_that_belongs_to_another_user` | unconditional → conditional (4) | La suppression ne contrôle pas l'ownership — force `ObjectiveAccessDeniedException` → 403 via `GlobalExceptionHandler` | ✅ GREEN |
+| B8 | `should_return_201_when_authenticated_user_marks_an_objective_as_done_for_a_date` | unconditional → conditional (4) | DELETE ne crée pas de completion — force `POST /api/objectives/{id}/completions/{date}` → 201 | ✅ GREEN |
+| B9 | `should_return_204_when_authenticated_user_unmarks_an_objective_for_a_date` | unconditional → conditional (4) | POST completion retourne 201 — `DELETE /api/objectives/{id}/completions/{date}` doit retourner 204 | ✅ GREEN |
+| B10 | `should_return_completions_map_indexed_by_date_when_authenticated_user_queries_a_date_range` | scalar → collection (5) | Les tests précédents testent des actions ponctuelles — force `GET /api/objectives/completions?from=&to=` retournant `Map<String, List<Long>>` sérialisé en JSON | ✅ GREEN |
 
 ---
 
-## Suite B — Frontend Vitest API client tests
+## Suite C — objectives.test.ts (Vitest, frontend)
 
-**Pre-condition:** Vitest and `@vitest/globals` must be installed before these tests can run.
-Required dev-dependencies: `vitest`, `@vitest/globals` (and optionally `jsdom` for environment).
+**Fichier cible:** `frontend/src/api/__tests__/objectives.test.ts`
 
-### Ordered Test List — `daily.test.ts`
+**Prérequis :** Vitest est installé (`vitest ^4.1.8` dans `devDependencies`). Le client `api` n'expose pas encore de méthode `delete` — elle doit être ajoutée à `client.ts` en même temps que `objectives.ts`.
+
+**Module mock (hissé en tête de fichier, avant tout import) :**
+```typescript
+vi.mock('../client', async () => {
+  const { ApiError } = await vi.importActual<typeof import('../client')>('../client');
+  return {
+    ApiError,
+    api: {
+      get: vi.fn(),
+      post: vi.fn(),
+      delete: vi.fn(),
+    },
+  };
+});
+```
 
 | # | Test Name | TPP | Contradiction | Status |
 |---|-----------|-----|---------------|--------|
-| 1 | should call GET /api/daily-kcal when fetching all daily entries | nil → constant (2) | Baseline — verifies the simplest URL is constructed correctly | ✅ GREEN |
-| 2 | should call GET /api/daily-kcal/{date} with the exact date string when fetching a single entry | constant → variable (3) | The fixed URL from Test 1 cannot satisfy a parameterised path — forces the date interpolation to be verified | ✅ GREEN |
-| 3 | should return null instead of throwing when the single-entry request receives a 404 response | unconditional → conditional (4) | The always-resolve behaviour from Test 2 is wrong for 404 — forces the catch-and-return-null branch to be exercised | ✅ GREEN |
-| 4 | should call POST /api/daily-kcal with a body that contains date, caloriesConsumed, steps, caloriesBurned, and confirmed but no userId field | nil → constant (2) | New method (`save`) — pins the exact POST body shape; the absence of `userId` is the critical assertion that would have caught the production bug | ✅ GREEN |
-| 5 | should call GET /api/daily-kcal/{date}/recap with the exact date string when fetching a recap | constant → variable (3) | The fixed POST from Test 4 does not cover this GET+param route — forces the recap URL interpolation to be verified | ✅ GREEN |
-
-### Ordered Test List — `weighIn.test.ts`
-
-| # | Test Name | TPP | Contradiction | Status |
-|---|-----------|-----|---------------|--------|
-| 1 | should call GET /api/weighin when fetching all weigh-ins | nil → constant (2) | Baseline — verifies the simplest URL | ✅ GREEN |
-| 2 | should call GET /api/weighin/latest when fetching the latest weigh-in | nil → constant (2) | New route — the `/weighin` URL from Test 1 is wrong for the `/latest` sub-route | ✅ GREEN |
-| 3 | should return null instead of throwing when the latest weigh-in request fails with any error | unconditional → conditional (4) | The always-resolve behaviour from Test 2 is wrong for error cases — forces the catch-and-return-null branch | ✅ GREEN |
-| 4 | should call POST /api/weighin with a body that contains date, weight, and note but no userId field | nil → constant (2) | New method (`save`) — pins the POST body; the absence of `userId` is the contract assertion | ✅ GREEN |
+| C1 | `getAll calls GET /api/objectives without any userId in the path` | nil → constant (2) | Baseline — vérifie que `getAll()` appelle `api.get` avec `/api/objectives` et sans userId | ✅ GREEN |
+| C2 | `create calls POST /api/objectives with body containing dayOfWeek and label but not userId` | constant → variable (3) | `getAll` appelle `get` — `create` doit appeler `post` avec un body structuré différent → force la vérification du body et l'absence de userId | ✅ GREEN |
+| C3 | `remove calls DELETE /api/objectives/{id} with the correct id in the path` | unconditional → conditional (4) | POST ne supprime pas — `remove(id)` doit appeler `api.delete` avec `{id}` dans le chemin → force l'ajout de `delete` au client | ✅ GREEN |
+| C4 | `markDone calls POST /api/objectives/{id}/completions/{date} with the correct id and date` | unconditional → conditional (4) | `remove` appelle `delete` — `markDone` doit appeler `post` vers un chemin distinct avec id et date interpolés | ✅ GREEN |
+| C5 | `markUndone calls DELETE /api/objectives/{id}/completions/{date} with the correct id and date` | unconditional → conditional (4) | `markDone` appelle `post` sur les completions — `markUndone` doit appeler `delete` sur le même chemin → distingue DELETE de POST | ✅ GREEN |
+| C6 | `getCompletions calls GET /api/objectives/completions with from and to as query parameters` | scalar → collection (5) | Les tests précédents testent des actions ponctuelles — `getCompletions(from, to)` appelle `get` avec deux query params `from` et `to` dans l'URL | ✅ GREEN |
 
 ---
 
-## Files to Create
+## Fichiers à créer
 
-### Backend
-- `backend/src/test/java/com/nutrition/backend/Controller/DailyCaloriesControllerTest.java`
-- `backend/src/test/java/com/nutrition/backend/Controller/WeeklyWeighInControllerTest.java`
-- `backend/src/test/java/com/nutrition/backend/Controller/UserControllerTest.java`
+**Backend — migration SQL :**
+- `backend/src/main/resources/db/migration/V8__create_objectives_tables.sql`
 
-### Frontend (after installing Vitest)
-- `frontend/src/api/__tests__/daily.test.ts`
-- `frontend/src/api/__tests__/weighIn.test.ts`
+**Backend — entités JPA :**
+- `backend/src/main/java/com/nutrition/backend/Class/UserObjective.java`
+- `backend/src/main/java/com/nutrition/backend/Class/ObjectiveCompletion.java`
+
+**Backend — repositories :**
+- `backend/src/main/java/com/nutrition/backend/Repository/UserObjectiveRepository.java`
+- `backend/src/main/java/com/nutrition/backend/Repository/ObjectiveCompletionRepository.java`
+
+**Backend — DTOs :**
+- `backend/src/main/java/com/nutrition/backend/web/dto/CreateObjectiveRequest.java`
+- `backend/src/main/java/com/nutrition/backend/web/dto/ObjectiveDto.java`
+
+**Backend — exceptions (+ handlers dans `GlobalExceptionHandler`) :**
+- `backend/src/main/java/com/nutrition/backend/Exception/ObjectiveNotFoundException.java`
+- `backend/src/main/java/com/nutrition/backend/Exception/ObjectiveAccessDeniedException.java`
+
+**Backend — service et controller :**
+- `backend/src/main/java/com/nutrition/backend/Service/ObjectiveService.java`
+- `backend/src/main/java/com/nutrition/backend/Controller/ObjectiveController.java`
+
+**Frontend :**
+- `frontend/src/api/objectives.ts`
+- `frontend/src/api/__tests__/objectives.test.ts`
+- (modification) `frontend/src/api/client.ts` — ajout de `delete` à l'objet `api`
 
 ---
 
 ## Design Notes
 
-### Backend (@WebMvcTest wiring)
+**Entités JPA (pattern `DailyCalories`) :**
+- `UserObjective` : `@Entity @Getter @Setter @Table(name = "user_objectives")`, champs `id`, `userId` (`@Column(name = "user_id")`), `dayOfWeek` (`@Column(name = "day_of_week")`), `label`, `position`
+- `ObjectiveCompletion` : `@Entity @Getter @Setter @Table(name = "objective_completions")`, champs `id`, `userId`, `objectiveId`, `date`
 
-- **Test class annotation:** `@WebMvcTest(XxxController.class)` loads only the web slice (controller + security filter chain + advice). `GlobalExceptionHandler` is auto-included as a `@RestControllerAdvice` in the same scan path.
-- **Security setup:** Use `@MockBean TokenService`. To simulate an authenticated request configure `when(tokenService.extractSubject(anyString())).thenReturn("test@example.com")` and `when(tokenService.isTokenValid(anyString(), anyString())).thenReturn(true)` so the filter populates `SecurityContextHolder`. Pass `Authorization: Bearer fake-token` on each request.
-- **Dependencies to `@MockBean`:** `UserService`, `DailyCaloriesService`, `DailyRecapService` for `DailyCaloriesControllerTest`; `UserService`, `WeeklyWeighInService` for `WeeklyWeighInControllerTest`; `UserService` for `UserControllerTest`. Also `@MockBean TokenService` in every class.
-- **`UserService.getByEmail` stub:** Every test that goes past the security filter needs `when(userService.getByEmail("test@example.com")).thenReturn(userWithId(1L))` in `@BeforeEach`.
-- **401 test:** Send the request without an `Authorization` header — the filter does nothing, Spring Security denies access with 401. No stub needed.
-- **400 via `DateTimeParseException`:** Call `GET /api/daily-kcal/19` (or any non-ISO-date string). `LocalDate.parse("19")` throws `DateTimeParseException` which `GlobalExceptionHandler.handleDateTimeParse` maps to 400. No extra mock needed.
-- **404 via `DailyCaloriesNotFoundException`:** Configure `dailyCaloriesService.getDailyCalories(any(), any())` to return `Optional.empty()` — the controller calls `orElseThrow(() -> new DailyCaloriesNotFoundException(...))` which the advice maps to 404.
-- **Upsert POST (200 both times):** No need for two requests in one test — write two separate test methods, each mocking `saveDailyCalories` to return the appropriate entry. Assert status 200 in both; assert `id` in the update variant matches the existing entry's id.
-- **Assertion style:** MockMvc fluent API — `mockMvc.perform(...).andExpect(status().isOk())`, `andExpect(jsonPath("$.caloriesConsumed").value(1800))`. Keep assertions on the observable HTTP contract only (status code, JSON field presence/value).
-- **Naming convention:** `should_[résultat]_when_[condition]` with underscores, matching all existing test classes in this project.
+**Repositories (pattern `DailyCaloriesRepository`) :**
+- `UserObjectiveRepository` : `findByUserId(Long userId)` → `List<UserObjective>`
+- `ObjectiveCompletionRepository` : `existsByObjectiveIdAndDate(Long, LocalDate)`, `deleteByObjectiveIdAndDate(Long, LocalDate)`, `findByUserIdAndDateBetween(Long, LocalDate, LocalDate)`
 
-### Frontend (Vitest)
+**Ownership check (A5/A6/B6/B7) :**
+- `ObjectiveService.deleteObjective(Long objectiveId, Long userId)` : appelle `findById` → lève `ObjectiveNotFoundException` si absent, compare `objective.getUserId()` avec `userId` → lève `ObjectiveAccessDeniedException` si différent, puis `deleteById`
+- Étendre `GlobalExceptionHandler` avec : `ObjectiveNotFoundException` → 404, `ObjectiveAccessDeniedException` → 403
 
-- **Install step:** `npm install --save-dev vitest @vitest/globals` and add `"test": "vitest"` to `package.json` scripts. Add `test: { globals: true, environment: 'jsdom' }` to `vite.config.ts`.
-- **Fetch mock:** `vi.spyOn(globalThis, 'fetch').mockResolvedValue(...)` before each test. Return a minimal Response-shaped object: `{ ok: true, status: 200, json: () => Promise.resolve(payload), headers: { get: () => null }, text: () => Promise.resolve('') }`.
-- **Token mock:** `vi.mock('../../auth/session', () => ({ readPersistedToken: () => 'test-token' }))` at the top of the test file so `client.ts` sends an `Authorization` header without hitting real storage.
-- **`sessionBus` mock:** `vi.mock('../../auth/sessionBus', () => ({ sessionBus: { emitSessionExpired: vi.fn() } }))` to prevent module import errors.
-- **URL assertion:** Capture the first argument of the spied `fetch` call — `expect(vi.mocked(fetch).mock.calls[0][0]).toBe('/api/daily-kcal/2026-06-11')`.
-- **Body assertion (no `userId`):** Parse the body from the spy — `const body = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string)` — then `expect(body).not.toHaveProperty('userId')` and `expect(body).toHaveProperty('caloriesConsumed')`.
-- **Test file structure:** `describe('dailyApi', () => { beforeEach(() => { vi.restoreAllMocks(); vi.mock(...); }); ... })`.
+**Idempotence `markDone` (A8) :**
+- Guard : `if (completionRepository.existsByObjectiveIdAndDate(objectiveId, date)) return;` — pas d'exception, pas de doublon
+
+**Map des completions (A10/A11/B10) :**
+- `ObjectiveService.getCompletions(Long userId, LocalDate from, LocalDate to)` retourne `Map<String, List<Long>>`
+- Implémentation cible : `completions.stream().collect(groupingBy(c -> c.getDate().toString(), mapping(ObjectiveCompletion::getObjectiveId, toList())))`
+
+**Controller (B) :**
+- `@RequestMapping("/api/objectives")`
+- `GET /` → 200 `List<ObjectiveDto>`
+- `POST /` → 201 `ObjectiveDto` (body : `CreateObjectiveRequest`)
+- `DELETE /{id}` → 204 (service reçoit `objectiveId` + `userId` extrait de `Authentication`)
+- `POST /{id}/completions/{date}` → 201
+- `DELETE /{id}/completions/{date}` → 204
+- `GET /completions?from=&to=` → 200 `Map<String, List<Long>>`
+
+**Ajout `delete` au client frontend (`client.ts`) :**
+```typescript
+delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+```
+Le mock dans `objectives.test.ts` doit inclure `delete: vi.fn()` — identique au `delete` du mock `daily.test.ts` qui n'en avait pas besoin, mais le pattern de mock `vi.mock('../client', async () => { ... })` reste le même.
+
+**Assertions frontend (pattern `daily.test.ts`) :**
+- URL : `vi.mocked(api.get).mock.calls[0][0]`
+- Body POST : `vi.mocked(api.post).mock.calls[0]` → `[path, body]` → `expect(body).not.toHaveProperty('userId')`
+- Path DELETE : `vi.mocked(api.delete).mock.calls[0][0]`
+
+**Naming convention tests backend :** `should_[résultat]_when_[condition]` en snake_case — identique aux tests existants.

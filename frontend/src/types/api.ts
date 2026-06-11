@@ -49,3 +49,10 @@ export interface AuthTokens {
 }
 
 export type DayStatus = 'hit' | 'miss' | 'today' | 'future';
+
+export interface ObjectiveDto {
+  id: number;
+  dayOfWeek: number;
+  label: string;
+  position: number;
+}

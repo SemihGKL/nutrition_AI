@@ -65,6 +65,7 @@ describe('dailyApi', () => {
       steps: 8000,
       caloriesBurned: 300,
       confirmed: false,
+      user: { id: 1 },
     };
     vi.mocked(api.post).mockResolvedValue(entry);
 

@@ -1,15 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { StatusBar } from '../components/dashboard/StatusBar';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { Check, Plus } from '../components/ui/icons';
 import { isoToday, weekStart, addDays } from '../utils/format';
-import { useAuth } from '../hooks/useAuth';
-
-interface ObjectifTask {
-  id: string;
-  dayOfWeek: number;
-  label: string;
-}
+import { objectivesApi, type CompletionsMap } from '../api/objectives';
+import type { ObjectiveDto } from '../types/api';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
@@ -17,77 +12,72 @@ function currentDayOfWeek(): number {
   return (new Date().getDay() + 6) % 7;
 }
 
-function loadFromStorage<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 interface Props {
   onTabChange: (tab: NavTab) => void;
 }
 
 export function ObjectifsPage({ onTabChange }: Props) {
-  const { user } = useAuth();
-  const tasksKey = user ? `nia_agenda_tasks_${user.id}` : null;
-  const completionsKey = user ? `nia_agenda_completions_${user.id}` : null;
-
-  const [tasks, setTasks] = useState<ObjectifTask[]>([]);
-  const [completions, setCompletions] = useState<Record<string, string[]>>({});
-
-  useEffect(() => {
-    if (!tasksKey || !completionsKey) return;
-    setTasks(loadFromStorage<ObjectifTask[]>(tasksKey, []));
-    setCompletions(loadFromStorage<Record<string, string[]>>(completionsKey, {}));
-  }, [tasksKey, completionsKey]);
+  const [tasks, setTasks] = useState<ObjectiveDto[]>([]);
+  const [completions, setCompletions] = useState<CompletionsMap>({});
   const [addingForDay, setAddingForDay] = useState<number | null>(null);
   const [newLabel, setNewLabel] = useState('');
 
   const today = isoToday();
   const todayDow = currentDayOfWeek();
+  const monday = weekStart(today);
+  const sunday = addDays(monday, 6);
 
-  function persistTasks(next: ObjectifTask[]) {
-    setTasks(next);
-    if (tasksKey) localStorage.setItem(tasksKey, JSON.stringify(next));
-  }
+  const loadData = useCallback(async () => {
+    const [fetchedTasks, fetchedCompletions] = await Promise.all([
+      objectivesApi.getAll(),
+      objectivesApi.getCompletions(monday, sunday),
+    ]);
+    setTasks(fetchedTasks);
+    setCompletions(fetchedCompletions);
+  }, [monday, sunday]);
 
-  function persistCompletions(next: Record<string, string[]>) {
-    setCompletions(next);
-    if (completionsKey) localStorage.setItem(completionsKey, JSON.stringify(next));
-  }
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  function addTask(dow: number) {
+  async function addTask(dow: number) {
     const trimmed = newLabel.trim();
     if (!trimmed) return;
-    const task: ObjectifTask = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      dayOfWeek: dow,
-      label: trimmed,
-    };
-    persistTasks([...tasks, task]);
+    const created = await objectivesApi.create(dow, trimmed);
+    setTasks(prev => [...prev, created]);
     setAddingForDay(null);
     setNewLabel('');
   }
 
-  function deleteTask(id: string) {
-    persistTasks(tasks.filter(t => t.id !== id));
-    const nextCompletions: Record<string, string[]> = {};
-    for (const [date, ids] of Object.entries(completions)) {
-      const filtered = ids.filter(tid => tid !== id);
-      if (filtered.length > 0) nextCompletions[date] = filtered;
-    }
-    persistCompletions(nextCompletions);
+  async function deleteTask(id: number) {
+    await objectivesApi.remove(id);
+    setTasks(prev => prev.filter(t => t.id !== id));
+    setCompletions(prev => {
+      const next: CompletionsMap = {};
+      for (const [date, ids] of Object.entries(prev)) {
+        const filtered = ids.filter(tid => tid !== id);
+        if (filtered.length > 0) next[date] = filtered;
+      }
+      return next;
+    });
   }
 
-  function toggleComplete(taskId: string, date: string) {
+  async function toggleComplete(taskId: number, date: string) {
     const current = completions[date] ?? [];
-    const next = current.includes(taskId)
-      ? current.filter(id => id !== taskId)
-      : [...current, taskId];
-    persistCompletions({ ...completions, [date]: next });
+    const done = current.includes(taskId);
+    if (done) {
+      await objectivesApi.markUndone(taskId, date);
+      setCompletions(prev => ({
+        ...prev,
+        [date]: (prev[date] ?? []).filter(id => id !== taskId),
+      }));
+    } else {
+      await objectivesApi.markDone(taskId, date);
+      setCompletions(prev => ({
+        ...prev,
+        [date]: [...(prev[date] ?? []), taskId],
+      }));
+    }
   }
 
   const totalToday = tasks.filter(t => t.dayOfWeek === todayDow).length;
@@ -95,7 +85,6 @@ export function ObjectifsPage({ onTabChange }: Props) {
     tasks.some(t => t.id === id && t.dayOfWeek === todayDow)
   ).length;
 
-  const monday = weekStart(today);
   const weekStats = (() => {
     let succeeded = 0;
     let failed = 0;
@@ -200,12 +189,12 @@ interface DayCardProps {
   dayDate: string;
   isToday: boolean;
   isPast: boolean;
-  tasks: ObjectifTask[];
-  completedIds: string[];
+  tasks: ObjectiveDto[];
+  completedIds: number[];
   isAdding: boolean;
   newLabel: string;
-  onToggle: (id: string, date: string) => void;
-  onDelete: (id: string) => void;
+  onToggle: (id: number, date: string) => void;
+  onDelete: (id: number) => void;
   onStartAdd: () => void;
   onCancelAdd: () => void;
   onConfirmAdd: () => void;

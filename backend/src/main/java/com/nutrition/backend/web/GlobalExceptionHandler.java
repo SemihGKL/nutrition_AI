@@ -1,6 +1,8 @@
 package com.nutrition.backend.web;
 
 import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
+import com.nutrition.backend.Exception.ObjectiveAccessDeniedException;
+import com.nutrition.backend.Exception.ObjectiveNotFoundException;
 import com.nutrition.backend.Exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DailyCaloriesNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleDailyCaloriesNotFound(DailyCaloriesNotFoundException ex) {
         return error(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(ObjectiveNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleObjectiveNotFound(ObjectiveNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(ObjectiveAccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleObjectiveAccessDenied(ObjectiveAccessDeniedException ex) {
+        return error(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

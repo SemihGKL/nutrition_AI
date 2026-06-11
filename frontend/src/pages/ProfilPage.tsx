@@ -45,7 +45,7 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
     if (!user) return;
     setSavingWeighIn(true);
     try {
-      await weighInApi.save({ date: isoToday(), weight: weighInWeight, userId: user.id });
+      await weighInApi.save({ date: isoToday(), weight: weighInWeight });
       await refresh();
     } finally {
       setSavingWeighIn(false);
