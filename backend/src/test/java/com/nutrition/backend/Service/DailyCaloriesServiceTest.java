@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -25,18 +26,21 @@ class DailyCaloriesServiceTest {
     private DailyCaloriesService dailyCaloriesService;
 
     @Test
-    void should_save_and_return_daily_calories_entry_when_valid_data_is_provided() {
+    void should_insert_new_entry_when_no_existing_entry_for_user_and_date() {
         // Given
         User user = new User();
+        user.setId(1L);
         user.setUsername("alice");
 
+        LocalDate date = LocalDate.of(2026, 6, 10);
         DailyCalories entry = new DailyCalories();
-        entry.setDate(LocalDate.of(2026, 6, 10));
+        entry.setDate(date);
         entry.setCaloriesConsumed(1800);
         entry.setCaloriesBurned(150);
         entry.setSteps(6000);
         entry.setUser(user);
 
+        when(dailyCaloriesRepository.findByUserIdAndDate(1L, date)).thenReturn(Optional.empty());
         when(dailyCaloriesRepository.save(entry)).thenReturn(entry);
 
         // When
@@ -46,11 +50,47 @@ class DailyCaloriesServiceTest {
         assertThat(result.getCaloriesConsumed()).isEqualTo(1800);
         assertThat(result.getCaloriesBurned()).isEqualTo(150);
         assertThat(result.getSteps()).isEqualTo(6000);
-        assertThat(result.getDate()).isEqualTo(LocalDate.of(2026, 6, 10));
+        assertThat(result.getDate()).isEqualTo(date);
     }
 
     @Test
-    void should_return_daily_calories_entry_when_entry_exists_for_user_and_date() {
+    void should_update_existing_entry_when_entry_already_exists_for_user_and_date() {
+        // Given
+        User user = new User();
+        user.setId(1L);
+
+        LocalDate date = LocalDate.of(2026, 6, 10);
+
+        DailyCalories existing = new DailyCalories();
+        existing.setId(42L);
+        existing.setDate(date);
+        existing.setCaloriesConsumed(1500);
+        existing.setCaloriesBurned(100);
+        existing.setSteps(5000);
+        existing.setUser(user);
+
+        DailyCalories incoming = new DailyCalories();
+        incoming.setDate(date);
+        incoming.setCaloriesConsumed(1900);
+        incoming.setCaloriesBurned(200);
+        incoming.setSteps(8000);
+        incoming.setUser(user);
+
+        when(dailyCaloriesRepository.findByUserIdAndDate(1L, date)).thenReturn(Optional.of(existing));
+        when(dailyCaloriesRepository.save(existing)).thenReturn(existing);
+
+        // When
+        DailyCalories result = dailyCaloriesService.saveDailyCalories(incoming);
+
+        // Then
+        assertThat(result.getId()).isEqualTo(42L);
+        assertThat(result.getCaloriesConsumed()).isEqualTo(1900);
+        assertThat(result.getCaloriesBurned()).isEqualTo(200);
+        assertThat(result.getSteps()).isEqualTo(8000);
+    }
+
+    @Test
+    void should_return_entry_when_entry_exists_for_user_and_date() {
         // Given
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 6, 10);
@@ -59,27 +99,27 @@ class DailyCaloriesServiceTest {
         entry.setDate(date);
         entry.setCaloriesConsumed(2000);
 
-        when(dailyCaloriesRepository.findByUserIdAndDate(userId, date)).thenReturn(List.of(entry));
+        when(dailyCaloriesRepository.findByUserIdAndDate(userId, date)).thenReturn(Optional.of(entry));
 
         // When
-        List<DailyCalories> result = dailyCaloriesService.getDailyCalories(userId, date);
+        Optional<DailyCalories> result = dailyCaloriesService.getDailyCalories(userId, date);
 
         // Then
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getCaloriesConsumed()).isEqualTo(2000);
-        assertThat(result.get(0).getDate()).isEqualTo(date);
+        assertThat(result).isPresent();
+        assertThat(result.get().getCaloriesConsumed()).isEqualTo(2000);
+        assertThat(result.get().getDate()).isEqualTo(date);
     }
 
     @Test
-    void should_return_empty_list_when_no_entry_exists_for_user_and_date() {
+    void should_return_empty_when_no_entry_exists_for_user_and_date() {
         // Given
         Long userId = 2L;
         LocalDate date = LocalDate.of(2026, 6, 10);
 
-        when(dailyCaloriesRepository.findByUserIdAndDate(userId, date)).thenReturn(List.of());
+        when(dailyCaloriesRepository.findByUserIdAndDate(userId, date)).thenReturn(Optional.empty());
 
         // When
-        List<DailyCalories> result = dailyCaloriesService.getDailyCalories(userId, date);
+        Optional<DailyCalories> result = dailyCaloriesService.getDailyCalories(userId, date);
 
         // Then
         assertThat(result).isEmpty();

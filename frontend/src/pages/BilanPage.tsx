@@ -35,15 +35,15 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
 
   useEffect(() => {
     if (!user) return;
-    weighInApi.getAll(user.id).then(setWeighIns).catch(() => {});
+    weighInApi.getAll().then(setWeighIns).catch(() => {});
   }, [user]);
 
   const handleWeighIn = async () => {
     if (!user) return;
     setSavingWeighIn(true);
     try {
-      await weighInApi.save({ date: isoToday(), weight: weighInWeight, userId: user.id });
-      const updated = await weighInApi.getAll(user.id);
+      await weighInApi.save({ date: isoToday(), weight: weighInWeight });
+      const updated = await weighInApi.getAll();
       setWeighIns(updated);
       await refreshBadge();
     } finally {

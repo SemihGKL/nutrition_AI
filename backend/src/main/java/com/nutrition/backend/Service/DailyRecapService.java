@@ -12,7 +12,6 @@ import com.nutrition.backend.domain.service.MbrCalculator;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 public class DailyRecapService {
@@ -33,13 +32,10 @@ public class DailyRecapService {
     }
 
     public DailyRecapResponse getRecap(Long userId, LocalDate date) {
-        List<DailyCalories> entries = dailyCaloriesService.getDailyCalories(userId, date);
-        if (entries.isEmpty()) {
-            throw new DailyCaloriesNotFoundException("No daily calories entry found for userId=" + userId + " on " + date);
-        }
+        DailyCalories entry = dailyCaloriesService.getDailyCalories(userId, date)
+                .orElseThrow(() -> new DailyCaloriesNotFoundException("No daily calories entry found for userId=" + userId + " on " + date));
 
         User user = userService.getUserById(userId);
-        DailyCalories entry = entries.get(0);
 
         UserProfile profile = new UserProfile(
                 user.getCurrentWeight(),

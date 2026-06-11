@@ -40,7 +40,7 @@ export function DashboardPage({ onTabChange }: Props) {
 
   useEffect(() => {
     if (!user) return;
-    dailyApi.getAll(user.id).then(setAllEntries).catch(() => {});
+    dailyApi.getAll().then(setAllEntries).catch(() => {});
   }, [user]);
 
   const streak = user ? computeStreak(allEntries, viewedDate) : EMPTY_STREAK;
@@ -56,7 +56,7 @@ export function DashboardPage({ onTabChange }: Props) {
 
   const handleConfirm = async () => {
     await confirm();
-    const fresh = await dailyApi.getAll(user!.id);
+    const fresh = await dailyApi.getAll();
     setAllEntries(fresh);
     setIsEditing(false);
   };

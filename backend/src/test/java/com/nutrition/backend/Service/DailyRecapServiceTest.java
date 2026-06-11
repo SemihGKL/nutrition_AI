@@ -11,7 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -54,7 +54,7 @@ class DailyRecapServiceTest {
         entry.setConfirmed(false);
 
         when(userService.getUserById(userId)).thenReturn(user);
-        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(List.of(entry));
+        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
 
         // When
         DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
@@ -97,7 +97,7 @@ class DailyRecapServiceTest {
         entry.setConfirmed(false);
 
         when(userService.getUserById(userId)).thenReturn(user);
-        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(List.of(entry));
+        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
 
         // When
         DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
@@ -114,7 +114,7 @@ class DailyRecapServiceTest {
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 3);
 
-        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(List.of());
+        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.empty());
 
         // When / Then
         assertThatThrownBy(() -> dailyRecapService.getRecap(userId, date))
@@ -142,7 +142,7 @@ class DailyRecapServiceTest {
         entry.setConfirmed(false);
 
         when(userService.getUserById(userId)).thenReturn(user);
-        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(List.of(entry));
+        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
 
         // When
         DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);

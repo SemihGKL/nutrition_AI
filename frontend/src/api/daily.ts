@@ -1,17 +1,19 @@
-import { api } from './client';
+import { api, ApiError } from './client';
 import type { DailyCalories, DailyRecap } from '../types/api';
 
 export const dailyApi = {
-  getByDate: (userId: number, date: string) =>
-    api.get<DailyCalories[]>(`/api/daily-kcal/${userId}/${date}`),
+  getByDate: (date: string): Promise<DailyCalories | null> =>
+    api.get<DailyCalories>(`/api/daily-kcal/${date}`).catch(e => {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }),
 
-  getAll: (userId: number) =>
-    api.get<DailyCalories[]>(`/api/daily-kcal/${userId}`),
+  getAll: (): Promise<DailyCalories[]> =>
+    api.get<DailyCalories[]>('/api/daily-kcal'),
 
-  save: (entry: DailyCalories) =>
+  save: (entry: DailyCalories): Promise<DailyCalories> =>
     api.post<DailyCalories>('/api/daily-kcal', {
       id: entry.id ?? null,
-      userId: entry.user.id,
       date: entry.date,
       caloriesConsumed: entry.caloriesConsumed,
       steps: entry.steps,
@@ -19,6 +21,6 @@ export const dailyApi = {
       confirmed: entry.confirmed,
     }),
 
-  getRecap: (userId: number, date: string) =>
-    api.get<DailyRecap>(`/api/daily-kcal/${userId}/recap?date=${date}`),
+  getRecap: (date: string): Promise<DailyRecap> =>
+    api.get<DailyRecap>(`/api/daily-kcal/${date}/recap`),
 };

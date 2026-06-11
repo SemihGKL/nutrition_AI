@@ -48,7 +48,6 @@ export function useDailyEntry(
         },
         body: JSON.stringify({
           id: toSave.id ?? null,
-          userId: toSave.user.id,
           date: toSave.date,
           caloriesConsumed: toSave.caloriesConsumed,
           steps: toSave.steps,
@@ -67,13 +66,12 @@ export function useDailyEntry(
     setState(s => ({ ...s, isLoading: true, error: null }));
 
     try {
-      const entries = await dailyApi.getByDate(userId, date);
-      const entry = entries[0] ?? null;
+      const entry = await dailyApi.getByDate(date);
 
       let recap: DailyRecap | null = null;
       if (entry) {
         try {
-          recap = await dailyApi.getRecap(userId, date);
+          recap = await dailyApi.getRecap(date);
         } catch (e) {
           if (!(e instanceof ApiError && e.status === 404)) throw e;
         }
@@ -104,7 +102,7 @@ export function useDailyEntry(
 
         try {
           const saved = await dailyApi.save(toSave);
-          const recap = await dailyApi.getRecap(userId, date);
+          const recap = await dailyApi.getRecap(date);
           setState(s => ({
             ...s,
             entry: saved,
@@ -165,7 +163,6 @@ export function useDailyEntry(
   const confirm = useCallback(async () => {
     if (!userId) return;
 
-    // Cancel any pending auto-save so it can't overwrite confirmed state or fetch a stale recap
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
@@ -177,7 +174,7 @@ export function useDailyEntry(
 
     try {
       const saved = await dailyApi.save(toConfirm);
-      const recap = await dailyApi.getRecap(userId, date);
+      const recap = await dailyApi.getRecap(date);
       setState(s => ({
         ...s,
         entry: saved,

@@ -40,11 +40,9 @@ public class DailyCaloriesController {
     @GetMapping("/{date}")
     public ResponseEntity<DailyCalories> getEntryByDate(@PathVariable String date, Authentication auth) {
         User user = userService.getByEmail(auth.getName());
-        List<DailyCalories> entries = dailyCaloriesService.getDailyCalories(user.getId(), LocalDate.parse(date));
-        if (entries.isEmpty()) {
-            throw new DailyCaloriesNotFoundException("Aucune entrée pour le " + date);
-        }
-        return ResponseEntity.ok(entries.get(0));
+        return dailyCaloriesService.getDailyCalories(user.getId(), LocalDate.parse(date))
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new DailyCaloriesNotFoundException("Aucune entrée pour le " + date));
     }
 
     @PostMapping

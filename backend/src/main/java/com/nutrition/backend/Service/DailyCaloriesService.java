@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class DailyCaloriesService {
@@ -16,7 +17,7 @@ public class DailyCaloriesService {
         this.dailyCaloriesRepository = dailyCaloriesRepository;
     }
 
-    public List<DailyCalories> getDailyCalories(Long userId, LocalDate date) {
+    public Optional<DailyCalories> getDailyCalories(Long userId, LocalDate date) {
         return dailyCaloriesRepository.findByUserIdAndDate(userId, date);
     }
 
@@ -24,8 +25,16 @@ public class DailyCaloriesService {
         return dailyCaloriesRepository.findByUserId(userId);
     }
 
-    public DailyCalories saveDailyCalories(DailyCalories dailyCalories) {
-        return dailyCaloriesRepository.save(dailyCalories);
+    public DailyCalories saveDailyCalories(DailyCalories incoming) {
+        return dailyCaloriesRepository.findByUserIdAndDate(incoming.getUser().getId(), incoming.getDate())
+                .map(existing -> {
+                    existing.setCaloriesConsumed(incoming.getCaloriesConsumed());
+                    existing.setSteps(incoming.getSteps());
+                    existing.setCaloriesBurned(incoming.getCaloriesBurned());
+                    existing.setConfirmed(incoming.isConfirmed());
+                    return dailyCaloriesRepository.save(existing);
+                })
+                .orElseGet(() -> dailyCaloriesRepository.save(incoming));
     }
 
 }

@@ -24,7 +24,7 @@ export function WeighInProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     if (!user?.id) return;
-    const data = await weighInApi.getLatest(user.id);
+    const data = await weighInApi.getLatest();
     setLatestWeighIn(data);
   }, [user?.id]);
 

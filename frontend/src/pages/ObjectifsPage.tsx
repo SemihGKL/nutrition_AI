@@ -3,6 +3,7 @@ import { StatusBar } from '../components/dashboard/StatusBar';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { Check, Plus } from '../components/ui/icons';
 import { isoToday, weekStart, addDays } from '../utils/format';
+import { useAuth } from '../hooks/useAuth';
 
 interface ObjectifTask {
   id: string;
@@ -30,12 +31,18 @@ interface Props {
 }
 
 export function ObjectifsPage({ onTabChange }: Props) {
-  const [tasks, setTasks] = useState<ObjectifTask[]>(() =>
-    loadFromStorage<ObjectifTask[]>('nia_agenda_tasks', [])
-  );
-  const [completions, setCompletions] = useState<Record<string, string[]>>(() =>
-    loadFromStorage<Record<string, string[]>>('nia_agenda_completions', {})
-  );
+  const { user } = useAuth();
+  const tasksKey = user ? `nia_agenda_tasks_${user.id}` : null;
+  const completionsKey = user ? `nia_agenda_completions_${user.id}` : null;
+
+  const [tasks, setTasks] = useState<ObjectifTask[]>([]);
+  const [completions, setCompletions] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    if (!tasksKey || !completionsKey) return;
+    setTasks(loadFromStorage<ObjectifTask[]>(tasksKey, []));
+    setCompletions(loadFromStorage<Record<string, string[]>>(completionsKey, {}));
+  }, [tasksKey, completionsKey]);
   const [addingForDay, setAddingForDay] = useState<number | null>(null);
   const [newLabel, setNewLabel] = useState('');
 
@@ -44,12 +51,12 @@ export function ObjectifsPage({ onTabChange }: Props) {
 
   function persistTasks(next: ObjectifTask[]) {
     setTasks(next);
-    localStorage.setItem('nia_agenda_tasks', JSON.stringify(next));
+    if (tasksKey) localStorage.setItem(tasksKey, JSON.stringify(next));
   }
 
   function persistCompletions(next: Record<string, string[]>) {
     setCompletions(next);
-    localStorage.setItem('nia_agenda_completions', JSON.stringify(next));
+    if (completionsKey) localStorage.setItem(completionsKey, JSON.stringify(next));
   }
 
   function addTask(dow: number) {
