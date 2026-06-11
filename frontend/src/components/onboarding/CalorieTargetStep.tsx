@@ -67,14 +67,16 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
         <ResultStat
           label="MBR"
           sublabel="au repos"
+          description="ce que ton corps brûle pour fonctionner"
           tooltip="Métabolisme de Base au Repos — calories que ton corps brûle juste pour fonctionner (cœur, cerveau, chaleur). Tu trackeras toute activité au jour le jour."
           value={formatNumber(Math.round(mbr))}
           suffix="kcal"
         />
         <ResultStat
           label="déficit alim. / j"
-          sublabel="depuis l'assiette"
-          tooltip="Déficit créé uniquement par ton alimentation (MBR − objectif). À ça s'ajoutent chaque jour tes pas et séances de sport."
+          description="ce qu'on retire de l'assiette pour créer le déficit"
+          uppercase={false}
+          tooltip="Déficit créé uniquement par ton alimentation (MBR − objectif)."
           value={foodDeficit > 0 ? `−${formatNumber(Math.round(foodDeficit))}` : `+${formatNumber(Math.round(-foodDeficit))}`}
           suffix="kcal"
         />
@@ -189,8 +191,14 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
   );
 }
 
-function ResultStat({ label, sublabel, tooltip, value, suffix }: {
-  label: string; sublabel?: string; tooltip?: string; value: string; suffix: string;
+function ResultStat({ label, sublabel, description, uppercase = true, tooltip, value, suffix }: {
+  label: string;
+  sublabel?: string;
+  description?: string;
+  uppercase?: boolean;
+  tooltip?: string;
+  value: string;
+  suffix: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -201,7 +209,10 @@ function ResultStat({ label, sublabel, tooltip, value, suffix }: {
       borderRadius: 'var(--radius)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span style={{ fontSize: 11, color: 'var(--ink-3)', letterSpacing: 0.4, textTransform: 'uppercase' }}>
+        <span style={{
+          fontSize: 11, color: 'var(--ink-3)', letterSpacing: 0.4,
+          textTransform: uppercase ? 'uppercase' : 'none',
+        }}>
           {label}
         </span>
         {sublabel && (
@@ -226,6 +237,12 @@ function ResultStat({ label, sublabel, tooltip, value, suffix }: {
           </button>
         )}
       </div>
+
+      {description && (
+        <div style={{ fontSize: 10, color: 'var(--ink-3)', fontStyle: 'italic', marginTop: 2, lineHeight: 1.4 }}>
+          {description}
+        </div>
+      )}
 
       {open && tooltip && (
         <div style={{
