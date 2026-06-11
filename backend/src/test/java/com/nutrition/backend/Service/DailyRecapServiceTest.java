@@ -120,4 +120,37 @@ class DailyRecapServiceTest {
         assertThatThrownBy(() -> dailyRecapService.getRecap(userId, date))
                 .isInstanceOf(DailyCaloriesNotFoundException.class);
     }
+
+    @Test
+    void should_count_zero_extra_calories_burned_from_steps_when_steps_below_4000_threshold() {
+        // Given
+        Long userId = 1L;
+        LocalDate date = LocalDate.of(2026, 5, 4);
+
+        User user = new User();
+        user.setGender("MALE");
+        user.setCurrentWeight(80.0);
+        user.setHeight(180.0);
+        user.setAge(30);
+        user.setDailyCalorieGoal(1780);
+
+        DailyCalories entry = new DailyCalories();
+        entry.setCaloriesConsumed(1900);
+        entry.setCaloriesBurned(0);
+        entry.setSteps(3999);
+        entry.setDate(date);
+        entry.setConfirmed(false);
+
+        when(userService.getUserById(userId)).thenReturn(user);
+        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(List.of(entry));
+
+        // When
+        DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
+
+        // Then
+        // effectiveSteps = max(0, 3999 - 4000) = 0 → stepsKcal = 0
+        // netCalories = 1900 - 0 - 0 = 1900 (aucune soustraction liée aux pas)
+        assertThat(recap.steps()).isEqualTo(3999);
+        assertThat(recap.netCalories()).isEqualTo(1900);
+    }
 }

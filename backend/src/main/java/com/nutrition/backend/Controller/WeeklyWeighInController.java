@@ -2,11 +2,11 @@ package com.nutrition.backend.Controller;
 
 import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Class.WeeklyWeighIn;
-import com.nutrition.backend.Exception.UserNotFoundException;
-import com.nutrition.backend.Repository.UserRepository;
+import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.Service.WeeklyWeighInService;
 import com.nutrition.backend.web.dto.CreateWeighInRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,17 +17,16 @@ import java.util.Optional;
 public class WeeklyWeighInController {
 
     private final WeeklyWeighInService weeklyWeighInService;
-    private final UserRepository userRepository;
+    private final UserService userService;
 
-    public WeeklyWeighInController(WeeklyWeighInService weeklyWeighInService, UserRepository userRepository) {
+    public WeeklyWeighInController(WeeklyWeighInService weeklyWeighInService, UserService userService) {
         this.weeklyWeighInService = weeklyWeighInService;
-        this.userRepository = userRepository;
+        this.userService = userService;
     }
 
     @PostMapping
-    public ResponseEntity<WeeklyWeighIn> saveWeighIn(@RequestBody CreateWeighInRequest request) {
-        User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable avec l'ID : " + request.userId()));
+    public ResponseEntity<WeeklyWeighIn> saveWeighIn(@RequestBody CreateWeighInRequest request, Authentication auth) {
+        User user = userService.getByEmail(auth.getName());
 
         WeeklyWeighIn weighIn = new WeeklyWeighIn();
         weighIn.setUser(user);
@@ -38,14 +37,16 @@ public class WeeklyWeighInController {
         return ResponseEntity.ok(weeklyWeighInService.saveWeighIn(weighIn));
     }
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<List<WeeklyWeighIn>> getAllByUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(weeklyWeighInService.getAllByUser(userId));
+    @GetMapping
+    public ResponseEntity<List<WeeklyWeighIn>> getAllMyWeighIns(Authentication auth) {
+        User user = userService.getByEmail(auth.getName());
+        return ResponseEntity.ok(weeklyWeighInService.getAllByUser(user.getId()));
     }
 
-    @GetMapping("/{userId}/latest")
-    public ResponseEntity<WeeklyWeighIn> getLatest(@PathVariable Long userId) {
-        Optional<WeeklyWeighIn> latest = weeklyWeighInService.getLatestByUser(userId);
+    @GetMapping("/latest")
+    public ResponseEntity<WeeklyWeighIn> getMyLatest(Authentication auth) {
+        User user = userService.getByEmail(auth.getName());
+        Optional<WeeklyWeighIn> latest = weeklyWeighInService.getLatestByUser(user.getId());
         return latest.map(ResponseEntity::ok).orElse(ResponseEntity.noContent().build());
     }
 }

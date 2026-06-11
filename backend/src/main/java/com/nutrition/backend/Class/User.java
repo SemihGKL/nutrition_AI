@@ -1,5 +1,6 @@
 package com.nutrition.backend.Class;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -46,6 +47,7 @@ public class User {
     @Column(name = "current_weight")
     private double currentWeight;
 
+    @JsonIgnore
     @Column(name = "password")
     private String password;
 

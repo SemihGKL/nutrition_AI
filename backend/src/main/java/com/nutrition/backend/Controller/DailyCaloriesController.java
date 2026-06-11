@@ -2,13 +2,14 @@ package com.nutrition.backend.Controller;
 
 import com.nutrition.backend.Class.DailyCalories;
 import com.nutrition.backend.Class.User;
-import com.nutrition.backend.Repository.UserRepository;
+import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.DailyRecapService;
-import com.nutrition.backend.Exception.UserNotFoundException;
+import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.web.dto.CreateDailyCaloriesRequest;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -20,30 +21,35 @@ public class DailyCaloriesController {
 
     private final DailyCaloriesService dailyCaloriesService;
     private final DailyRecapService dailyRecapService;
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     public DailyCaloriesController(DailyCaloriesService dailyCaloriesService,
                                    DailyRecapService dailyRecapService,
-                                   UserRepository userRepository) {
+                                   UserService userService) {
         this.dailyCaloriesService = dailyCaloriesService;
         this.dailyRecapService = dailyRecapService;
-        this.userRepository = userRepository;
+        this.userService = userService;
     }
 
-    @GetMapping("/{userId}/{date}")
-    public List<DailyCalories> getDailyCalories(@PathVariable Long userId, @PathVariable String date) {
-        return dailyCaloriesService.getDailyCalories(userId, LocalDate.parse(date));
+    @GetMapping
+    public List<DailyCalories> getAllMyEntries(Authentication auth) {
+        User user = userService.getByEmail(auth.getName());
+        return dailyCaloriesService.getAllDailyCalories(user.getId());
     }
 
-    @GetMapping("/{userId}")
-    public List<DailyCalories> getAllDailyCalories(@PathVariable Long userId) {
-        return dailyCaloriesService.getAllDailyCalories(userId);
+    @GetMapping("/{date}")
+    public ResponseEntity<DailyCalories> getEntryByDate(@PathVariable String date, Authentication auth) {
+        User user = userService.getByEmail(auth.getName());
+        List<DailyCalories> entries = dailyCaloriesService.getDailyCalories(user.getId(), LocalDate.parse(date));
+        if (entries.isEmpty()) {
+            throw new DailyCaloriesNotFoundException("Aucune entrée pour le " + date);
+        }
+        return ResponseEntity.ok(entries.get(0));
     }
 
     @PostMapping
-    public ResponseEntity<DailyCalories> createDailyCalories(@RequestBody CreateDailyCaloriesRequest request) {
-        User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable avec l'ID : " + request.userId()));
+    public ResponseEntity<DailyCalories> saveEntry(@RequestBody CreateDailyCaloriesRequest request, Authentication auth) {
+        User user = userService.getByEmail(auth.getName());
 
         DailyCalories entry = new DailyCalories();
         if (request.id() != null) entry.setId(request.id());
@@ -57,9 +63,9 @@ public class DailyCaloriesController {
         return ResponseEntity.ok(dailyCaloriesService.saveDailyCalories(entry));
     }
 
-    @GetMapping("/{userId}/recap")
-    public ResponseEntity<DailyRecapResponse> getRecap(@PathVariable Long userId, @RequestParam String date) {
-        DailyRecapResponse recap = dailyRecapService.getRecap(userId, LocalDate.parse(date));
-        return ResponseEntity.ok(recap);
+    @GetMapping("/{date}/recap")
+    public ResponseEntity<DailyRecapResponse> getRecap(@PathVariable String date, Authentication auth) {
+        User user = userService.getByEmail(auth.getName());
+        return ResponseEntity.ok(dailyRecapService.getRecap(user.getId(), LocalDate.parse(date)));
     }
 }

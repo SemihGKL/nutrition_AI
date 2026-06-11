@@ -1,6 +1,7 @@
 package com.nutrition.backend.Service;
 
 import com.nutrition.backend.Class.WeeklyWeighIn;
+import com.nutrition.backend.Repository.UserRepository;
 import com.nutrition.backend.Repository.WeeklyWeighInRepository;
 import org.springframework.stereotype.Service;
 
@@ -11,12 +12,16 @@ import java.util.Optional;
 public class WeeklyWeighInService {
 
     private final WeeklyWeighInRepository weeklyWeighInRepository;
+    private final UserRepository userRepository;
 
-    public WeeklyWeighInService(WeeklyWeighInRepository weeklyWeighInRepository) {
+    public WeeklyWeighInService(WeeklyWeighInRepository weeklyWeighInRepository, UserRepository userRepository) {
         this.weeklyWeighInRepository = weeklyWeighInRepository;
+        this.userRepository = userRepository;
     }
 
     public WeeklyWeighIn saveWeighIn(WeeklyWeighIn weighIn) {
+        weighIn.getUser().setCurrentWeight(weighIn.getWeight());
+        userRepository.save(weighIn.getUser());
         return weeklyWeighInRepository.save(weighIn);
     }
 

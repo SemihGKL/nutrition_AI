@@ -1,5 +1,6 @@
 package com.nutrition.backend.Class;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,6 +31,7 @@ public class DailyCalories {
     @Column(name = "calories_burned")
     private int caloriesBurned;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;

@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -130,5 +131,65 @@ class UserServiceTest {
         assertThat(result.getDailyCalorieGoal()).isEqualTo(1640);
         assertThat(result.getCurrentWeight()).isEqualTo(65.0);
         assertThat(result.getGender()).isEqualTo("FEMALE");
+    }
+
+    @Test
+    void should_return_empty_list_when_no_users_exist() {
+        when(userRepository.findAll()).thenReturn(List.of());
+
+        List<User> result = userService.getAllUsers();
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void should_return_all_users_when_users_exist() {
+        User alice = new User();
+        alice.setUsername("alice");
+        User bob = new User();
+        bob.setUsername("bob");
+        when(userRepository.findAll()).thenReturn(List.of(alice, bob));
+
+        List<User> result = userService.getAllUsers();
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getUsername()).isEqualTo("alice");
+        assertThat(result.get(1).getUsername()).isEqualTo("bob");
+    }
+
+    @Test
+    void should_return_user_when_id_exists() {
+        Long userId = 1L;
+        User expected = new User();
+        expected.setUsername("alice");
+        expected.setEmail("alice@mail.fr");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(expected));
+
+        User result = userService.getUserById(userId);
+
+        assertThat(result.getUsername()).isEqualTo("alice");
+        assertThat(result.getEmail()).isEqualTo("alice@mail.fr");
+    }
+
+    @Test
+    void should_return_user_when_email_exists() {
+        String email = "alice@mail.fr";
+        User expected = new User();
+        expected.setEmail(email);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(expected));
+
+        User result = userService.getByEmail(email);
+
+        assertThat(result.getEmail()).isEqualTo(email);
+    }
+
+    @Test
+    void should_throw_exception_when_email_not_found() {
+        String email = "unknown@mail.fr";
+        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.getByEmail(email))
+                .isInstanceOf(UserNotFoundException.class)
+                .hasMessageContaining(email);
     }
 }

@@ -78,4 +78,9 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable avec l'ID : " + id));
     }
 
+    public User getByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable pour l'email : " + email));
+    }
+
 }
