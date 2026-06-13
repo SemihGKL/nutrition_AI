@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Stepper } from '../ui/Stepper';
-import { formatNumber } from '../../utils/format';
+import { formatNumber, stepsToKcal } from '../../utils/format';
 
 interface Props {
   calories: number;
@@ -25,7 +25,7 @@ export function EntrySection({
 }: Props) {
   const [hasSession, setHasSession] = useState(burned > 0);
 
-  const stepsKcal = steps > 0 ? Math.round(steps * (weightKg / 70) * 0.025) : 0;
+  const stepsKcal = stepsToKcal(steps, weightKg);
 
   const toggleSession = (checked: boolean) => {
     setHasSession(checked);
