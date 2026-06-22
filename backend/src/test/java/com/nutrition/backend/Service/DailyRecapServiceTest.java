@@ -67,6 +67,7 @@ class DailyRecapServiceTest {
         // effectiveSteps = max(0, 8000 - 4000) = 4000
         // stepsKcal = round(4000 × (80/70) × 0.025) = 114
         // netCalories = 1736 - 200 - 114 = 1422
+        assertThat(recap.stepsKcal()).isEqualTo(114);
         assertThat(recap.netCalories()).isEqualTo(1422);
         assertThat(recap.dailyCalorieGoal()).isEqualTo(1780);
         assertThat(recap.mbr()).isEqualTo(1780.0);
@@ -151,6 +152,7 @@ class DailyRecapServiceTest {
         // effectiveSteps = max(0, 3999 - 4000) = 0 → stepsKcal = 0
         // netCalories = 1900 - 0 - 0 = 1900 (aucune soustraction liée aux pas)
         assertThat(recap.steps()).isEqualTo(3999);
+        assertThat(recap.stepsKcal()).isEqualTo(0);
         assertThat(recap.netCalories()).isEqualTo(1900);
     }
 }
