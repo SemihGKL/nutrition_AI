@@ -25,4 +25,10 @@ public class UserObjective {
 
     @Column(name = "position")
     private int position;
+
+    @Column(name = "type", nullable = false)
+    private String type = "CUSTOM";
+
+    @Column(name = "target_value")
+    private Integer targetValue;
 }

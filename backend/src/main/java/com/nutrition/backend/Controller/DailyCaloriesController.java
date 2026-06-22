@@ -2,9 +2,9 @@ package com.nutrition.backend.Controller;
 
 import com.nutrition.backend.Class.DailyCalories;
 import com.nutrition.backend.Class.User;
-import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.DailyRecapService;
+import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.web.dto.CreateDailyCaloriesRequest;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
@@ -22,13 +22,16 @@ public class DailyCaloriesController {
     private final DailyCaloriesService dailyCaloriesService;
     private final DailyRecapService dailyRecapService;
     private final UserService userService;
+    private final ObjectiveService objectiveService;
 
     public DailyCaloriesController(DailyCaloriesService dailyCaloriesService,
                                    DailyRecapService dailyRecapService,
-                                   UserService userService) {
+                                   UserService userService,
+                                   ObjectiveService objectiveService) {
         this.dailyCaloriesService = dailyCaloriesService;
         this.dailyRecapService = dailyRecapService;
         this.userService = userService;
+        this.objectiveService = objectiveService;
     }
 
     @GetMapping
@@ -42,7 +45,7 @@ public class DailyCaloriesController {
         User user = userService.getByEmail(auth.getName());
         return dailyCaloriesService.getDailyCalories(user.getId(), LocalDate.parse(date))
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new DailyCaloriesNotFoundException("Aucune entrée pour le " + date));
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
@@ -58,7 +61,9 @@ public class DailyCaloriesController {
         entry.setCaloriesBurned(request.caloriesBurned());
         entry.setConfirmed(request.confirmed());
 
-        return ResponseEntity.ok(dailyCaloriesService.saveDailyCalories(entry));
+        DailyCalories saved = dailyCaloriesService.saveDailyCalories(entry);
+        objectiveService.autoComplete(user.getId(), request.date(), request.caloriesBurned());
+        return ResponseEntity.ok(saved);
     }
 
     @GetMapping("/{date}/recap")

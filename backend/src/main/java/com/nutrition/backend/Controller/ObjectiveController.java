@@ -2,6 +2,7 @@ package com.nutrition.backend.Controller;
 
 import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Class.UserObjective;
+import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.web.dto.CreateObjectiveRequest;
@@ -22,17 +23,19 @@ public class ObjectiveController {
 
     private final ObjectiveService objectiveService;
     private final UserService userService;
+    private final DailyCaloriesService dailyCaloriesService;
 
-    public ObjectiveController(ObjectiveService objectiveService, UserService userService) {
+    public ObjectiveController(ObjectiveService objectiveService, UserService userService, DailyCaloriesService dailyCaloriesService) {
         this.objectiveService = objectiveService;
         this.userService = userService;
+        this.dailyCaloriesService = dailyCaloriesService;
     }
 
     @GetMapping
     public List<ObjectiveDto> getObjectives(Authentication auth) {
         User user = userService.getByEmail(auth.getName());
         return objectiveService.getObjectives(user.getId()).stream()
-                .map(o -> new ObjectiveDto(o.getId(), o.getDayOfWeek(), o.getLabel(), o.getPosition()))
+                .map(o -> new ObjectiveDto(o.getId(), o.getDayOfWeek(), o.getLabel(), o.getPosition(), o.getType(), o.getTargetValue()))
                 .collect(Collectors.toList());
     }
 
@@ -43,8 +46,23 @@ public class ObjectiveController {
         objective.setUserId(user.getId());
         objective.setDayOfWeek(request.dayOfWeek());
         objective.setLabel(request.label());
+        objective.setType(request.type() != null ? request.type() : "CUSTOM");
+        objective.setTargetValue(request.targetValue());
         UserObjective saved = objectiveService.createObjective(objective);
-        ObjectiveDto dto = new ObjectiveDto(saved.getId(), saved.getDayOfWeek(), saved.getLabel(), saved.getPosition());
+
+        // Rétroactivité : si l'objectif SPORT correspond à aujourd'hui et que la journée
+        // a déjà des calories brûlées enregistrées, on le coche immédiatement
+        if ("SPORT".equals(saved.getType())) {
+            LocalDate today = LocalDate.now();
+            int todayDow = today.getDayOfWeek().getValue() - 1;
+            if (saved.getDayOfWeek() == todayDow) {
+                dailyCaloriesService.getDailyCalories(user.getId(), today)
+                        .filter(entry -> entry.getCaloriesBurned() > 0)
+                        .ifPresent(entry -> objectiveService.markDone(saved.getId(), user.getId(), today));
+            }
+        }
+
+        ObjectiveDto dto = new ObjectiveDto(saved.getId(), saved.getDayOfWeek(), saved.getLabel(), saved.getPosition(), saved.getType(), saved.getTargetValue());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 

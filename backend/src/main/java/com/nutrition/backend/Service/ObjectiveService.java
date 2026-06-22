@@ -57,6 +57,15 @@ public class ObjectiveService {
         objectiveCompletionRepository.deleteByObjectiveIdAndDate(objectiveId, date);
     }
 
+    public void autoComplete(Long userId, LocalDate date, int caloriesBurned) {
+        int dow = date.getDayOfWeek().getValue() - 1; // 0=Lundi ... 6=Dimanche
+        for (UserObjective obj : userObjectiveRepository.findByUserId(userId)) {
+            if ("SPORT".equals(obj.getType()) && obj.getDayOfWeek() == dow && caloriesBurned > 0) {
+                markDone(obj.getId(), userId, date);
+            }
+        }
+    }
+
     public Map<String, List<Long>> getCompletions(Long userId, LocalDate from, LocalDate to) {
         return objectiveCompletionRepository.findByUserIdAndDateBetween(userId, from, to)
                 .stream()

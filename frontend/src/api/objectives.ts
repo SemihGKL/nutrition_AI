@@ -9,8 +9,8 @@ export const objectivesApi = {
   getAll: (): Promise<ObjectiveDto[]> =>
     api.get('/api/objectives'),
 
-  create: (dayOfWeek: number, label: string): Promise<ObjectiveDto> =>
-    api.post('/api/objectives', { dayOfWeek, label }),
+  create: (dayOfWeek: number, label: string, type = 'CUSTOM', targetValue?: number): Promise<ObjectiveDto> =>
+    api.post('/api/objectives', { dayOfWeek, label, type, targetValue: targetValue ?? null }),
 
   remove: (id: number): Promise<void> =>
     api.delete(`/api/objectives/${id}`),
