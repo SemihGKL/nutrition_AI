@@ -4,9 +4,10 @@ import { formatNumber } from '../../utils/format';
 interface Props {
   calories: number;
   target: number;
+  mbr?: number;
 }
 
-export function ContextMessage({ calories, target }: Props) {
+export function ContextMessage({ calories, target, mbr }: Props) {
   if (calories <= 0) {
     return (
       <div style={STYLE}>
@@ -30,6 +31,34 @@ export function ContextMessage({ calories, target }: Props) {
   }
 
   const over = Math.abs(remaining);
+
+  if (mbr !== undefined && calories <= mbr) {
+    const mbrDeficit = mbr - calories;
+    return (
+      <div style={STYLE}>
+        <span className="tabular" style={{ color: 'var(--amber)', fontWeight: 600 }}>
+          +{formatNumber(over)} kcal
+        </span>{' '}
+        au-dessus de l'objectif · tu restes sous ton métabolisme de base, c'est correct{' '}
+        <span style={{ color: 'var(--green)', fontWeight: 600 }}>
+          (déficit de {formatNumber(mbrDeficit)} kcal)
+        </span>
+      </div>
+    );
+  }
+
+  if (mbr !== undefined && calories > mbr) {
+    const overMbr = calories - mbr;
+    return (
+      <div style={STYLE}>
+        <span className="tabular" style={{ color: 'var(--red)', fontWeight: 600 }}>
+          +{formatNumber(overMbr)} kcal
+        </span>{' '}
+        au-dessus de ton métabolisme de base — essaie de compenser cette semaine
+      </div>
+    );
+  }
+
   return (
     <div style={STYLE}>
       dépassement de{' '}

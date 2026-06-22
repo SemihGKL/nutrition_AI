@@ -183,7 +183,21 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
           background: 'var(--paper-2)', borderRadius: 'var(--radius-md)',
           border: '1px solid var(--hairline-2)', padding: 16, marginBottom: 14,
         }}>
-          <div className="display" style={{ fontSize: 15, fontWeight: 500, marginBottom: 12 }}>jour par jour</div>
+          <div className="display" style={{ fontSize: 15, fontWeight: 500, marginBottom: 4 }}>jour par jour</div>
+          {(() => {
+            const entered = weekDays.filter(d => !d.future && d.net !== null);
+            const ok = entered.filter(d => d.ok);
+            if (entered.length === 0) return null;
+            const all = ok.length === entered.length;
+            return (
+              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 12, lineHeight: 1.4 }}>
+                {all
+                  ? `objectif respecté tous les jours saisis — belle régularité !`
+                  : `objectif respecté ${ok.length} jour${ok.length !== 1 ? 's' : ''} sur ${entered.length} saisi${entered.length !== 1 ? 's' : ''}`
+                }
+              </div>
+            );
+          })()}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {weekDays.map((d, i) => (
               <div key={i} style={{

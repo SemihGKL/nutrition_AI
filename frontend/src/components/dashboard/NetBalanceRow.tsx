@@ -18,7 +18,10 @@ export function NetBalanceRow({ calories, stepsKcal, burned, target }: Props) {
       border: '1px solid var(--hairline-2)',
     }}>
       <div style={{ marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>calcul du bilan net</span>
+        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>bilan net</span>
+        <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>
+          ce que tu as mangé, moins ton activité physique
+        </div>
       </div>
 
       <div style={{

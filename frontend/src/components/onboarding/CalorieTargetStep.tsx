@@ -65,10 +65,10 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <ResultStat
-          label="MBR"
-          sublabel="au repos"
-          description="ce que ton corps brûle pour fonctionner"
-          tooltip="Métabolisme de Base au Repos — calories que ton corps brûle juste pour fonctionner (cœur, cerveau, chaleur). Tu trackeras toute activité au jour le jour."
+          label="métabolisme de base"
+          uppercase={false}
+          description="calories brûlées sans bouger"
+          tooltip="Ton corps brûle des calories même au repos — pour faire battre ton cœur, respirer, digérer. C'est ton minimum vital. Ton objectif alimentaire est fixé en dessous pour créer un déficit."
           value={formatNumber(Math.round(mbr))}
           suffix="kcal"
         />
@@ -172,7 +172,7 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
           fontSize: 11, color: 'var(--ink-3)', marginTop: 4,
         }}>
           <span className="tabular">{formatNumber(sliderMin)} kcal · déficit max</span>
-          <span className="tabular">MBR · {formatNumber(sliderMax)} kcal</span>
+          <span className="tabular">métabolisme de base · {formatNumber(sliderMax)} kcal</span>
         </div>
       </div>
 

@@ -34,7 +34,7 @@ function AppTabs() {
   useEffect(() => {
     if (!user) return;
     dailyApi.getAll().then(setAllEntries).catch(() => {});
-  }, [user]);
+  }, [user, tab]);
 
   const streak = user ? computeStreak(allEntries, isoToday()) : { current: 0, best: 0, last14: [] };
 
