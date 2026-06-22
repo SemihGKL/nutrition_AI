@@ -42,6 +42,10 @@ public class UserController {
             userService.updateCalorieGoal(current.getId(), request.dailyCalorieGoal());
         }
 
+        if (request.dailyStepsGoal() != null) {
+            userService.updateStepsGoal(current.getId(), request.dailyStepsGoal());
+        }
+
         return ResponseEntity.ok(UserMapper.toDto(userService.getUserById(current.getId())));
     }
 }

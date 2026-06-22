@@ -53,4 +53,7 @@ public class User {
 
     @Column(name = "weigh_in_day")
     private String weighInDay;
+
+    @Column(name = "daily_steps_goal")
+    private Integer dailyStepsGoal;
 }

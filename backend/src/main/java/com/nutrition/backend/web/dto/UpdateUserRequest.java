@@ -8,5 +8,6 @@ public record UpdateUserRequest(
         double height,
         double currentWeight,
         String weighInDay,
-        Integer dailyCalorieGoal
+        Integer dailyCalorieGoal,
+        Integer dailyStepsGoal
 ) {}

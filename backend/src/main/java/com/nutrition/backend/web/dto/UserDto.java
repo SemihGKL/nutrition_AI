@@ -11,5 +11,6 @@ public record UserDto(
         double height,
         double startWeight,
         double currentWeight,
-        String weighInDay
+        String weighInDay,
+        Integer dailyStepsGoal
 ) {}

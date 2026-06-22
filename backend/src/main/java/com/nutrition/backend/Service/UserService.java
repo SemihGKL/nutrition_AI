@@ -52,6 +52,12 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public User updateStepsGoal(Long id, Integer dailyStepsGoal) {
+        User user = getUserById(id);
+        user.setDailyStepsGoal(dailyStepsGoal);
+        return userRepository.save(user);
+    }
+
     public User updateBodyMetrics(Long id, Gender gender, int age, Double height, double currentWeight, String weighInDay) {
         User user = getUserById(id);
         user.setGender(gender.name());

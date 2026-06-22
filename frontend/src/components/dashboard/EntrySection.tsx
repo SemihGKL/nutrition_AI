@@ -7,6 +7,7 @@ interface Props {
   steps: number;
   burned: number;
   weightKg: number;
+  stepsGoal?: number | null;
   isSaving: boolean;
   onCalories: (v: number) => void;
   onSteps: (v: number) => void;
@@ -18,6 +19,7 @@ export function EntrySection({
   steps,
   burned,
   weightKg,
+  stepsGoal,
   isSaving,
   onCalories,
   onSteps,
@@ -71,6 +73,9 @@ export function EntrySection({
           step={500}
           hint={stepsKcal > 0 ? `≈ ${formatNumber(stepsKcal)} kcal (est. basse)` : undefined}
         />
+        {stepsGoal != null && stepsGoal > 0 && (
+          <StepsGoalIndicator steps={steps} goal={stepsGoal} />
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button
@@ -120,6 +125,31 @@ export function EntrySection({
             />
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StepsGoalIndicator({ steps, goal }: { steps: number; goal: number }) {
+  const reached = steps >= goal;
+  const pct = Math.min(100, Math.round((steps / goal) * 100));
+  return (
+    <div style={{ marginTop: -4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <span style={{ fontSize: 11, color: reached ? 'var(--green)' : 'var(--ink-3)' }}>
+          objectif de pas
+        </span>
+        <span className="tabular" style={{ fontSize: 11, fontWeight: 600, color: reached ? 'var(--green)' : 'var(--ink-2)' }}>
+          {formatNumber(steps)} / {formatNumber(goal)}
+          {reached && ' ✓'}
+        </span>
+      </div>
+      <div style={{ height: 4, background: 'var(--paper-3)', borderRadius: 999, overflow: 'hidden' }}>
+        <div style={{
+          width: `${pct}%`, height: '100%', borderRadius: 999,
+          background: reached ? 'var(--green)' : 'var(--amber)',
+          transition: 'width 600ms cubic-bezier(.2,.7,.2,1)',
+        }} />
       </div>
     </div>
   );

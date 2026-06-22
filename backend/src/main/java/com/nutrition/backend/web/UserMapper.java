@@ -19,7 +19,8 @@ public final class UserMapper {
                 user.getHeight(),
                 user.getStartWeight(),
                 user.getCurrentWeight(),
-                user.getWeighInDay()
+                user.getWeighInDay(),
+                user.getDailyStepsGoal()
         );
     }
 }

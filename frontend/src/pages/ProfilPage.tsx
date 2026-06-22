@@ -46,6 +46,8 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
     setSavingWeighIn(true);
     try {
       await weighInApi.save({ date: isoToday(), weight: weighInWeight });
+      const updatedUser = await usersApi.getMe();
+      updateUser(updatedUser);
       await refresh();
     } finally {
       setSavingWeighIn(false);
@@ -57,7 +59,10 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
       <EditView
         user={user}
         onSave={async (payload) => {
-          const updated = await usersApi.update(user.id, payload);
+          const updated = await usersApi.update(user.id, {
+            ...payload,
+            dailyStepsGoal: payload.dailyStepsGoal,
+          });
           updateUser(updated);
           setEditing(false);
         }}
@@ -144,7 +149,8 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
 
         {/* Calculs */}
         <Section label="tes calculs">
-          <InfoRow label="Objectif" value={user?.dailyCalorieGoal ? `${user.dailyCalorieGoal} kcal/j` : '—'} last />
+          <InfoRow label="Objectif calorique" value={user?.dailyCalorieGoal ? `${user.dailyCalorieGoal} kcal/j` : '—'} />
+          <InfoRow label="Objectif de pas" value={user?.dailyStepsGoal ? `${user.dailyStepsGoal.toLocaleString('fr-FR')} pas/j` : '—'} last />
         </Section>
 
         {/* Actions */}
@@ -188,6 +194,7 @@ interface EditViewProps {
     username: string; gender: string; age: number;
     height: number; currentWeight: number;
     weighInDay: string; dailyCalorieGoal: number;
+    dailyStepsGoal: number | null;
   }) => Promise<void>;
   onCancel: () => void;
   onTabChange: (tab: NavTab) => void;
@@ -203,6 +210,7 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
     gender:           user.gender,
     weighInDay:       user.weighInDay ?? 'MONDAY',
     dailyCalorieGoal: user.dailyCalorieGoal,
+    dailyStepsGoal:   String(user.dailyStepsGoal ?? ''),
   });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState<string | null>(null);
@@ -237,6 +245,7 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
     setSaving(true);
     setError(null);
     try {
+      const stepsGoalParsed = parseInt(form.dailyStepsGoal, 10);
       await onSave({
         username:         form.username.trim(),
         gender:           form.gender,
@@ -245,6 +254,7 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
         currentWeight:    parseFloat(String(form.currentWeight)),
         weighInDay:       form.weighInDay,
         dailyCalorieGoal: form.dailyCalorieGoal,
+        dailyStepsGoal:   isNaN(stepsGoalParsed) || stepsGoalParsed <= 0 ? null : stepsGoalParsed,
       });
     } catch {
       setError('Erreur lors de la mise à jour');
@@ -291,7 +301,8 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
             <Section label="physique">
               <EditField label="Âge"              value={String(form.age)}           onChange={v => setField('age', v)}           type="number" />
               <EditField label="Taille (cm)"       value={String(form.height)}        onChange={v => setField('height', v)}        type="number" />
-              <EditField label="Poids actuel (kg)" value={String(form.currentWeight)} onChange={v => setField('currentWeight', v)} type="number" last />
+              <EditField label="Poids actuel (kg)" value={String(form.currentWeight)} onChange={v => setField('currentWeight', v)} type="number" />
+              <EditField label="Objectif de pas/j" value={form.dailyStepsGoal}        onChange={v => setField('dailyStepsGoal', v)} type="number" last />
             </Section>
 
             <Section label="pesée hebdomadaire">

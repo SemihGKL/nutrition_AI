@@ -9,11 +9,13 @@ export interface UpdateUserPayload {
   currentWeight: number;
   weighInDay: string;
   dailyCalorieGoal: number;
+  dailyStepsGoal?: number | null;
 }
 
 export const usersApi = {
   getAll: () => api.get<User[]>('/api/users'),
   getById: (id: number) => api.get<User>(`/api/users/${id}`),
-  update: (id: number, payload: UpdateUserPayload) =>
-    api.put<User>(`/api/users/${id}`, payload),
+  getMe: () => api.get<User>('/api/users/me'),
+  update: (_id: number, payload: UpdateUserPayload) =>
+    api.put<User>('/api/users/me', payload),
 };
