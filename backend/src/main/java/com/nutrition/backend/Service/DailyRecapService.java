@@ -56,6 +56,7 @@ public class DailyRecapService {
                 entry.getCaloriesConsumed(),
                 entry.getCaloriesBurned(),
                 entry.getSteps(),
+                stepsKcal,
                 netCalories,
                 user.getDailyCalorieGoal(),
                 mbr.mbr(),

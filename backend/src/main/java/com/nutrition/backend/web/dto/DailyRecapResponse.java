@@ -7,6 +7,7 @@ public record DailyRecapResponse(
         int caloriesConsumed,
         int caloriesBurned,
         int steps,
+        int stepsKcal,
         int netCalories,
         int dailyCalorieGoal,
         double mbr,

@@ -10,6 +10,7 @@ export interface User {
   startWeight: number;
   currentWeight: number;
   weighInDay: string | null;
+  dailyStepsGoal: number | null;
 }
 
 export interface WeighIn {
@@ -34,6 +35,7 @@ export interface DailyRecap {
   caloriesConsumed: number;
   caloriesBurned: number;
   steps: number;
+  stepsKcal: number;
   netCalories: number;
   dailyCalorieGoal: number;
   mbr: number;
@@ -55,4 +57,6 @@ export interface ObjectiveDto {
   dayOfWeek: number;
   label: string;
   position: number;
+  type: string;
+  targetValue: number | null;
 }

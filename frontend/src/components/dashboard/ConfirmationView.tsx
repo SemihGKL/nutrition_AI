@@ -3,7 +3,7 @@ import { Flame, Pencil, Chevron } from '../ui/icons';
 import { PipStrip } from '../ui/PipStrip';
 import { Card } from '../ui/Card';
 import { BilanRow } from './BilanRow';
-import { frenchWeekday, frenchDay, formatNumber, stepsToKcal } from '../../utils/format';
+import { frenchWeekday, frenchDay, formatNumber } from '../../utils/format';
 import type { DailyRecap } from '../../types/api';
 import type { StreakInfo } from '../../hooks/useStreak';
 
@@ -11,7 +11,6 @@ interface Props {
   date: string;
   recap: DailyRecap;
   streak: StreakInfo;
-  weightKg: number;
   canEdit?: boolean;
   onEdit: () => void;
 }
@@ -29,17 +28,18 @@ function milestoneLabel(days: number): string {
   return `${months} mois`;
 }
 
-export function ConfirmationView({ date, recap, streak, weightKg, canEdit = false, onEdit }: Props) {
+export function ConfirmationView({ date, recap, streak, canEdit = false, onEdit }: Props) {
   const [bilanOpen, setBilanOpen] = useState(false);
   const milestone   = nextMilestone(streak.current);
   const toMilestone = milestone - streak.current;
   const progressPct = (streak.current / milestone) * 100;
 
-  const stepsKcal  = stepsToKcal(recap.steps, weightKg);
+  const stepsKcal  = recap.stepsKcal;
   const ecart      = recap.netCalories - recap.dailyCalorieGoal;
   const isOnTarget = ecart <= 0;
+  const isPartial  = ecart > 0 && recap.netCalories <= recap.mbr;
   const absEcart   = Math.abs(ecart);
-  const resultColor = isOnTarget ? 'var(--green)' : 'var(--red)';
+  const resultColor = isOnTarget ? 'var(--green)' : isPartial ? 'var(--amber)' : 'var(--red)';
 
   return (
     <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px 20px' }}>
@@ -81,7 +81,7 @@ export function ConfirmationView({ date, recap, streak, weightKg, canEdit = fals
         gap: 14,
         padding: '16px',
         marginBottom: 16,
-        background: isOnTarget ? 'var(--green-soft)' : 'var(--red-soft)',
+        background: isOnTarget ? 'var(--green-soft)' : isPartial ? 'var(--orange-tint)' : 'var(--red-soft)',
         borderRadius: 'var(--radius-md)',
         borderLeft: `4px solid ${resultColor}`,
         boxShadow: 'var(--shadow-sm)',
@@ -91,11 +91,15 @@ export function ConfirmationView({ date, recap, streak, weightKg, canEdit = fals
           background: resultColor,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
-          boxShadow: `0 0 0 6px ${isOnTarget ? 'var(--green-tint)' : 'var(--red-soft)'}`,
+          boxShadow: `0 0 0 6px ${isOnTarget ? 'var(--green-tint)' : isPartial ? 'var(--orange-soft)' : 'var(--red-soft)'}`,
         }}>
           {isOnTarget ? (
             <svg width="20" height="15" viewBox="0 0 20 15" fill="none">
               <path d="M1.5 7.5L7.5 13.5L18.5 1.5" stroke="white" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : isPartial ? (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3v5M8 11v1" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
             </svg>
           ) : (
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -105,17 +109,19 @@ export function ConfirmationView({ date, recap, streak, weightKg, canEdit = fals
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: resultColor, marginBottom: 3 }}>
-            {isOnTarget ? 'Objectif atteint' : 'Au-dessus de l\'objectif'}
+            {isOnTarget ? 'Objectif atteint' : isPartial ? 'Objectif dépassé — déficit préservé' : 'Au-dessus de l\'objectif'}
           </div>
           <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>
             {isOnTarget
               ? <>Déficit de <span className="tabular" style={{ fontWeight: 600 }}>{formatNumber(absEcart)} kcal</span></>
-              : <>Dépassement de <span className="tabular" style={{ fontWeight: 600 }}>+{formatNumber(absEcart)} kcal</span></>
+              : <><span className="tabular" style={{ fontWeight: 600 }}>+{formatNumber(absEcart)} kcal</span>{isPartial ? ' · tu restes en déficit' : ' au-dessus de ton objectif'}</>
             }
           </div>
-          <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 3 }}>
-            ≈ {isOnTarget ? '−' : '+'}{Math.round(absEcart / 7.7)} g de graisse
-          </div>
+          {!isPartial && (
+            <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 3 }}>
+              ≈ {isOnTarget ? '−' : '+'}{Math.round(absEcart / 7.7)} g de graisse
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div className="tabular" style={{ fontSize: 22, fontWeight: 700, color: resultColor, lineHeight: 1 }}>
@@ -195,7 +201,7 @@ export function ConfirmationView({ date, recap, streak, weightKg, canEdit = fals
               <span style={{ fontSize: 12, fontWeight: 500 }}>kcal</span>
             </div>
             <div style={{ fontSize: 11, fontWeight: 600, color: resultColor, marginTop: 3 }}>
-              {isOnTarget ? 'Déficit calorique ✓' : 'Surplus calorique'}
+              {isOnTarget ? 'Déficit calorique ✓' : isPartial ? 'Déficit préservé' : 'Surplus calorique'}
             </div>
           </div>
         </button>
@@ -220,7 +226,7 @@ export function ConfirmationView({ date, recap, streak, weightKg, canEdit = fals
                   <span style={{ fontSize: 12, fontWeight: 500 }}>kcal</span>
                 </div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: resultColor, marginTop: 3 }}>
-                  {isOnTarget ? 'Déficit calorique ✓' : 'Surplus calorique'}
+                  {isOnTarget ? 'Déficit calorique ✓' : isPartial ? 'Déficit préservé' : 'Surplus calorique'}
                 </div>
               </div>
             </div>

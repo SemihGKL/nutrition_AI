@@ -53,6 +53,10 @@ export function DashboardPage({ onTabChange }: Props) {
   const stepsKcal = stepsToKcal(steps, user?.currentWeight ?? 70);
   const net       = calories - stepsKcal - burned;
 
+  const mbrValue = recap?.mbr ?? (user
+    ? Math.round((10 * (user.currentWeight ?? 70)) + (6.25 * (user.height ?? 170)) - (5 * (user.age ?? 30)) + (user.gender === 'MALE' ? 5 : -161))
+    : undefined);
+
 
   const handleConfirm = async () => {
     await confirm();
@@ -73,7 +77,6 @@ export function DashboardPage({ onTabChange }: Props) {
           date={viewedDate}
           recap={recap}
           streak={streak}
-          weightKg={user?.currentWeight ?? 70}
           canEdit={isToday}
           onEdit={() => setIsEditing(true)}
         />
@@ -129,13 +132,14 @@ export function DashboardPage({ onTabChange }: Props) {
           <ProgressRing
             value={Math.max(0, net)}
             target={target}
+            mbr={mbrValue}
             size={232}
             stroke={14}
             label="kcal net"
           />
         </div>
 
-        <ContextMessage calories={net} target={target} />
+        <ContextMessage calories={net} target={target} mbr={mbrValue} />
 
         <EntrySection
           key={viewedDate}
@@ -143,6 +147,7 @@ export function DashboardPage({ onTabChange }: Props) {
           steps={steps}
           burned={burned}
           weightKg={user?.currentWeight ?? 70}
+          stepsGoal={user?.dailyStepsGoal}
           isSaving={isSaving}
           onCalories={setCalories}
           onSteps={setSteps}
@@ -154,7 +159,7 @@ export function DashboardPage({ onTabChange }: Props) {
         )}
 
         {calories > 0 && (
-          <DeficitBanner net={net} target={target} />
+          <DeficitBanner net={net} target={target} mbr={mbrValue} />
         )}
 
         <PrimaryCTA
