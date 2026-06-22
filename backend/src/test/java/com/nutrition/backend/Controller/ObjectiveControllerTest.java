@@ -5,6 +5,7 @@ import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Class.UserObjective;
 import com.nutrition.backend.Exception.ObjectiveAccessDeniedException;
 import com.nutrition.backend.Exception.ObjectiveNotFoundException;
+import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.domain.ports.TokenService;
@@ -49,6 +50,9 @@ class ObjectiveControllerTest {
 
     @MockBean
     ObjectiveService objectiveService;
+
+    @MockBean
+    DailyCaloriesService dailyCaloriesService;
 
     private User testUser;
 
@@ -122,7 +126,7 @@ class ObjectiveControllerTest {
 
         when(objectiveService.createObjective(any(UserObjective.class))).thenReturn(saved);
 
-        String body = objectMapper.writeValueAsString(new CreateObjectiveRequest(2, "Méditer 10 min"));
+        String body = objectMapper.writeValueAsString(new CreateObjectiveRequest(2, "Méditer 10 min", null, null));
 
         mockMvc.perform(post("/api/objectives")
                         .with(csrf())

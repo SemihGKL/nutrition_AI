@@ -5,6 +5,7 @@ import com.nutrition.backend.Class.DailyCalories;
 import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.DailyRecapService;
+import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.Config.JwtAuthenticationFilter;
 import com.nutrition.backend.domain.ports.TokenService;
@@ -56,6 +57,9 @@ class DailyCaloriesControllerTest {
 
     @MockBean
     DailyRecapService dailyRecapService;
+
+    @MockBean
+    ObjectiveService objectiveService;
 
     private User testUser;
 
@@ -204,8 +208,9 @@ class DailyCaloriesControllerTest {
     void should_return_daily_recap_when_valid_date_is_provided() throws Exception {
         LocalDate date = LocalDate.of(2026, 6, 10);
 
+        // stepsKcal = round(max(0,7500-4000) × (70/70) × 0.025) = round(3500 × 0.025) = 88
         DailyRecapResponse recap = new DailyRecapResponse(
-                date, 1900, 200, 7500, 1550, 1950, 1800.0, 2160.0, 610.0, 28.2, false
+                date, 1900, 200, 7500, 88, 1550, 1950, 1800.0, 2160.0, 610.0, 28.2, false
         );
 
         when(dailyRecapService.getRecap(1L, date)).thenReturn(recap);

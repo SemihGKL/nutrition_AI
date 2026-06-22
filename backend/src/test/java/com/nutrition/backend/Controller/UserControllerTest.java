@@ -99,7 +99,7 @@ class UserControllerTest {
         when(userService.getUserById(1L)).thenReturn(updatedUser);
 
         String body = objectMapper.writeValueAsString(
-                new UpdateUserRequest("UpdatedTest", "updated@example.com", "MALE", 29, 178.0, 79.0, "MONDAY", 2000)
+                new UpdateUserRequest("UpdatedTest", "updated@example.com", "MALE", 29, 178.0, 79.0, "MONDAY", 2000, null)
         );
 
         mockMvc.perform(put("/api/users/me")
@@ -134,7 +134,7 @@ class UserControllerTest {
         when(userService.getUserById(1L)).thenReturn(updatedUser);
 
         String body = objectMapper.writeValueAsString(
-                new UpdateUserRequest("Test", "test@example.com", "MALE", 28, 178.0, 78.0, "WEDNESDAY", null)
+                new UpdateUserRequest("Test", "test@example.com", "MALE", 28, 178.0, 78.0, "WEDNESDAY", null, null)
         );
 
         mockMvc.perform(put("/api/users/me")
