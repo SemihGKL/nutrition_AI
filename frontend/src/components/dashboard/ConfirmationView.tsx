@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Flame, Pencil, Chevron } from '../ui/icons';
 import { PipStrip } from '../ui/PipStrip';
-import { Card } from '../ui/Card';
 import { BilanRow } from './BilanRow';
 import { frenchWeekday, frenchDay, formatNumber } from '../../utils/format';
 import type { DailyRecap } from '../../types/api';
@@ -15,25 +14,17 @@ interface Props {
   onEdit: () => void;
 }
 
-const NEXT_MILESTONES = [30, 60, 90, 180, 365, 730];
 
-function nextMilestone(current: number): number {
-  return NEXT_MILESTONES.find(m => m > current) ?? current + 30;
-}
-
-function milestoneLabel(days: number): string {
-  const months = days / 30;
-  if (days === 365) return '1 an';
-  if (days === 730) return '2 ans';
-  return `${months} mois`;
+function motivationMessage(current: number): string {
+  if (current === 0) return "Commence aujourd'hui — une série commence toujours par 1.";
+  if (current <= 2)  return "Les premières habitudes se construisent maintenant — continue !";
+  if (current <= 6)  return "Tu prends de l'élan, lâche rien !";
+  if (current <= 13) return "Une semaine de régularité, c'est déjà beaucoup — garde le cap.";
+  return "Tu es dans une dynamique solide, chaque jour compte.";
 }
 
 export function ConfirmationView({ date, recap, streak, canEdit = false, onEdit }: Props) {
   const [bilanOpen, setBilanOpen] = useState(false);
-  const milestone   = nextMilestone(streak.current);
-  const toMilestone = milestone - streak.current;
-  const progressPct = (streak.current / milestone) * 100;
-
   const stepsKcal  = recap.stepsKcal;
   const ecart      = recap.netCalories - recap.dailyCalorieGoal;
   const isOnTarget = ecart <= 0;
@@ -156,8 +147,8 @@ export function ConfirmationView({ date, recap, streak, canEdit = false, onEdit 
         <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 4 }}>
           jours de suivi confirmés d'affilée · record : {streak.best}j
         </div>
-        <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 4 }}>
-          Chaque journée confirmée fait progresser la série.
+        <div style={{ fontSize: 11, color: 'var(--orange)', fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
+          {motivationMessage(streak.current)}
         </div>
 
         <div style={{ height: 1, background: 'var(--orange-soft)', margin: '14px 0' }} />
@@ -234,26 +225,6 @@ export function ConfirmationView({ date, recap, streak, canEdit = false, onEdit 
         )}
       </div>
 
-      {/* Prochain palier */}
-      <Card padding={14} style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>prochain palier</span>
-          <span className="tabular" style={{ fontSize: 13, fontWeight: 600, color: 'var(--orange)' }}>
-            {milestoneLabel(milestone)}
-          </span>
-        </div>
-        <div style={{ height: 6, borderRadius: 999, background: 'var(--paper-3)', overflow: 'hidden' }}>
-          <div style={{
-            width: `${Math.min(100, progressPct)}%`,
-            height: '100%',
-            background: 'var(--orange)',
-            borderRadius: 999,
-          }} />
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 8 }}>
-          encore {formatNumber(toMilestone)} jour{toMilestone > 1 ? 's' : ''} pour atteindre le palier {milestoneLabel(milestone)}
-        </div>
-      </Card>
 
     </div>
   );
