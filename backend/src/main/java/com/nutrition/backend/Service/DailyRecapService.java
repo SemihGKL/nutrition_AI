@@ -1,10 +1,9 @@
 package com.nutrition.backend.Service;
 
 import com.nutrition.backend.Class.DailyCalories;
-import com.nutrition.backend.Class.User;
+import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
 import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
-import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.model.Mbr;
 import com.nutrition.backend.domain.model.UserProfile;
 import com.nutrition.backend.domain.service.MbrCalculator;
@@ -41,7 +40,7 @@ public class DailyRecapService {
                 user.getCurrentWeight(),
                 user.getHeight(),
                 user.getAge(),
-                Gender.valueOf(user.getGender())
+                user.getGender()
         );
 
         Mbr mbr = mbrCalculator.calculate(profile);

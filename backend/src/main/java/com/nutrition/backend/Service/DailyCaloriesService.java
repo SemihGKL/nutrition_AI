@@ -1,7 +1,6 @@
 package com.nutrition.backend.Service;
 
 import com.nutrition.backend.Class.DailyCalories;
-import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Repository.DailyCaloriesRepository;
 import org.springframework.stereotype.Service;
 

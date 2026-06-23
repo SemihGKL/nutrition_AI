@@ -1,10 +1,10 @@
 package com.nutrition.backend.Service;
 
-import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Exception.UserNotFoundException;
-import com.nutrition.backend.Repository.UserRepository;
+import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.model.UserProfile;
+import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.service.MbrCalculator;
 import org.springframework.stereotype.Service;
 
@@ -25,52 +25,42 @@ public class UserService {
         UserProfile profile = new UserProfile(startWeight, height, age, gender);
         int calculatedGoal = (int) mbrCalculator.calculate(profile).dailyCalorieGoal();
 
-        User user = new User();
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setWeightGoal(weightGoal);
-        user.setDailyCalorieGoal(calculatedGoal);
-        user.setAge(age);
-        user.setGender(gender.name());
-        user.setHeight(height);
-        user.setStartWeight(startWeight);
-        user.setCurrentWeight(startWeight);
-        user.setWeighInDay(weighInDay);
+        User user = new User(null, username, email, null, gender, age, height,
+                startWeight, startWeight, calculatedGoal, weightGoal, weighInDay, null);
         return userRepository.save(user);
     }
 
     public User updateProfile(Long id, Optional<String> username, Optional<String> email) {
         User user = getUserById(id);
-        username.ifPresent(user::setUsername);
-        email.ifPresent(user::setEmail);
+        if (username.isPresent()) {
+            user = user.withUsername(username.get());
+        }
+        if (email.isPresent()) {
+            user = user.withEmail(email.get());
+        }
         return userRepository.save(user);
     }
 
     public User updateCalorieGoal(Long id, int dailyCalorieGoal) {
         User user = getUserById(id);
-        user.setDailyCalorieGoal(dailyCalorieGoal);
+        user = user.withDailyCalorieGoal(dailyCalorieGoal);
         return userRepository.save(user);
     }
 
     public User updateStepsGoal(Long id, Integer dailyStepsGoal) {
         User user = getUserById(id);
-        user.setDailyStepsGoal(dailyStepsGoal);
+        user = user.withDailyStepsGoal(dailyStepsGoal);
         return userRepository.save(user);
     }
 
     public User updateBodyMetrics(Long id, Gender gender, int age, Double height, double currentWeight, String weighInDay) {
         User user = getUserById(id);
-        user.setGender(gender.name());
-        user.setAge(age);
-        user.setHeight(height);
-        user.setCurrentWeight(currentWeight);
-        if (weighInDay != null) {
-            user.setWeighInDay(weighInDay);
-        }
 
         UserProfile profile = new UserProfile(currentWeight, height, age, gender);
         int recalculatedGoal = (int) mbrCalculator.calculate(profile).dailyCalorieGoal();
-        user.setDailyCalorieGoal(recalculatedGoal);
+
+        user = user.withBodyMetrics(gender, age, height, currentWeight, weighInDay)
+                   .withDailyCalorieGoal(recalculatedGoal);
 
         return userRepository.save(user);
     }
@@ -88,5 +78,4 @@ public class UserService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable pour l'email : " + email));
     }
-
 }

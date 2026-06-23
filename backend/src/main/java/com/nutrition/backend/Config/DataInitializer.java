@@ -1,7 +1,7 @@
 package com.nutrition.backend.Config;
 
-import com.nutrition.backend.Class.User;
-import com.nutrition.backend.Repository.UserRepository;
+import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
+import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,11 +13,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class DataInitializer {
 
     @Bean
-    ApplicationRunner seedTestUser(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    ApplicationRunner seedTestUser(UserJpaRepository userJpaRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            if (userRepository.findByEmail("test@test.com").isPresent()) return;
+            if (userJpaRepository.findByEmail("test@test.com").isPresent()) return;
 
-            User user = new User();
+            UserJpaEntity user = new UserJpaEntity();
             user.setUsername("Test");
             user.setEmail("test@test.com");
             user.setPassword(passwordEncoder.encode("test1234"));
@@ -29,7 +29,7 @@ public class DataInitializer {
             user.setWeightGoal(75);
             user.setDailyCalorieGoal(1950);
 
-            userRepository.save(user);
+            userJpaRepository.save(user);
         };
     }
 }

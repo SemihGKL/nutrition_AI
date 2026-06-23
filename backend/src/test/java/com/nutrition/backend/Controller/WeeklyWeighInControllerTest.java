@@ -1,11 +1,14 @@
 package com.nutrition.backend.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Class.WeeklyWeighIn;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.Service.WeeklyWeighInService;
+import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
+import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
+import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
 import com.nutrition.backend.web.dto.CreateWeighInRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,22 +54,30 @@ class WeeklyWeighInControllerTest {
     @MockBean
     WeeklyWeighInService weeklyWeighInService;
 
+    @MockBean
+    UserJpaRepository userJpaRepository;
+
     private User testUser;
+    private UserJpaEntity testUserJpa;
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setId(1L);
-        testUser.setEmail("test@example.com");
-        testUser.setUsername("Test");
-        testUser.setGender("MALE");
-        testUser.setAge(28);
-        testUser.setHeight(178.0);
-        testUser.setCurrentWeight(80.0);
-        testUser.setStartWeight(85.0);
-        testUser.setWeightGoal(75);
-        testUser.setDailyCalorieGoal(1950);
+        testUser = new User(1L, "Test", "test@example.com", "hashed",
+                Gender.MALE, 28, 178.0, 85.0, 80.0, 1950, 75, null, null);
+        testUserJpa = new UserJpaEntity();
+        testUserJpa.setId(1L);
+        testUserJpa.setEmail("test@example.com");
+        testUserJpa.setUsername("Test");
+        testUserJpa.setGender("MALE");
+        testUserJpa.setAge(28);
+        testUserJpa.setHeight(178.0);
+        testUserJpa.setCurrentWeight(80.0);
+        testUserJpa.setStartWeight(85.0);
+        testUserJpa.setWeightGoal(75);
+        testUserJpa.setDailyCalorieGoal(1950);
+
         when(userService.getByEmail("user")).thenReturn(testUser);
+        when(userJpaRepository.findById(1L)).thenReturn(Optional.of(testUserJpa));
     }
 
     @Test

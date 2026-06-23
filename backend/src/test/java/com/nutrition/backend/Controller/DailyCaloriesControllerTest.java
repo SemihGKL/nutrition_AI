@@ -2,14 +2,16 @@ package com.nutrition.backend.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nutrition.backend.Class.DailyCalories;
-import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.DailyRecapService;
 import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
-import com.nutrition.backend.Config.JwtAuthenticationFilter;
 import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
+import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
+import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
+import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
 import com.nutrition.backend.web.dto.CreateDailyCaloriesRequest;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -62,22 +64,30 @@ class DailyCaloriesControllerTest {
     @MockBean
     ObjectiveService objectiveService;
 
+    @MockBean
+    UserJpaRepository userJpaRepository;
+
     private User testUser;
+    private UserJpaEntity testUserJpa;
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setId(1L);
-        testUser.setEmail("test@example.com");
-        testUser.setUsername("Test");
-        testUser.setGender("MALE");
-        testUser.setAge(28);
-        testUser.setHeight(178.0);
-        testUser.setCurrentWeight(80.0);
-        testUser.setStartWeight(85.0);
-        testUser.setWeightGoal(75);
-        testUser.setDailyCalorieGoal(1950);
+        testUser = new User(1L, "Test", "test@example.com", "hashed",
+                Gender.MALE, 28, 178.0, 85.0, 80.0, 1950, 75, null, null);
+        testUserJpa = new UserJpaEntity();
+        testUserJpa.setId(1L);
+        testUserJpa.setEmail("test@example.com");
+        testUserJpa.setUsername("Test");
+        testUserJpa.setGender("MALE");
+        testUserJpa.setAge(28);
+        testUserJpa.setHeight(178.0);
+        testUserJpa.setCurrentWeight(80.0);
+        testUserJpa.setStartWeight(85.0);
+        testUserJpa.setWeightGoal(75);
+        testUserJpa.setDailyCalorieGoal(1950);
+
         when(userService.getByEmail("user")).thenReturn(testUser);
+        when(userJpaRepository.findById(1L)).thenReturn(Optional.of(testUserJpa));
     }
 
     @Test
@@ -231,7 +241,6 @@ class DailyCaloriesControllerTest {
     void should_return_daily_recap_when_valid_date_is_provided() throws Exception {
         LocalDate date = LocalDate.of(2026, 6, 10);
 
-        // stepsKcal = round(max(0,7500-4000) × (70/70) × 0.025) = round(3500 × 0.025) = 88
         DailyRecapResponse recap = new DailyRecapResponse(
                 date, 1900, 200, 7500, 88, 1550, 1950, 1800.0, 2160.0, 610.0, 28.2, false
         );

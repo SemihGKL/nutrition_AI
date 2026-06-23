@@ -1,13 +1,14 @@
 package com.nutrition.backend.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Class.UserObjective;
 import com.nutrition.backend.Exception.ObjectiveAccessDeniedException;
 import com.nutrition.backend.Exception.ObjectiveNotFoundException;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
+import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
 import com.nutrition.backend.web.dto.CreateObjectiveRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,17 +59,8 @@ class ObjectiveControllerTest {
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setId(1L);
-        testUser.setEmail("test@example.com");
-        testUser.setUsername("Test");
-        testUser.setGender("MALE");
-        testUser.setAge(28);
-        testUser.setHeight(178.0);
-        testUser.setCurrentWeight(80.0);
-        testUser.setStartWeight(85.0);
-        testUser.setWeightGoal(75);
-        testUser.setDailyCalorieGoal(1950);
+        testUser = new User(1L, "Test", "test@example.com", "hashed",
+                Gender.MALE, 28, 178.0, 85.0, 80.0, 1950, 75, null, null);
         when(userService.getByEmail("user")).thenReturn(testUser);
     }
 

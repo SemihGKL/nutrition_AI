@@ -1,10 +1,10 @@
 package com.nutrition.backend.Controller;
 
-import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Class.UserObjective;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
+import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.web.dto.CreateObjectiveRequest;
 import com.nutrition.backend.web.dto.ObjectiveDto;
 import org.springframework.http.HttpStatus;
@@ -50,8 +50,6 @@ public class ObjectiveController {
         objective.setTargetValue(request.targetValue());
         UserObjective saved = objectiveService.createObjective(objective);
 
-        // Rétroactivité : si l'objectif SPORT correspond à aujourd'hui et que la journée
-        // a déjà des calories brûlées enregistrées, on le coche immédiatement
         if ("SPORT".equals(saved.getType())) {
             LocalDate today = LocalDate.now();
             int todayDow = today.getDayOfWeek().getValue() - 1;

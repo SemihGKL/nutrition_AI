@@ -1,8 +1,8 @@
 package com.nutrition.backend.Service;
 
 import com.nutrition.backend.Class.WeeklyWeighIn;
-import com.nutrition.backend.Repository.UserRepository;
 import com.nutrition.backend.Repository.WeeklyWeighInRepository;
+import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,16 +12,16 @@ import java.util.Optional;
 public class WeeklyWeighInService {
 
     private final WeeklyWeighInRepository weeklyWeighInRepository;
-    private final UserRepository userRepository;
+    private final UserJpaRepository userJpaRepository;
 
-    public WeeklyWeighInService(WeeklyWeighInRepository weeklyWeighInRepository, UserRepository userRepository) {
+    public WeeklyWeighInService(WeeklyWeighInRepository weeklyWeighInRepository, UserJpaRepository userJpaRepository) {
         this.weeklyWeighInRepository = weeklyWeighInRepository;
-        this.userRepository = userRepository;
+        this.userJpaRepository = userJpaRepository;
     }
 
     public WeeklyWeighIn saveWeighIn(WeeklyWeighIn weighIn) {
         weighIn.getUser().setCurrentWeight(weighIn.getWeight());
-        userRepository.save(weighIn.getUser());
+        userJpaRepository.save(weighIn.getUser());
         return weeklyWeighInRepository.save(weighIn);
     }
 

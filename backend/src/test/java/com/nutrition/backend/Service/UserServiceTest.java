@@ -1,9 +1,10 @@
 package com.nutrition.backend.Service;
 
-import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Exception.UserNotFoundException;
-import com.nutrition.backend.Repository.UserRepository;
+import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
+import com.nutrition.backend.domain.model.Mbr;
+import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.service.MbrCalculator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,23 +32,23 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
+    private User userWith(Long id, String username, String email, int calorieGoal) {
+        return new User(id, username, email, null, Gender.MALE, 28, 178.0,
+                80.0, 80.0, calorieGoal, 75, null, null);
+    }
+
     @Test
     void should_calculate_mbr_and_set_daily_goal_when_creating_user() {
         String username = "john";
         String email = "john@mail.fr";
-        double startWeight = 80.0;
 
-        com.nutrition.backend.domain.model.Mbr fakeMbr =
-                new com.nutrition.backend.domain.model.Mbr(1780.0, 2136.0, 1736.0);
+        Mbr fakeMbr = new Mbr(1780.0, 2136.0, 1736.0);
         when(mbrCalculator.calculate(any())).thenReturn(fakeMbr);
 
-        User saved = new User();
-        saved.setUsername(username);
-        saved.setEmail(email);
-        saved.setDailyCalorieGoal(1736);
+        User saved = userWith(1L, username, email, 1736);
         when(userRepository.save(any(User.class))).thenReturn(saved);
 
-        User result = userService.createUser(username, email, 75, Gender.MALE, 30, 180.0, startWeight, null);
+        User result = userService.createUser(username, email, 75, Gender.MALE, 30, 180.0, 80.0, null);
 
         assertThat(result.getDailyCalorieGoal()).isEqualTo(1736);
         assertThat(result.getUsername()).isEqualTo(username);
@@ -67,13 +68,8 @@ class UserServiceTest {
     @Test
     void should_update_username_and_email_when_both_provided() {
         Long userId = 1L;
-        User existing = new User();
-        existing.setUsername("old");
-        existing.setEmail("old@mail.fr");
-
-        User updated = new User();
-        updated.setUsername("new");
-        updated.setEmail("new@mail.fr");
+        User existing = userWith(userId, "old", "old@mail.fr", 2000);
+        User updated = userWith(userId, "new", "new@mail.fr", 2000);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(existing));
         when(userRepository.save(any(User.class))).thenReturn(updated);
@@ -87,9 +83,7 @@ class UserServiceTest {
     @Test
     void should_update_only_username_when_email_absent() {
         Long userId = 1L;
-        User existing = new User();
-        existing.setUsername("old");
-        existing.setEmail("same@mail.fr");
+        User existing = userWith(userId, "old", "same@mail.fr", 2000);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(existing));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -103,8 +97,7 @@ class UserServiceTest {
     @Test
     void should_update_calorie_goal() {
         Long userId = 1L;
-        User existing = new User();
-        existing.setDailyCalorieGoal(2000);
+        User existing = userWith(userId, "john", "john@mail.fr", 2000);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(existing));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -117,11 +110,9 @@ class UserServiceTest {
     @Test
     void should_recalculate_mbr_when_updating_body_metrics() {
         Long userId = 1L;
-        User existing = new User();
-        existing.setDailyCalorieGoal(2000);
+        User existing = userWith(userId, "jane", "jane@mail.fr", 2000);
 
-        com.nutrition.backend.domain.model.Mbr newMbr =
-                new com.nutrition.backend.domain.model.Mbr(1700.0, 2040.0, 1640.0);
+        Mbr newMbr = new Mbr(1700.0, 2040.0, 1640.0);
         when(mbrCalculator.calculate(any())).thenReturn(newMbr);
         when(userRepository.findById(userId)).thenReturn(Optional.of(existing));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -130,7 +121,7 @@ class UserServiceTest {
 
         assertThat(result.getDailyCalorieGoal()).isEqualTo(1640);
         assertThat(result.getCurrentWeight()).isEqualTo(65.0);
-        assertThat(result.getGender()).isEqualTo("FEMALE");
+        assertThat(result.getGender()).isEqualTo(Gender.FEMALE);
     }
 
     @Test
@@ -144,10 +135,8 @@ class UserServiceTest {
 
     @Test
     void should_return_all_users_when_users_exist() {
-        User alice = new User();
-        alice.setUsername("alice");
-        User bob = new User();
-        bob.setUsername("bob");
+        User alice = userWith(1L, "alice", "alice@mail.fr", 2000);
+        User bob = userWith(2L, "bob", "bob@mail.fr", 1800);
         when(userRepository.findAll()).thenReturn(List.of(alice, bob));
 
         List<User> result = userService.getAllUsers();
@@ -160,9 +149,7 @@ class UserServiceTest {
     @Test
     void should_return_user_when_id_exists() {
         Long userId = 1L;
-        User expected = new User();
-        expected.setUsername("alice");
-        expected.setEmail("alice@mail.fr");
+        User expected = userWith(userId, "alice", "alice@mail.fr", 2000);
         when(userRepository.findById(userId)).thenReturn(Optional.of(expected));
 
         User result = userService.getUserById(userId);
@@ -174,8 +161,7 @@ class UserServiceTest {
     @Test
     void should_return_user_when_email_exists() {
         String email = "alice@mail.fr";
-        User expected = new User();
-        expected.setEmail(email);
+        User expected = userWith(1L, "alice", email, 2000);
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(expected));
 
         User result = userService.getByEmail(email);
@@ -186,8 +172,8 @@ class UserServiceTest {
     @Test
     void should_update_daily_steps_goal_and_persist_it_when_valid_user_id_and_steps_value() {
         Long userId = 1L;
-        User existing = new User();
-        existing.setDailyStepsGoal(5000);
+        User existing = new User(userId, "john", "john@mail.fr", null, Gender.MALE, 28, 178.0,
+                80.0, 80.0, 2000, 75, null, 5000);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(existing));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -200,17 +186,14 @@ class UserServiceTest {
     @Test
     void should_preserve_existing_weigh_in_day_when_weigh_in_day_is_null_in_body_metrics_update() {
         Long userId = 1L;
-        User existing = new User();
-        existing.setWeighInDay("WEDNESDAY");
-        existing.setDailyCalorieGoal(2000);
+        User existing = new User(userId, "jane", "jane@mail.fr", null, Gender.FEMALE, 28, 165.0,
+                70.0, 70.0, 2000, 60, "WEDNESDAY", null);
 
-        com.nutrition.backend.domain.model.Mbr newMbr =
-                new com.nutrition.backend.domain.model.Mbr(1700.0, 2040.0, 1640.0);
+        Mbr newMbr = new Mbr(1700.0, 2040.0, 1640.0);
         when(mbrCalculator.calculate(any())).thenReturn(newMbr);
         when(userRepository.findById(userId)).thenReturn(Optional.of(existing));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        // When — weighInDay est null : le champ existant doit être préservé
         User result = userService.updateBodyMetrics(userId, Gender.FEMALE, 28, 165.0, 65.0, null);
 
         assertThat(result.getWeighInDay()).isEqualTo("WEDNESDAY");

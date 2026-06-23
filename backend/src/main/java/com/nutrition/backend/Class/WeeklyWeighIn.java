@@ -1,6 +1,7 @@
 package com.nutrition.backend.Class;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,5 +30,5 @@ public class WeeklyWeighIn {
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private UserJpaEntity user;
 }

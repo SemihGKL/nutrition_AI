@@ -1,9 +1,9 @@
 package com.nutrition.backend.Service;
 
-import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Class.WeeklyWeighIn;
-import com.nutrition.backend.Repository.UserRepository;
 import com.nutrition.backend.Repository.WeeklyWeighInRepository;
+import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
+import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -27,16 +27,22 @@ public class WeeklyWeighInServiceTest {
     private WeeklyWeighInRepository weeklyWeighInRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private UserJpaRepository userJpaRepository;
 
     @InjectMocks
     private WeeklyWeighInService weeklyWeighInService;
 
+    private UserJpaEntity userJpaEntity(double currentWeight) {
+        UserJpaEntity entity = new UserJpaEntity();
+        entity.setId(1L);
+        entity.setUsername("john");
+        entity.setCurrentWeight(currentWeight);
+        return entity;
+    }
+
     @Test
     public void should_save_weighin_when_valid_data() {
-        User user = new User();
-        user.setUsername("john");
-        user.setCurrentWeight(82.0);
+        UserJpaEntity user = userJpaEntity(82.0);
 
         WeeklyWeighIn weighIn = new WeeklyWeighIn();
         weighIn.setDate(LocalDate.of(2024, 1, 15));
@@ -53,8 +59,7 @@ public class WeeklyWeighInServiceTest {
 
     @Test
     public void should_update_user_current_weight_when_saving_weigh_in() {
-        User user = new User();
-        user.setCurrentWeight(82.0);
+        UserJpaEntity user = userJpaEntity(82.0);
 
         WeeklyWeighIn weighIn = new WeeklyWeighIn();
         weighIn.setWeight(80.5);
@@ -65,13 +70,12 @@ public class WeeklyWeighInServiceTest {
         weeklyWeighInService.saveWeighIn(weighIn);
 
         assertThat(user.getCurrentWeight()).isEqualTo(80.5);
-        verify(userRepository).save(user);
+        verify(userJpaRepository).save(user);
     }
 
     @Test
     public void should_persist_user_before_weigh_in_when_saving() {
-        User user = new User();
-        user.setCurrentWeight(82.0);
+        UserJpaEntity user = userJpaEntity(82.0);
 
         WeeklyWeighIn weighIn = new WeeklyWeighIn();
         weighIn.setWeight(79.0);
@@ -81,8 +85,8 @@ public class WeeklyWeighInServiceTest {
 
         weeklyWeighInService.saveWeighIn(weighIn);
 
-        InOrder order = inOrder(userRepository, weeklyWeighInRepository);
-        order.verify(userRepository).save(user);
+        InOrder order = inOrder(userJpaRepository, weeklyWeighInRepository);
+        order.verify(userJpaRepository).save(user);
         order.verify(weeklyWeighInRepository).save(weighIn);
     }
 

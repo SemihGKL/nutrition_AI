@@ -1,9 +1,11 @@
 package com.nutrition.backend.Controller;
 
-import com.nutrition.backend.Class.User;
 import com.nutrition.backend.Class.WeeklyWeighIn;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.Service.WeeklyWeighInService;
+import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
+import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
 import com.nutrition.backend.web.dto.CreateWeighInRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -19,18 +21,24 @@ public class WeeklyWeighInController {
 
     private final WeeklyWeighInService weeklyWeighInService;
     private final UserService userService;
+    private final UserJpaRepository userJpaRepository;
 
-    public WeeklyWeighInController(WeeklyWeighInService weeklyWeighInService, UserService userService) {
+    public WeeklyWeighInController(WeeklyWeighInService weeklyWeighInService,
+                                   UserService userService,
+                                   UserJpaRepository userJpaRepository) {
         this.weeklyWeighInService = weeklyWeighInService;
         this.userService = userService;
+        this.userJpaRepository = userJpaRepository;
     }
 
     @PostMapping
     public ResponseEntity<WeeklyWeighIn> saveWeighIn(@Valid @RequestBody CreateWeighInRequest request, Authentication auth) {
         User user = userService.getByEmail(auth.getName());
+        UserJpaEntity userJpaEntity = userJpaRepository.findById(user.getId())
+                .orElseThrow(() -> new IllegalStateException("User JPA entity not found for id: " + user.getId()));
 
         WeeklyWeighIn weighIn = new WeeklyWeighIn();
-        weighIn.setUser(user);
+        weighIn.setUser(userJpaEntity);
         weighIn.setDate(request.date());
         weighIn.setWeight(request.weight());
         weighIn.setNote(request.note());

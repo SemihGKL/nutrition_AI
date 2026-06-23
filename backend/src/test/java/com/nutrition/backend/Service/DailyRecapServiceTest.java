@@ -1,7 +1,8 @@
 package com.nutrition.backend.Service;
 
 import com.nutrition.backend.Class.DailyCalories;
-import com.nutrition.backend.Class.User;
+import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
 import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,21 +31,19 @@ class DailyRecapServiceTest {
 
     @BeforeEach
     void setUp() {
-        dailyRecapService = new DailyRecapService(userService, dailyCaloriesService, new com.nutrition.backend.domain.service.MbrCalculator());
+        dailyRecapService = new DailyRecapService(userService, dailyCaloriesService,
+                new com.nutrition.backend.domain.service.MbrCalculator());
+    }
+
+    private User maleUser80kg180cm30y() {
+        return new User(1L, "john", "john@mail.fr", null, Gender.MALE, 30, 180.0,
+                80.0, 80.0, 1780, 75, null, null);
     }
 
     @Test
     void should_return_recap_with_deficit_percentage_when_entry_exists() {
-        // Given
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 1);
-
-        User user = new User();
-        user.setGender("MALE");
-        user.setCurrentWeight(80.0);
-        user.setHeight(180.0);
-        user.setAge(30);
-        user.setDailyCalorieGoal(1780);
 
         DailyCalories entry = new DailyCalories();
         entry.setCaloriesConsumed(1736);
@@ -53,13 +52,11 @@ class DailyRecapServiceTest {
         entry.setDate(date);
         entry.setConfirmed(false);
 
-        when(userService.getUserById(userId)).thenReturn(user);
+        when(userService.getUserById(userId)).thenReturn(maleUser80kg180cm30y());
         when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
 
-        // When
         DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
 
-        // Then
         assertThat(recap.date()).isEqualTo(date);
         assertThat(recap.caloriesConsumed()).isEqualTo(1736);
         assertThat(recap.caloriesBurned()).isEqualTo(200);
@@ -79,16 +76,8 @@ class DailyRecapServiceTest {
 
     @Test
     void should_return_recap_with_negative_deficit_when_in_surplus() {
-        // Given
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 2);
-
-        User user = new User();
-        user.setGender("MALE");
-        user.setCurrentWeight(80.0);
-        user.setHeight(180.0);
-        user.setAge(30);
-        user.setDailyCalorieGoal(1780);
 
         DailyCalories entry = new DailyCalories();
         entry.setCaloriesConsumed(2500);
@@ -97,13 +86,11 @@ class DailyRecapServiceTest {
         entry.setDate(date);
         entry.setConfirmed(false);
 
-        when(userService.getUserById(userId)).thenReturn(user);
+        when(userService.getUserById(userId)).thenReturn(maleUser80kg180cm30y());
         when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
 
-        // When
         DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
 
-        // Then
         assertThat(recap.netCalories()).isEqualTo(2500);
         assertThat(recap.deficit()).isEqualTo(-364.0);
         assertThat(recap.deficitPercentage()).isNegative();
@@ -111,73 +98,32 @@ class DailyRecapServiceTest {
 
     @Test
     void should_throw_exception_when_no_entry_for_date() {
-        // Given
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 3);
 
         when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.empty());
 
-        // When / Then
         assertThatThrownBy(() -> dailyRecapService.getRecap(userId, date))
                 .isInstanceOf(DailyCaloriesNotFoundException.class);
     }
 
     @Test
-    void should_throw_exception_when_gender_stored_in_database_is_invalid_during_recap_computation() {
-        // Given
-        Long userId = 1L;
-        LocalDate date = LocalDate.of(2026, 5, 5);
-
-        User user = new User();
-        user.setGender("INVALID"); // valeur inconnue de l'enum Gender
-        user.setCurrentWeight(80.0);
-        user.setHeight(180.0);
-        user.setAge(30);
-        user.setDailyCalorieGoal(1780);
-
-        DailyCalories entry = new DailyCalories();
-        entry.setCaloriesConsumed(1800);
-        entry.setCaloriesBurned(0);
-        entry.setSteps(0);
-        entry.setDate(date);
-        entry.setConfirmed(false);
-
-        when(userService.getUserById(userId)).thenReturn(user);
-        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
-
-        // When / Then — Gender.valueOf("INVALID") doit lever IllegalArgumentException
-        assertThatThrownBy(() -> dailyRecapService.getRecap(userId, date))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
     void should_return_zero_steps_kcal_when_steps_are_exactly_at_threshold_of_4000() {
-        // Given
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 6);
 
-        User user = new User();
-        user.setGender("MALE");
-        user.setCurrentWeight(80.0);
-        user.setHeight(180.0);
-        user.setAge(30);
-        user.setDailyCalorieGoal(1780);
-
         DailyCalories entry = new DailyCalories();
         entry.setCaloriesConsumed(1800);
         entry.setCaloriesBurned(0);
-        entry.setSteps(4000); // exactement au seuil, pas au-dessus
+        entry.setSteps(4000);
         entry.setDate(date);
         entry.setConfirmed(false);
 
-        when(userService.getUserById(userId)).thenReturn(user);
+        when(userService.getUserById(userId)).thenReturn(maleUser80kg180cm30y());
         when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
 
-        // When
         DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
 
-        // Then
-        // effectiveSteps = max(0, 4000 - 4000) = 0 → stepsKcal = 0
         assertThat(recap.steps()).isEqualTo(4000);
         assertThat(recap.stepsKcal()).isEqualTo(0);
         assertThat(recap.netCalories()).isEqualTo(1800);
@@ -185,16 +131,8 @@ class DailyRecapServiceTest {
 
     @Test
     void should_count_zero_extra_calories_burned_from_steps_when_steps_below_4000_threshold() {
-        // Given
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 4);
-
-        User user = new User();
-        user.setGender("MALE");
-        user.setCurrentWeight(80.0);
-        user.setHeight(180.0);
-        user.setAge(30);
-        user.setDailyCalorieGoal(1780);
 
         DailyCalories entry = new DailyCalories();
         entry.setCaloriesConsumed(1900);
@@ -203,15 +141,11 @@ class DailyRecapServiceTest {
         entry.setDate(date);
         entry.setConfirmed(false);
 
-        when(userService.getUserById(userId)).thenReturn(user);
+        when(userService.getUserById(userId)).thenReturn(maleUser80kg180cm30y());
         when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
 
-        // When
         DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
 
-        // Then
-        // effectiveSteps = max(0, 3999 - 4000) = 0 → stepsKcal = 0
-        // netCalories = 1900 - 0 - 0 = 1900 (aucune soustraction liée aux pas)
         assertThat(recap.steps()).isEqualTo(3999);
         assertThat(recap.stepsKcal()).isEqualTo(0);
         assertThat(recap.netCalories()).isEqualTo(1900);
