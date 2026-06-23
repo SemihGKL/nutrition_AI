@@ -1,7 +1,7 @@
 package com.nutrition.backend.Service;
 
-import com.nutrition.backend.Class.DailyCalories;
-import com.nutrition.backend.Repository.DailyCaloriesRepository;
+import com.nutrition.backend.domain.entity.DailyEntry;
+import com.nutrition.backend.domain.ports.DailyEntryRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -10,30 +10,22 @@ import java.util.Optional;
 
 @Service
 public class DailyCaloriesService {
-    private final DailyCaloriesRepository dailyCaloriesRepository;
 
-    public DailyCaloriesService(DailyCaloriesRepository dailyCaloriesRepository) {
-        this.dailyCaloriesRepository = dailyCaloriesRepository;
+    private final DailyEntryRepository dailyEntryRepository;
+
+    public DailyCaloriesService(DailyEntryRepository dailyEntryRepository) {
+        this.dailyEntryRepository = dailyEntryRepository;
     }
 
-    public Optional<DailyCalories> getDailyCalories(Long userId, LocalDate date) {
-        return dailyCaloriesRepository.findByUserIdAndDate(userId, date);
+    public Optional<DailyEntry> getDailyCalories(Long userId, LocalDate date) {
+        return dailyEntryRepository.findByUserIdAndDate(userId, date);
     }
 
-    public List<DailyCalories> getAllDailyCalories(Long userId) {
-        return dailyCaloriesRepository.findByUserId(userId);
+    public List<DailyEntry> getAllDailyCalories(Long userId) {
+        return dailyEntryRepository.findByUserId(userId);
     }
 
-    public DailyCalories saveDailyCalories(DailyCalories incoming) {
-        return dailyCaloriesRepository.findByUserIdAndDate(incoming.getUser().getId(), incoming.getDate())
-                .map(existing -> {
-                    existing.setCaloriesConsumed(incoming.getCaloriesConsumed());
-                    existing.setSteps(incoming.getSteps());
-                    existing.setCaloriesBurned(incoming.getCaloriesBurned());
-                    existing.setConfirmed(incoming.isConfirmed());
-                    return dailyCaloriesRepository.save(existing);
-                })
-                .orElseGet(() -> dailyCaloriesRepository.save(incoming));
+    public DailyEntry saveDailyCalories(DailyEntry incoming) {
+        return dailyEntryRepository.save(incoming);
     }
-
 }

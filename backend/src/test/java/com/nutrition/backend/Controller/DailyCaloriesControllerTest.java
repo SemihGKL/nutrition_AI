@@ -1,17 +1,15 @@
 package com.nutrition.backend.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nutrition.backend.Class.DailyCalories;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.DailyRecapService;
 import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
+import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
-import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
-import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
 import com.nutrition.backend.web.dto.CreateDailyCaloriesRequest;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +27,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -64,44 +61,25 @@ class DailyCaloriesControllerTest {
     @MockBean
     ObjectiveService objectiveService;
 
-    @MockBean
-    UserJpaRepository userJpaRepository;
-
     private User testUser;
-    private UserJpaEntity testUserJpa;
 
     @BeforeEach
     void setUp() {
         testUser = new User(1L, "Test", "test@example.com", "hashed",
                 Gender.MALE, 28, 178.0, 85.0, 80.0, 1950, 75, null, null);
-        testUserJpa = new UserJpaEntity();
-        testUserJpa.setId(1L);
-        testUserJpa.setEmail("test@example.com");
-        testUserJpa.setUsername("Test");
-        testUserJpa.setGender("MALE");
-        testUserJpa.setAge(28);
-        testUserJpa.setHeight(178.0);
-        testUserJpa.setCurrentWeight(80.0);
-        testUserJpa.setStartWeight(85.0);
-        testUserJpa.setWeightGoal(75);
-        testUserJpa.setDailyCalorieGoal(1950);
 
         when(userService.getByEmail("user")).thenReturn(testUser);
-        when(userJpaRepository.findById(1L)).thenReturn(Optional.of(testUserJpa));
+    }
+
+    private DailyEntry entry(Long id, LocalDate date, int kcal, int steps, int burned, boolean confirmed) {
+        return new DailyEntry(id, 1L, date, kcal, steps, burned, confirmed);
     }
 
     @Test
     @WithMockUser(username = "user")
     void should_return_all_daily_entries_when_valid_jwt_is_provided() throws Exception {
-        DailyCalories entry1 = new DailyCalories();
-        entry1.setId(1L);
-        entry1.setDate(LocalDate.of(2026, 6, 9));
-        entry1.setCaloriesConsumed(1800);
-
-        DailyCalories entry2 = new DailyCalories();
-        entry2.setId(2L);
-        entry2.setDate(LocalDate.of(2026, 6, 10));
-        entry2.setCaloriesConsumed(2100);
+        DailyEntry entry1 = entry(1L, LocalDate.of(2026, 6, 9), 1800, 0, 0, false);
+        DailyEntry entry2 = entry(2L, LocalDate.of(2026, 6, 10), 2100, 0, 0, false);
 
         when(dailyCaloriesService.getAllDailyCalories(1L)).thenReturn(List.of(entry1, entry2));
 
@@ -122,13 +100,7 @@ class DailyCaloriesControllerTest {
     @WithMockUser(username = "user")
     void should_return_daily_entry_for_valid_date_when_entry_exists() throws Exception {
         LocalDate date = LocalDate.of(2026, 6, 10);
-
-        DailyCalories entry = new DailyCalories();
-        entry.setId(1L);
-        entry.setDate(date);
-        entry.setCaloriesConsumed(1900);
-        entry.setSteps(7500);
-        entry.setCaloriesBurned(200);
+        DailyEntry entry = entry(1L, date, 1900, 7500, 200, false);
 
         when(dailyCaloriesService.getDailyCalories(1L, date)).thenReturn(Optional.of(entry));
 
@@ -161,16 +133,9 @@ class DailyCaloriesControllerTest {
     @WithMockUser(username = "user")
     void should_save_new_daily_entry_when_post_body_is_valid_and_has_no_userId() throws Exception {
         LocalDate date = LocalDate.of(2026, 6, 10);
+        DailyEntry saved = entry(10L, date, 1850, 8000, 180, false);
 
-        DailyCalories saved = new DailyCalories();
-        saved.setId(10L);
-        saved.setDate(date);
-        saved.setCaloriesConsumed(1850);
-        saved.setSteps(8000);
-        saved.setCaloriesBurned(180);
-        saved.setConfirmed(false);
-
-        when(dailyCaloriesService.saveDailyCalories(any(DailyCalories.class))).thenReturn(saved);
+        when(dailyCaloriesService.saveDailyCalories(any(DailyEntry.class))).thenReturn(saved);
 
         String body = objectMapper.writeValueAsString(
                 new CreateDailyCaloriesRequest(null, date, 1850, 8000, 180, false)
@@ -190,16 +155,9 @@ class DailyCaloriesControllerTest {
     @WithMockUser(username = "user")
     void should_return_updated_entry_when_posting_for_date_that_already_has_entry() throws Exception {
         LocalDate date = LocalDate.of(2026, 6, 10);
+        DailyEntry updated = entry(10L, date, 2200, 10000, 300, true);
 
-        DailyCalories updated = new DailyCalories();
-        updated.setId(10L);
-        updated.setDate(date);
-        updated.setCaloriesConsumed(2200);
-        updated.setSteps(10000);
-        updated.setCaloriesBurned(300);
-        updated.setConfirmed(true);
-
-        when(dailyCaloriesService.saveDailyCalories(any(DailyCalories.class))).thenReturn(updated);
+        when(dailyCaloriesService.saveDailyCalories(any(DailyEntry.class))).thenReturn(updated);
 
         String body = objectMapper.writeValueAsString(
                 new CreateDailyCaloriesRequest(10L, date, 2200, 10000, 300, true)

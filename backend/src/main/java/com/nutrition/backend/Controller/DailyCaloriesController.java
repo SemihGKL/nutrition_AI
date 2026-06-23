@@ -1,14 +1,14 @@
 package com.nutrition.backend.Controller;
 
-import com.nutrition.backend.Class.DailyCalories;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.DailyRecapService;
 import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
+import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.entity.User;
-import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
-import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
+import com.nutrition.backend.web.DailyEntryMapper;
 import com.nutrition.backend.web.dto.CreateDailyCaloriesRequest;
+import com.nutrition.backend.web.dto.DailyEntryDto;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/daily-kcal")
@@ -26,52 +27,52 @@ public class DailyCaloriesController {
     private final DailyRecapService dailyRecapService;
     private final UserService userService;
     private final ObjectiveService objectiveService;
-    private final UserJpaRepository userJpaRepository;
 
     public DailyCaloriesController(DailyCaloriesService dailyCaloriesService,
                                    DailyRecapService dailyRecapService,
                                    UserService userService,
-                                   ObjectiveService objectiveService,
-                                   UserJpaRepository userJpaRepository) {
+                                   ObjectiveService objectiveService) {
         this.dailyCaloriesService = dailyCaloriesService;
         this.dailyRecapService = dailyRecapService;
         this.userService = userService;
         this.objectiveService = objectiveService;
-        this.userJpaRepository = userJpaRepository;
     }
 
     @GetMapping
-    public List<DailyCalories> getAllMyEntries(Authentication auth) {
+    public List<DailyEntryDto> getAllMyEntries(Authentication auth) {
         User user = userService.getByEmail(auth.getName());
-        return dailyCaloriesService.getAllDailyCalories(user.getId());
+        return dailyCaloriesService.getAllDailyCalories(user.getId()).stream()
+                .map(DailyEntryMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/{date}")
-    public ResponseEntity<DailyCalories> getEntryByDate(@PathVariable String date, Authentication auth) {
+    public ResponseEntity<DailyEntryDto> getEntryByDate(@PathVariable String date, Authentication auth) {
         User user = userService.getByEmail(auth.getName());
         return dailyCaloriesService.getDailyCalories(user.getId(), LocalDate.parse(date))
+                .map(DailyEntryMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<DailyCalories> saveEntry(@Valid @RequestBody CreateDailyCaloriesRequest request, Authentication auth) {
+    public ResponseEntity<DailyEntryDto> saveEntry(@Valid @RequestBody CreateDailyCaloriesRequest request,
+                                                   Authentication auth) {
         User user = userService.getByEmail(auth.getName());
-        UserJpaEntity userJpaEntity = userJpaRepository.findById(user.getId())
-                .orElseThrow(() -> new IllegalStateException("User JPA entity not found for id: " + user.getId()));
 
-        DailyCalories entry = new DailyCalories();
-        if (request.id() != null) entry.setId(request.id());
-        entry.setUser(userJpaEntity);
-        entry.setDate(request.date());
-        entry.setCaloriesConsumed(request.caloriesConsumed());
-        entry.setSteps(request.steps());
-        entry.setCaloriesBurned(request.caloriesBurned());
-        entry.setConfirmed(request.confirmed());
+        DailyEntry entry = new DailyEntry(
+                request.id(),
+                user.getId(),
+                request.date(),
+                request.caloriesConsumed(),
+                request.steps(),
+                request.caloriesBurned(),
+                request.confirmed()
+        );
 
-        DailyCalories saved = dailyCaloriesService.saveDailyCalories(entry);
+        DailyEntry saved = dailyCaloriesService.saveDailyCalories(entry);
         objectiveService.autoComplete(user.getId(), request.date(), request.caloriesBurned());
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(DailyEntryMapper.toDto(saved));
     }
 
     @GetMapping("/{date}/recap")

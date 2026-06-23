@@ -1,8 +1,12 @@
 package com.nutrition.backend.Service;
 
-import com.nutrition.backend.Class.DailyCalories;
+import com.nutrition.backend.application.usecase.GetDailyRecapUseCase;
+import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
+import com.nutrition.backend.domain.ports.DailyEntryRepository;
+import com.nutrition.backend.domain.ports.UserRepository;
+import com.nutrition.backend.domain.service.MbrCalculator;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
 import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,17 +26,17 @@ import static org.mockito.Mockito.when;
 class DailyRecapServiceTest {
 
     @Mock
-    private UserService userService;
+    private DailyEntryRepository dailyEntryRepository;
 
     @Mock
-    private DailyCaloriesService dailyCaloriesService;
+    private UserRepository userRepository;
 
-    private DailyRecapService dailyRecapService;
+    private GetDailyRecapUseCase getDailyRecapUseCase;
 
     @BeforeEach
     void setUp() {
-        dailyRecapService = new DailyRecapService(userService, dailyCaloriesService,
-                new com.nutrition.backend.domain.service.MbrCalculator());
+        getDailyRecapUseCase = new GetDailyRecapUseCase(
+                dailyEntryRepository, userRepository, new MbrCalculator());
     }
 
     private User maleUser80kg180cm30y() {
@@ -40,22 +44,21 @@ class DailyRecapServiceTest {
                 80.0, 80.0, 1780, 75, null, null);
     }
 
+    private DailyEntry dailyEntry(LocalDate date, int kcal, int burned, int steps, boolean confirmed) {
+        return new DailyEntry(1L, 1L, date, kcal, steps, burned, confirmed);
+    }
+
     @Test
     void should_return_recap_with_deficit_percentage_when_entry_exists() {
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 1);
 
-        DailyCalories entry = new DailyCalories();
-        entry.setCaloriesConsumed(1736);
-        entry.setCaloriesBurned(200);
-        entry.setSteps(8000);
-        entry.setDate(date);
-        entry.setConfirmed(false);
+        DailyEntry entry = dailyEntry(date, 1736, 200, 8000, false);
 
-        when(userService.getUserById(userId)).thenReturn(maleUser80kg180cm30y());
-        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(maleUser80kg180cm30y()));
+        when(dailyEntryRepository.findByUserIdAndDate(userId, date)).thenReturn(Optional.of(entry));
 
-        DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
+        DailyRecapResponse recap = getDailyRecapUseCase.execute(userId, date);
 
         assertThat(recap.date()).isEqualTo(date);
         assertThat(recap.caloriesConsumed()).isEqualTo(1736);
@@ -79,17 +82,12 @@ class DailyRecapServiceTest {
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 2);
 
-        DailyCalories entry = new DailyCalories();
-        entry.setCaloriesConsumed(2500);
-        entry.setCaloriesBurned(0);
-        entry.setSteps(0);
-        entry.setDate(date);
-        entry.setConfirmed(false);
+        DailyEntry entry = dailyEntry(date, 2500, 0, 0, false);
 
-        when(userService.getUserById(userId)).thenReturn(maleUser80kg180cm30y());
-        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(maleUser80kg180cm30y()));
+        when(dailyEntryRepository.findByUserIdAndDate(userId, date)).thenReturn(Optional.of(entry));
 
-        DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
+        DailyRecapResponse recap = getDailyRecapUseCase.execute(userId, date);
 
         assertThat(recap.netCalories()).isEqualTo(2500);
         assertThat(recap.deficit()).isEqualTo(-364.0);
@@ -101,9 +99,9 @@ class DailyRecapServiceTest {
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 3);
 
-        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.empty());
+        when(dailyEntryRepository.findByUserIdAndDate(userId, date)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> dailyRecapService.getRecap(userId, date))
+        assertThatThrownBy(() -> getDailyRecapUseCase.execute(userId, date))
                 .isInstanceOf(DailyCaloriesNotFoundException.class);
     }
 
@@ -112,17 +110,12 @@ class DailyRecapServiceTest {
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 6);
 
-        DailyCalories entry = new DailyCalories();
-        entry.setCaloriesConsumed(1800);
-        entry.setCaloriesBurned(0);
-        entry.setSteps(4000);
-        entry.setDate(date);
-        entry.setConfirmed(false);
+        DailyEntry entry = dailyEntry(date, 1800, 0, 4000, false);
 
-        when(userService.getUserById(userId)).thenReturn(maleUser80kg180cm30y());
-        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(maleUser80kg180cm30y()));
+        when(dailyEntryRepository.findByUserIdAndDate(userId, date)).thenReturn(Optional.of(entry));
 
-        DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
+        DailyRecapResponse recap = getDailyRecapUseCase.execute(userId, date);
 
         assertThat(recap.steps()).isEqualTo(4000);
         assertThat(recap.stepsKcal()).isEqualTo(0);
@@ -134,17 +127,12 @@ class DailyRecapServiceTest {
         Long userId = 1L;
         LocalDate date = LocalDate.of(2026, 5, 4);
 
-        DailyCalories entry = new DailyCalories();
-        entry.setCaloriesConsumed(1900);
-        entry.setCaloriesBurned(0);
-        entry.setSteps(3999);
-        entry.setDate(date);
-        entry.setConfirmed(false);
+        DailyEntry entry = dailyEntry(date, 1900, 0, 3999, false);
 
-        when(userService.getUserById(userId)).thenReturn(maleUser80kg180cm30y());
-        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(maleUser80kg180cm30y()));
+        when(dailyEntryRepository.findByUserIdAndDate(userId, date)).thenReturn(Optional.of(entry));
 
-        DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
+        DailyRecapResponse recap = getDailyRecapUseCase.execute(userId, date);
 
         assertThat(recap.steps()).isEqualTo(3999);
         assertThat(recap.stepsKcal()).isEqualTo(0);

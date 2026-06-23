@@ -1,18 +1,18 @@
-package com.nutrition.backend.Class;
-
+package com.nutrition.backend.infrastructure.persistence;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.time.LocalDate;
 
 @Entity
 @Getter
 @Setter
 @Table(name = "daily_calories")
-public class DailyCalories {
+public class DailyCaloriesJpaEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -25,7 +25,6 @@ public class DailyCalories {
 
     @Column(name = "is_confirmed")
     private boolean confirmed;
-
 
     @Column(name = "steps")
     private int steps;

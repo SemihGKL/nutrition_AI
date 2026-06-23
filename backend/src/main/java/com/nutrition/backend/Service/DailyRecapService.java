@@ -1,13 +1,7 @@
 package com.nutrition.backend.Service;
 
-import com.nutrition.backend.Class.DailyCalories;
-import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.application.usecase.GetDailyRecapUseCase;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
-import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
-import com.nutrition.backend.domain.model.Mbr;
-import com.nutrition.backend.domain.model.UserProfile;
-import com.nutrition.backend.domain.service.MbrCalculator;
-
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -15,54 +9,13 @@ import java.time.LocalDate;
 @Service
 public class DailyRecapService {
 
-    private final UserService userService;
-    private final DailyCaloriesService dailyCaloriesService;
-    private final MbrCalculator mbrCalculator;
+    private final GetDailyRecapUseCase getDailyRecapUseCase;
 
-    public DailyRecapService(UserService userService, DailyCaloriesService dailyCaloriesService, MbrCalculator mbrCalculator) {
-        this.userService = userService;
-        this.dailyCaloriesService = dailyCaloriesService;
-        this.mbrCalculator = mbrCalculator;
-    }
-
-    private static int stepsToKcal(int steps, double weightKg) {
-        int effectiveSteps = Math.max(0, steps - 4000);
-        return (int) Math.round(effectiveSteps * (weightKg / 70.0) * 0.025);
+    public DailyRecapService(GetDailyRecapUseCase getDailyRecapUseCase) {
+        this.getDailyRecapUseCase = getDailyRecapUseCase;
     }
 
     public DailyRecapResponse getRecap(Long userId, LocalDate date) {
-        DailyCalories entry = dailyCaloriesService.getDailyCalories(userId, date)
-                .orElseThrow(() -> new DailyCaloriesNotFoundException("No daily calories entry found for userId=" + userId + " on " + date));
-
-        User user = userService.getUserById(userId);
-
-        UserProfile profile = new UserProfile(
-                user.getCurrentWeight(),
-                user.getHeight(),
-                user.getAge(),
-                user.getGender()
-        );
-
-        Mbr mbr = mbrCalculator.calculate(profile);
-
-        int stepsKcal = stepsToKcal(entry.getSteps(), user.getCurrentWeight());
-        int netCalories = entry.getCaloriesConsumed() - entry.getCaloriesBurned() - stepsKcal;
-        double deficit = mbr.tdee() - netCalories;
-        double deficitPercentage = mbr.deficitPercentage(netCalories);
-
-        return new DailyRecapResponse(
-                entry.getDate(),
-                entry.getCaloriesConsumed(),
-                entry.getCaloriesBurned(),
-                entry.getSteps(),
-                stepsKcal,
-                netCalories,
-                user.getDailyCalorieGoal(),
-                mbr.mbr(),
-                mbr.tdee(),
-                deficit,
-                deficitPercentage,
-                entry.isConfirmed()
-        );
+        return getDailyRecapUseCase.execute(userId, date);
     }
 }
