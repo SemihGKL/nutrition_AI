@@ -1,12 +1,12 @@
 package com.nutrition.backend.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nutrition.backend.Class.UserObjective;
 import com.nutrition.backend.Exception.ObjectiveAccessDeniedException;
 import com.nutrition.backend.Exception.ObjectiveNotFoundException;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
+import com.nutrition.backend.domain.entity.Objective;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
@@ -83,17 +83,8 @@ class ObjectiveControllerTest {
     @Test
     @WithMockUser(username = "user")
     void should_return_list_of_objectives_when_authenticated_user_has_objectives() throws Exception {
-        UserObjective obj1 = new UserObjective();
-        obj1.setId(1L);
-        obj1.setDayOfWeek(1);
-        obj1.setLabel("Boire 2L d'eau");
-        obj1.setPosition(0);
-
-        UserObjective obj2 = new UserObjective();
-        obj2.setId(2L);
-        obj2.setDayOfWeek(3);
-        obj2.setLabel("30 min de sport");
-        obj2.setPosition(1);
+        Objective obj1 = new Objective(1L, 1L, 1, "Boire 2L d'eau", 0, "CUSTOM", null);
+        Objective obj2 = new Objective(2L, 1L, 3, "30 min de sport", 1, "CUSTOM", null);
 
         when(objectiveService.getObjectives(1L)).thenReturn(List.of(obj1, obj2));
 
@@ -109,14 +100,9 @@ class ObjectiveControllerTest {
     @Test
     @WithMockUser(username = "user")
     void should_return_201_when_authenticated_user_creates_a_valid_objective() throws Exception {
-        UserObjective saved = new UserObjective();
-        saved.setId(10L);
-        saved.setUserId(1L);
-        saved.setDayOfWeek(2);
-        saved.setLabel("Méditer 10 min");
-        saved.setPosition(0);
+        Objective saved = new Objective(10L, 1L, 2, "Méditer 10 min", 0, "CUSTOM", null);
 
-        when(objectiveService.createObjective(any(UserObjective.class))).thenReturn(saved);
+        when(objectiveService.createObjective(any(Objective.class))).thenReturn(saved);
 
         String body = objectMapper.writeValueAsString(new CreateObjectiveRequest(2, "Méditer 10 min", null, null));
 

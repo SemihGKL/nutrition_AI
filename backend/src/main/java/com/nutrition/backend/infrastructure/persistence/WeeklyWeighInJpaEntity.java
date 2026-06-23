@@ -1,7 +1,6 @@
-package com.nutrition.backend.Class;
+package com.nutrition.backend.infrastructure.persistence;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,7 +11,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Table(name = "weekly_weigh_in")
-public class WeeklyWeighIn {
+public class WeeklyWeighInJpaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

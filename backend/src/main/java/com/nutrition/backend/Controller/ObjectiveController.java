@@ -1,9 +1,9 @@
 package com.nutrition.backend.Controller;
 
-import com.nutrition.backend.Class.UserObjective;
 import com.nutrition.backend.Service.DailyCaloriesService;
 import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
+import com.nutrition.backend.domain.entity.Objective;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.web.dto.CreateObjectiveRequest;
 import com.nutrition.backend.web.dto.ObjectiveDto;
@@ -42,13 +42,9 @@ public class ObjectiveController {
     @PostMapping
     public ResponseEntity<ObjectiveDto> createObjective(@RequestBody CreateObjectiveRequest request, Authentication auth) {
         User user = userService.getByEmail(auth.getName());
-        UserObjective objective = new UserObjective();
-        objective.setUserId(user.getId());
-        objective.setDayOfWeek(request.dayOfWeek());
-        objective.setLabel(request.label());
-        objective.setType(request.type() != null ? request.type() : "CUSTOM");
-        objective.setTargetValue(request.targetValue());
-        UserObjective saved = objectiveService.createObjective(objective);
+        Objective objective = new Objective(null, user.getId(), request.dayOfWeek(),
+                request.label(), 0, request.type() != null ? request.type() : "CUSTOM", request.targetValue());
+        Objective saved = objectiveService.createObjective(objective);
 
         if ("SPORT".equals(saved.getType())) {
             LocalDate today = LocalDate.now();

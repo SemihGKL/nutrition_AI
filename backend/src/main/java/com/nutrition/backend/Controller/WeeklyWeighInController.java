@@ -1,12 +1,12 @@
 package com.nutrition.backend.Controller;
 
-import com.nutrition.backend.Class.WeeklyWeighIn;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.Service.WeeklyWeighInService;
 import com.nutrition.backend.domain.entity.User;
-import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
-import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
+import com.nutrition.backend.domain.entity.WeightEntry;
+import com.nutrition.backend.web.WeightEntryMapper;
 import com.nutrition.backend.web.dto.CreateWeighInRequest;
+import com.nutrition.backend.web.dto.WeightEntryDto;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/weighin")
@@ -21,41 +22,35 @@ public class WeeklyWeighInController {
 
     private final WeeklyWeighInService weeklyWeighInService;
     private final UserService userService;
-    private final UserJpaRepository userJpaRepository;
 
     public WeeklyWeighInController(WeeklyWeighInService weeklyWeighInService,
-                                   UserService userService,
-                                   UserJpaRepository userJpaRepository) {
+                                   UserService userService) {
         this.weeklyWeighInService = weeklyWeighInService;
         this.userService = userService;
-        this.userJpaRepository = userJpaRepository;
     }
 
     @PostMapping
-    public ResponseEntity<WeeklyWeighIn> saveWeighIn(@Valid @RequestBody CreateWeighInRequest request, Authentication auth) {
+    public ResponseEntity<WeightEntryDto> saveWeighIn(@Valid @RequestBody CreateWeighInRequest request, Authentication auth) {
         User user = userService.getByEmail(auth.getName());
-        UserJpaEntity userJpaEntity = userJpaRepository.findById(user.getId())
-                .orElseThrow(() -> new IllegalStateException("User JPA entity not found for id: " + user.getId()));
-
-        WeeklyWeighIn weighIn = new WeeklyWeighIn();
-        weighIn.setUser(userJpaEntity);
-        weighIn.setDate(request.date());
-        weighIn.setWeight(request.weight());
-        weighIn.setNote(request.note());
-
-        return ResponseEntity.ok(weeklyWeighInService.saveWeighIn(weighIn));
+        WeightEntry entry = new WeightEntry(null, user.getId(), request.date(), request.weight(), request.note());
+        WeightEntry saved = weeklyWeighInService.saveWeighIn(entry);
+        return ResponseEntity.ok(WeightEntryMapper.toDto(saved));
     }
 
     @GetMapping
-    public ResponseEntity<List<WeeklyWeighIn>> getAllMyWeighIns(Authentication auth) {
+    public ResponseEntity<List<WeightEntryDto>> getAllMyWeighIns(Authentication auth) {
         User user = userService.getByEmail(auth.getName());
-        return ResponseEntity.ok(weeklyWeighInService.getAllByUser(user.getId()));
+        List<WeightEntryDto> dtos = weeklyWeighInService.getAllByUser(user.getId()).stream()
+                .map(WeightEntryMapper::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/latest")
-    public ResponseEntity<WeeklyWeighIn> getMyLatest(Authentication auth) {
+    public ResponseEntity<WeightEntryDto> getMyLatest(Authentication auth) {
         User user = userService.getByEmail(auth.getName());
-        Optional<WeeklyWeighIn> latest = weeklyWeighInService.getLatestByUser(user.getId());
-        return latest.map(ResponseEntity::ok).orElse(ResponseEntity.noContent().build());
+        Optional<WeightEntry> latest = weeklyWeighInService.getLatestByUser(user.getId());
+        return latest.map(e -> ResponseEntity.ok(WeightEntryMapper.toDto(e)))
+                .orElse(ResponseEntity.noContent().build());
     }
 }

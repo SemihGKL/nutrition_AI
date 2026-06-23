@@ -1,4 +1,4 @@
-package com.nutrition.backend.Class;
+package com.nutrition.backend.infrastructure.persistence;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Table(name = "objective_completions")
-public class ObjectiveCompletion {
+public class ObjectiveCompletionJpaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

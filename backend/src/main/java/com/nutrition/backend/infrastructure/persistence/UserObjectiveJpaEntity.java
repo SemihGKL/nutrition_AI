@@ -1,4 +1,4 @@
-package com.nutrition.backend.Class;
+package com.nutrition.backend.infrastructure.persistence;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -8,7 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Table(name = "user_objectives")
-public class UserObjective {
+public class UserObjectiveJpaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

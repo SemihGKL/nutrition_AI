@@ -1,12 +1,10 @@
 package com.nutrition.backend.Service;
 
-import com.nutrition.backend.Class.WeeklyWeighIn;
-import com.nutrition.backend.Repository.WeeklyWeighInRepository;
-import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
-import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
+import com.nutrition.backend.application.usecase.GetWeightEntriesUseCase;
+import com.nutrition.backend.application.usecase.RecordWeightEntryUseCase;
+import com.nutrition.backend.domain.entity.WeightEntry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -24,34 +22,22 @@ import static org.mockito.Mockito.*;
 public class WeeklyWeighInServiceTest {
 
     @Mock
-    private WeeklyWeighInRepository weeklyWeighInRepository;
+    private RecordWeightEntryUseCase recordWeightEntryUseCase;
 
     @Mock
-    private UserJpaRepository userJpaRepository;
+    private GetWeightEntriesUseCase getWeightEntriesUseCase;
 
     @InjectMocks
     private WeeklyWeighInService weeklyWeighInService;
 
-    private UserJpaEntity userJpaEntity(double currentWeight) {
-        UserJpaEntity entity = new UserJpaEntity();
-        entity.setId(1L);
-        entity.setUsername("john");
-        entity.setCurrentWeight(currentWeight);
-        return entity;
-    }
-
     @Test
     public void should_save_weighin_when_valid_data() {
-        UserJpaEntity user = userJpaEntity(82.0);
+        WeightEntry entry = new WeightEntry(null, 1L, LocalDate.of(2024, 1, 15), 80.5, null);
+        WeightEntry saved = new WeightEntry(1L, 1L, LocalDate.of(2024, 1, 15), 80.5, null);
 
-        WeeklyWeighIn weighIn = new WeeklyWeighIn();
-        weighIn.setDate(LocalDate.of(2024, 1, 15));
-        weighIn.setWeight(80.5);
-        weighIn.setUser(user);
+        when(recordWeightEntryUseCase.execute(any(WeightEntry.class))).thenReturn(saved);
 
-        when(weeklyWeighInRepository.save(any(WeeklyWeighIn.class))).thenReturn(weighIn);
-
-        WeeklyWeighIn result = weeklyWeighInService.saveWeighIn(weighIn);
+        WeightEntry result = weeklyWeighInService.saveWeighIn(entry);
 
         assertEquals(80.5, result.getWeight());
         assertEquals(LocalDate.of(2024, 1, 15), result.getDate());
@@ -59,53 +45,40 @@ public class WeeklyWeighInServiceTest {
 
     @Test
     public void should_update_user_current_weight_when_saving_weigh_in() {
-        UserJpaEntity user = userJpaEntity(82.0);
+        WeightEntry entry = new WeightEntry(null, 1L, LocalDate.of(2024, 1, 15), 80.5, null);
+        WeightEntry saved = new WeightEntry(1L, 1L, LocalDate.of(2024, 1, 15), 80.5, null);
 
-        WeeklyWeighIn weighIn = new WeeklyWeighIn();
-        weighIn.setWeight(80.5);
-        weighIn.setUser(user);
+        when(recordWeightEntryUseCase.execute(any(WeightEntry.class))).thenReturn(saved);
 
-        when(weeklyWeighInRepository.save(any())).thenReturn(weighIn);
+        WeightEntry result = weeklyWeighInService.saveWeighIn(entry);
 
-        weeklyWeighInService.saveWeighIn(weighIn);
-
-        assertThat(user.getCurrentWeight()).isEqualTo(80.5);
-        verify(userJpaRepository).save(user);
+        assertThat(result.getWeight()).isEqualTo(80.5);
+        verify(recordWeightEntryUseCase).execute(entry);
     }
 
     @Test
     public void should_persist_user_before_weigh_in_when_saving() {
-        UserJpaEntity user = userJpaEntity(82.0);
+        WeightEntry entry = new WeightEntry(null, 1L, LocalDate.of(2024, 1, 15), 79.0, null);
+        WeightEntry saved = new WeightEntry(1L, 1L, LocalDate.of(2024, 1, 15), 79.0, null);
 
-        WeeklyWeighIn weighIn = new WeeklyWeighIn();
-        weighIn.setWeight(79.0);
-        weighIn.setUser(user);
+        when(recordWeightEntryUseCase.execute(any(WeightEntry.class))).thenReturn(saved);
 
-        when(weeklyWeighInRepository.save(any())).thenReturn(weighIn);
+        WeightEntry result = weeklyWeighInService.saveWeighIn(entry);
 
-        weeklyWeighInService.saveWeighIn(weighIn);
-
-        InOrder order = inOrder(userJpaRepository, weeklyWeighInRepository);
-        order.verify(userJpaRepository).save(user);
-        order.verify(weeklyWeighInRepository).save(weighIn);
+        verify(recordWeightEntryUseCase).execute(entry);
+        assertThat(result.getWeight()).isEqualTo(79.0);
     }
 
     @Test
     public void should_return_all_weighins_for_user() {
         Long userId = 1L;
 
-        WeeklyWeighIn weighIn1 = new WeeklyWeighIn();
-        weighIn1.setDate(LocalDate.of(2024, 1, 22));
-        weighIn1.setWeight(80.0);
+        WeightEntry e1 = new WeightEntry(1L, userId, LocalDate.of(2024, 1, 22), 80.0, null);
+        WeightEntry e2 = new WeightEntry(2L, userId, LocalDate.of(2024, 1, 15), 81.0, null);
 
-        WeeklyWeighIn weighIn2 = new WeeklyWeighIn();
-        weighIn2.setDate(LocalDate.of(2024, 1, 15));
-        weighIn2.setWeight(81.0);
+        when(getWeightEntriesUseCase.allByUser(userId)).thenReturn(List.of(e1, e2));
 
-        when(weeklyWeighInRepository.findByUserIdOrderByDateDesc(userId))
-                .thenReturn(List.of(weighIn1, weighIn2));
-
-        List<WeeklyWeighIn> result = weeklyWeighInService.getAllByUser(userId);
+        List<WeightEntry> result = weeklyWeighInService.getAllByUser(userId);
 
         assertEquals(2, result.size());
         assertEquals(80.0, result.get(0).getWeight());
@@ -116,18 +89,11 @@ public class WeeklyWeighInServiceTest {
     public void should_return_latest_weighin_for_user() {
         Long userId = 1L;
 
-        WeeklyWeighIn latest = new WeeklyWeighIn();
-        latest.setDate(LocalDate.of(2024, 1, 22));
-        latest.setWeight(80.0);
+        WeightEntry latest = new WeightEntry(1L, userId, LocalDate.of(2024, 1, 22), 80.0, null);
 
-        WeeklyWeighIn older = new WeeklyWeighIn();
-        older.setDate(LocalDate.of(2024, 1, 15));
-        older.setWeight(81.5);
+        when(getWeightEntriesUseCase.latestByUser(userId)).thenReturn(Optional.of(latest));
 
-        when(weeklyWeighInRepository.findByUserIdOrderByDateDesc(userId))
-                .thenReturn(List.of(latest, older));
-
-        Optional<WeeklyWeighIn> result = weeklyWeighInService.getLatestByUser(userId);
+        Optional<WeightEntry> result = weeklyWeighInService.getLatestByUser(userId);
 
         assertTrue(result.isPresent());
         assertEquals(80.0, result.get().getWeight());
@@ -137,10 +103,9 @@ public class WeeklyWeighInServiceTest {
     @Test
     public void should_return_empty_optional_when_no_weighin_exists() {
         Long userId = 99L;
-        when(weeklyWeighInRepository.findByUserIdOrderByDateDesc(userId))
-                .thenReturn(List.of());
+        when(getWeightEntriesUseCase.latestByUser(userId)).thenReturn(Optional.empty());
 
-        Optional<WeeklyWeighIn> result = weeklyWeighInService.getLatestByUser(userId);
+        Optional<WeightEntry> result = weeklyWeighInService.getLatestByUser(userId);
 
         assertFalse(result.isPresent());
     }

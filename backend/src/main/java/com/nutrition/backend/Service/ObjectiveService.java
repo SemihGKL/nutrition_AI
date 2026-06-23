@@ -1,11 +1,11 @@
 package com.nutrition.backend.Service;
 
-import com.nutrition.backend.Class.ObjectiveCompletion;
-import com.nutrition.backend.Class.UserObjective;
+import com.nutrition.backend.domain.entity.Objective;
+import com.nutrition.backend.domain.entity.ObjectiveCompletion;
+import com.nutrition.backend.domain.ports.ObjectiveCompletionRepository;
+import com.nutrition.backend.domain.ports.ObjectiveRepository;
 import com.nutrition.backend.Exception.ObjectiveAccessDeniedException;
 import com.nutrition.backend.Exception.ObjectiveNotFoundException;
-import com.nutrition.backend.Repository.ObjectiveCompletionRepository;
-import com.nutrition.backend.Repository.UserObjectiveRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -16,40 +16,37 @@ import java.util.stream.Collectors;
 @Service
 public class ObjectiveService {
 
-    private final UserObjectiveRepository userObjectiveRepository;
+    private final ObjectiveRepository objectiveRepository;
     private final ObjectiveCompletionRepository objectiveCompletionRepository;
 
-    public ObjectiveService(UserObjectiveRepository userObjectiveRepository,
+    public ObjectiveService(ObjectiveRepository objectiveRepository,
                             ObjectiveCompletionRepository objectiveCompletionRepository) {
-        this.userObjectiveRepository = userObjectiveRepository;
+        this.objectiveRepository = objectiveRepository;
         this.objectiveCompletionRepository = objectiveCompletionRepository;
     }
 
-    public List<UserObjective> getObjectives(Long userId) {
-        return userObjectiveRepository.findByUserId(userId);
+    public List<Objective> getObjectives(Long userId) {
+        return objectiveRepository.findByUserId(userId);
     }
 
-    public UserObjective createObjective(UserObjective objective) {
-        return userObjectiveRepository.save(objective);
+    public Objective createObjective(Objective objective) {
+        return objectiveRepository.save(objective);
     }
 
     public void deleteObjective(Long objectiveId, Long userId) {
-        UserObjective objective = userObjectiveRepository.findById(objectiveId)
+        Objective objective = objectiveRepository.findById(objectiveId)
                 .orElseThrow(() -> new ObjectiveNotFoundException(objectiveId));
         if (!objective.getUserId().equals(userId)) {
             throw new ObjectiveAccessDeniedException(objectiveId);
         }
-        userObjectiveRepository.deleteById(objectiveId);
+        objectiveRepository.deleteById(objectiveId);
     }
 
     public void markDone(Long objectiveId, Long userId, LocalDate date) {
         if (objectiveCompletionRepository.existsByObjectiveIdAndDate(objectiveId, date)) {
             return;
         }
-        ObjectiveCompletion completion = new ObjectiveCompletion();
-        completion.setObjectiveId(objectiveId);
-        completion.setUserId(userId);
-        completion.setDate(date);
+        ObjectiveCompletion completion = new ObjectiveCompletion(null, userId, objectiveId, date);
         objectiveCompletionRepository.save(completion);
     }
 
@@ -59,7 +56,7 @@ public class ObjectiveService {
 
     public void autoComplete(Long userId, LocalDate date, int caloriesBurned) {
         int dow = date.getDayOfWeek().getValue() - 1; // 0=Lundi ... 6=Dimanche
-        for (UserObjective obj : userObjectiveRepository.findByUserId(userId)) {
+        for (Objective obj : objectiveRepository.findByUserId(userId)) {
             if ("SPORT".equals(obj.getType()) && obj.getDayOfWeek() == dow && caloriesBurned > 0) {
                 markDone(obj.getId(), userId, date);
             }

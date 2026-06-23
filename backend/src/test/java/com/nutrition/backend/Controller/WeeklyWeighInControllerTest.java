@@ -1,14 +1,12 @@
 package com.nutrition.backend.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nutrition.backend.Class.WeeklyWeighIn;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.Service.WeeklyWeighInService;
 import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.entity.WeightEntry;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
-import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
-import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;
 import com.nutrition.backend.web.dto.CreateWeighInRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,44 +52,21 @@ class WeeklyWeighInControllerTest {
     @MockBean
     WeeklyWeighInService weeklyWeighInService;
 
-    @MockBean
-    UserJpaRepository userJpaRepository;
-
     private User testUser;
-    private UserJpaEntity testUserJpa;
 
     @BeforeEach
     void setUp() {
         testUser = new User(1L, "Test", "test@example.com", "hashed",
                 Gender.MALE, 28, 178.0, 85.0, 80.0, 1950, 75, null, null);
-        testUserJpa = new UserJpaEntity();
-        testUserJpa.setId(1L);
-        testUserJpa.setEmail("test@example.com");
-        testUserJpa.setUsername("Test");
-        testUserJpa.setGender("MALE");
-        testUserJpa.setAge(28);
-        testUserJpa.setHeight(178.0);
-        testUserJpa.setCurrentWeight(80.0);
-        testUserJpa.setStartWeight(85.0);
-        testUserJpa.setWeightGoal(75);
-        testUserJpa.setDailyCalorieGoal(1950);
 
         when(userService.getByEmail("user")).thenReturn(testUser);
-        when(userJpaRepository.findById(1L)).thenReturn(Optional.of(testUserJpa));
     }
 
     @Test
     @WithMockUser(username = "user")
     void should_return_all_weighins_when_valid_jwt_is_provided() throws Exception {
-        WeeklyWeighIn w1 = new WeeklyWeighIn();
-        w1.setId(1L);
-        w1.setDate(LocalDate.of(2026, 6, 9));
-        w1.setWeight(80.5);
-
-        WeeklyWeighIn w2 = new WeeklyWeighIn();
-        w2.setId(2L);
-        w2.setDate(LocalDate.of(2026, 6, 2));
-        w2.setWeight(81.0);
+        WeightEntry w1 = new WeightEntry(1L, 1L, LocalDate.of(2026, 6, 9), 80.5, null);
+        WeightEntry w2 = new WeightEntry(2L, 1L, LocalDate.of(2026, 6, 2), 81.0, null);
 
         when(weeklyWeighInService.getAllByUser(1L)).thenReturn(List.of(w1, w2));
 
@@ -105,11 +80,7 @@ class WeeklyWeighInControllerTest {
     @Test
     @WithMockUser(username = "user")
     void should_return_latest_weighin_when_at_least_one_exists() throws Exception {
-        WeeklyWeighIn latest = new WeeklyWeighIn();
-        latest.setId(1L);
-        latest.setDate(LocalDate.of(2026, 6, 9));
-        latest.setWeight(80.5);
-        latest.setNote("Feeling good");
+        WeightEntry latest = new WeightEntry(1L, 1L, LocalDate.of(2026, 6, 9), 80.5, "Feeling good");
 
         when(weeklyWeighInService.getLatestByUser(1L)).thenReturn(Optional.of(latest));
 
@@ -158,13 +129,9 @@ class WeeklyWeighInControllerTest {
     void should_save_new_weighin_when_post_body_is_valid_and_has_no_userId() throws Exception {
         LocalDate date = LocalDate.of(2026, 6, 11);
 
-        WeeklyWeighIn saved = new WeeklyWeighIn();
-        saved.setId(5L);
-        saved.setDate(date);
-        saved.setWeight(79.8);
-        saved.setNote("Morning weigh-in");
+        WeightEntry saved = new WeightEntry(5L, 1L, date, 79.8, "Morning weigh-in");
 
-        when(weeklyWeighInService.saveWeighIn(any(WeeklyWeighIn.class))).thenReturn(saved);
+        when(weeklyWeighInService.saveWeighIn(any(WeightEntry.class))).thenReturn(saved);
 
         String body = objectMapper.writeValueAsString(
                 new CreateWeighInRequest(date, 79.8, "Morning weigh-in")
