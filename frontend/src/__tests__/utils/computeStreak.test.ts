@@ -80,4 +80,23 @@ describe('computeStreak', () => {
     const entries = [entry('2026-06-21', true)];
     expect(computeStreak(entries, TODAY).last14).toContain('hit');
   });
+
+  it('should return future status for dates after today in last14 window', () => {
+    // viewedDate is 2 days in the future relative to today (2026-06-22)
+    const futureViewedDate = '2026-06-24';
+    const r = computeStreak([], futureViewedDate);
+    // last14 window: 2026-06-11 to 2026-06-24
+    // 2026-06-23 and 2026-06-24 are after today (2026-06-22) → 'future'
+    const futureCount = r.last14.filter(s => s === 'future').length;
+    expect(futureCount).toBe(2);
+  });
+
+  it('should exclude unconfirmed entries from streak calculation', () => {
+    const entries = [
+      entry('2026-06-20', false), // non confirmee
+      entry('2026-06-21', false), // non confirmee
+      entry('2026-06-22', false), // non confirmee
+    ];
+    expect(computeStreak(entries, TODAY).current).toBe(0);
+  });
 });

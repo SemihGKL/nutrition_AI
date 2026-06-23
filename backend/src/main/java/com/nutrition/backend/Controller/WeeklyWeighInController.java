@@ -5,6 +5,7 @@ import com.nutrition.backend.Class.WeeklyWeighIn;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.Service.WeeklyWeighInService;
 import com.nutrition.backend.web.dto.CreateWeighInRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +26,7 @@ public class WeeklyWeighInController {
     }
 
     @PostMapping
-    public ResponseEntity<WeeklyWeighIn> saveWeighIn(@RequestBody CreateWeighInRequest request, Authentication auth) {
+    public ResponseEntity<WeeklyWeighIn> saveWeighIn(@Valid @RequestBody CreateWeighInRequest request, Authentication auth) {
         User user = userService.getByEmail(auth.getName());
 
         WeeklyWeighIn weighIn = new WeeklyWeighIn();

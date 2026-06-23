@@ -1,170 +1,144 @@
-# TDD Analysis — Persistance des objectifs utilisateur en base de données
+# TDD Analysis — Audit de couverture tests NutritionIA
 
-**Test Type:** UNIT (Suite A — Mockito), E2E/@WebMvcTest (Suite B), UNIT/Vitest (Suite C)
+**Test Type:** UNIT (dominant) + E2E (controllers WebMvcTest)
 
-**Feature Area:**
-- Backend service: `backend/src/main/java/com/nutrition/backend/Service/`
-- Backend controller: `backend/src/main/java/com/nutrition/backend/Controller/`
-- Frontend API: `frontend/src/api/`
-
-**Bounded Context:** nutrition (monolithe — dette technique assumée, packages existants conservés)
+**Bounded Context:** backend Spring Boot + frontend React/TypeScript
 
 ---
 
-## Suite A — ObjectiveServiceTest (tests unitaires, Mockito)
+## Synthèse par module
 
-**Fichier cible:** `backend/src/test/java/com/nutrition/backend/Service/ObjectiveServiceTest.java`
+### Backend — Domain
 
-**Wiring:** `@ExtendWith(MockitoExtension.class)`, `@Mock UserObjectiveRepository`, `@Mock ObjectiveCompletionRepository`, `@InjectMocks ObjectiveService`
+| Classe | Couvert | Lacunes |
+|--------|---------|---------|
+| `Mbr` | deficitPercentage (déficit, surplus, équilibre) | Valeurs limites : TDEE à zéro, MBR à zéro, consommation négative |
+| `MbrCalculator` | Homme/Femme, TDEE sédentaire, objectif calorique | Valeur limite : poids ou taille à zéro, âge extrême |
+| `JwtTokenService` | Génération, extraction, validité, expiration | Token trafiqué (signature altérée), sujet qui ne correspond pas |
 
-| # | Test Name | TPP | Contradiction | Status |
-|---|-----------|-----|---------------|--------|
-| A1 | `should_return_empty_list_when_user_has_no_objectives` | nil → constant (2) | Baseline — peut être satisfait par `return List.of()` | ✅ GREEN |
-| A2 | `should_return_all_objectives_when_user_has_objectives` | constant → variable (3) | La liste vide constante est fausse quand le repository retourne des objectifs — force la délégation à `findByUserId` | ✅ GREEN |
-| A3 | `should_create_objective_and_return_it_when_day_of_week_and_label_are_valid` | unconditional → conditional (4) | `getObjectives` ne persiste rien — `createObjective` doit appeler `save` sur le repository et retourner l'entité persistée → introduit une nouvelle branche | ✅ GREEN |
-| A4 | `should_delete_objective_when_objective_belongs_to_the_authenticated_user` | unconditional → conditional (4) | La création ne supprime pas — force `deleteById` après vérification d'existence et d'ownership | ✅ GREEN |
-| A5 | `should_prevent_deletion_when_objective_does_not_belong_to_the_authenticated_user` | unconditional → conditional (4) | La suppression sans contrôle réussit même pour un objectif étranger — force la comparaison de `userId` et le lancement d'une exception d'accès | ✅ GREEN |
-| A6 | `should_prevent_deletion_when_objective_does_not_exist` | unconditional → conditional (4) | L'ownership check suppose que `findById` retourne quelque chose — force la gestion du cas `Optional.empty()` avec une exception de not-found | ✅ GREEN |
-| A7 | `should_mark_objective_as_done_when_no_completion_exists_for_that_date` | nil → constant (2) | Les tests précédents ne touchent pas aux completions — baseline du toggle : introduit `save` sur `ObjectiveCompletionRepository` | ✅ GREEN |
-| A8 | `should_not_create_duplicate_completion_when_objective_is_already_marked_done_for_that_date` | unconditional → conditional (4) | Un deuxième `markDone` sans guard créerait un doublon (contrainte UNIQUE en base) — force `existsByObjectiveIdAndDate` avant `save` | ✅ GREEN |
-| A9 | `should_remove_completion_when_objective_is_marked_undone_for_a_date` | unconditional → conditional (4) | `markDone` ne supprime pas — force `deleteByObjectiveIdAndDate` | ✅ GREEN |
-| A10 | `should_return_empty_map_when_no_completions_exist_in_date_range` | nil → constant (2) | Baseline pour `getCompletions` — satisfait par `return Map.of()` quand le repository retourne une liste vide | ✅ GREEN |
-| A11 | `should_return_completions_map_indexed_by_date_when_completions_exist_in_date_range` | scalar → collection (5) | La map vide constante est fausse pour des completions existantes — force l'agrégation en `Map<String, List<Long>>` groupée par date ISO | ✅ GREEN |
+### Backend — Services
+
+| Classe | Couvert | Lacunes |
+|--------|---------|---------|
+| `AuthService` | Inscription (token + encodage), connexion réussie, email inconnu, mauvais mot de passe | Email déjà enregistré (doublon) |
+| `UserService` | Création, getById (trouvé/non trouvé), updateProfile, updateCalorieGoal, updateBodyMetrics, getAllUsers, getByEmail (trouvé/non trouvé) | `updateStepsGoal` non testée, `weighInDay` null ignoré dans `updateBodyMetrics` |
+| `DailyCaloriesService` | Insert, update (idempotence), getByDate (trouvé/vide), getAll (multi/vide) | — (couverture fonctionnelle complète) |
+| `DailyRecapService` | Déficit, surplus, aucune entrée, pas sous seuil 4 000 | Borne exacte 4 000 pas, genre invalide dans `Gender.valueOf` |
+| `ObjectiveService` | Get (vide/liste), create, delete (ok/mauvais user/inexistant), markDone (idempotence), markUndone, getCompletions (vide/plein) | `autoComplete` — aucun test sur les 3 branches conditionnelles |
+| `WeeklyWeighInService` | Save (retour, màj poids user, ordre persistence), getAllByUser, getLatest (trouvé/vide) | — (couverture fonctionnelle complète) |
+
+### Backend — Controllers (WebMvcTest)
+
+| Classe | Couvert | Lacunes |
+|--------|---------|---------|
+| `UserController` | GET /me (200), PUT /me (200), PUT sans dailyCalorieGoal (null) | PUT /me sans JWT (401), PUT /me avec champs invalides (400) |
+| `DailyCaloriesController` | GET all (200), GET by date (200/404/400 format invalide), POST save/update, GET recap (200), 401 sans JWT | Recap 404 (aucune entrée), POST body invalide (400) |
+| `ObjectiveController` | 401 sans JWT, GET (vide/liste), POST (201), DELETE (204/404/403), markDone (201), markUndone (204), getCompletions | markDone 404 (objectif inexistant), getCompletions sans from/to (400) |
+| `WeeklyWeighInController` | GET all (200), GET latest (200/204), POST save (200) | POST sans JWT (401), POST body invalide (400) |
+
+### Frontend — Utils
+
+| Fichier | Couvert | Lacunes |
+|---------|---------|---------|
+| `stepsToKcal` (format.ts) | Sous-seuil, borne exacte 4000, au-dessus, scaling poids, arrondi, formule complète | Couverture complète |
+| `format.ts` (autres fonctions) | Aucun test | `formatNumber`, `formatDecimal`, `addDays`, `frenchWeekday`, `frenchDay`, `frenchDateShort`, `frenchDayShort`, `weekStart`, `weekEnd`, `weekNumber` |
+| `mbr.ts` | Aucun test | `computeMbr`, `computeTdee`, `suggestedTarget` |
+
+### Frontend — Hooks
+
+| Hook | Couvert | Lacunes |
+|------|---------|---------|
+| `computeStreak` | Vide, 3 jours consécutifs, gap, streak courant nul, best streak, last14 longueur/today/miss/hit | Entrées non confirmées ignorées, dates futures dans last14 |
+| `useDailyEntry` | Chargement, entry null, confirm, debounce setCalories, confirm annule debounce | `setSteps` et `setBurned` sans tests, erreur réseau sur getByDate, `userId` undefined |
+
+### Frontend — Composants
+
+| Composant | Couvert | Lacunes |
+|-----------|---------|---------|
+| `DeficitBanner` | Sous objectif, dépassé mais sous MBR, au-dessus MBR, sans MBR, écart affiché | Borne exacte `net === target`, borne exacte `net === mbr` |
+| `ConfirmationView` | 3 états visuels bannière, 2 états bilan jour | Bouton Modifier déclenche `onEdit` |
+| `EntrySection` | Affichage steppers, sport masqué/visible, onBurned reset, estimation kcal, stepper +/-, stepsGoal indicateur | `onSteps` déclenché par le stepper Pas, calories ne descendent pas sous 0 |
+
+### Frontend — API clients
+
+| Module | Couvert | Lacunes |
+|--------|---------|---------|
+| `dailyApi` | getAll, getByDate, getByDate 404 → null, save (body sans userId), getRecap | getRecap 404 non géré |
+| `objectivesApi` | getAll, create, remove, markDone, markUndone, getCompletions | — (couverture fonctionnelle complète) |
+| `weighInApi` | getAll, getLatest, getLatest error → null, save (body sans userId) | — (couverture fonctionnelle complète) |
+
+### Frontend — Flows
+
+| Flow | Couvert | Lacunes |
+|------|---------|---------|
+| `DashboardPage` | Loading, formulaire si entry null, Confirmer désactivé à 0, Confirmer actif après saisie, ConfirmationView si confirmée, nav jour précédent non confirmé | Confirmation réussie → transition vers ConfirmationView, erreur réseau affichée |
 
 ---
 
-## Suite B — ObjectiveControllerTest (@WebMvcTest)
+## Liste de tests manquants — ordonnée par priorité TPP
 
-**Fichier cible:** `backend/src/test/java/com/nutrition/backend/Controller/ObjectiveControllerTest.java`
+### CRITICAL — Comportements métier non couverts avec risque de régression silencieux
 
-**Wiring (pattern hérité de `DailyCaloriesControllerTest`) :**
-- `@WebMvcTest(ObjectiveController.class)`
-- `@TestPropertySource(properties = { "jwt.secret=test-secret-key-that-is-at-least-32-characters-long", "jwt.expiration=86400000" })`
-- `@MockBean TokenService tokenService`
-- `@MockBean UserService userService`
-- `@MockBean ObjectiveService objectiveService`
-- Dans `@BeforeEach` : stub `tokenService.extractSubject` + `tokenService.isTokenValid` + `userService.getByEmail("user")`
-- Chaque test authentifié porte `@WithMockUser(username = "user")`
-- DELETE et POST portent `.with(csrf())`
+| # | Test Name (convention) | Fichier cible | Priorité | Raison |
+|---|------------------------|---------------|----------|--------|
+| 1 | `should_complete_sport_objective_automatically_when_calories_burned_is_positive_and_day_of_week_matches` | `ObjectiveServiceTest` | CRITICAL | `autoComplete` est invoqué lors de la confirmation quotidienne — 3 branches conditionnelles imbriquées (type SPORT, jour de semaine, caloriesBurned > 0), zéro test, régression indétectable |
+| 2 | `should_not_complete_sport_objective_when_calories_burned_is_zero` | `ObjectiveServiceTest` | CRITICAL | Branche explicite `caloriesBurned > 0` dans `autoComplete` — chemin négatif absent |
+| 3 | `should_not_complete_objective_when_type_is_not_sport` | `ObjectiveServiceTest` | CRITICAL | Branche `"SPORT".equals(obj.getType())` — le chemin "CUSTOM" non testé, le filtre peut disparaître sans alerte |
+| 4 | `should_update_daily_steps_goal_and_persist_it_when_valid_user_id_and_steps_value` | `UserServiceTest` | CRITICAL | `updateStepsGoal` est une méthode publique sans aucun test — exposée par le contrôleur pour l'objectif quotidien de pas |
+| 5 | `should_throw_exception_when_gender_stored_in_database_is_invalid_during_recap_computation` | `DailyRecapServiceTest` | CRITICAL | `Gender.valueOf(user.getGender())` lève `IllegalArgumentException` si la valeur est corrompue en base — aucune protection, aucun test |
 
-| # | Test Name | TPP | Contradiction | Status |
-|---|-----------|-----|---------------|--------|
-| B1 | `should_return_401_when_request_has_no_jwt_token` | nil → constant (2) | Baseline sécurité — Spring Security rejette sans header `Authorization` | ✅ GREEN |
-| B2 | `should_return_empty_list_when_authenticated_user_has_no_objectives` | constant → variable (3) | Le 401 constant ne peut pas retourner 200 avec un body JSON — force le routing `GET /api/objectives` avec l'utilisateur authentifié | ✅ GREEN |
-| B3 | `should_return_list_of_objectives_when_authenticated_user_has_objectives` | constant → variable (3) | La liste vide insatisfaisante quand le service retourne des objectifs — force la sérialisation JSON de `id`, `dayOfWeek`, `label`, `position` | ✅ GREEN |
-| B4 | `should_return_201_when_authenticated_user_creates_a_valid_objective` | unconditional → conditional (4) | `GET` retourne 200 ; `POST /api/objectives` doit retourner 201 avec l'objet créé — introduit la route POST et le status `CREATED` | ✅ GREEN |
-| B5 | `should_return_204_when_authenticated_user_deletes_their_own_objective` | unconditional → conditional (4) | POST crée — `DELETE /api/objectives/{id}` doit retourner 204 sans body — introduit la route DELETE | ✅ GREEN |
-| B6 | `should_return_404_when_authenticated_user_deletes_an_objective_that_does_not_exist` | unconditional → conditional (4) | La suppression réussit toujours dans les tests précédents — force la propagation de `ObjectiveNotFoundException` → 404 via `GlobalExceptionHandler` | ✅ GREEN |
-| B7 | `should_return_403_when_authenticated_user_deletes_an_objective_that_belongs_to_another_user` | unconditional → conditional (4) | La suppression ne contrôle pas l'ownership — force `ObjectiveAccessDeniedException` → 403 via `GlobalExceptionHandler` | ✅ GREEN |
-| B8 | `should_return_201_when_authenticated_user_marks_an_objective_as_done_for_a_date` | unconditional → conditional (4) | DELETE ne crée pas de completion — force `POST /api/objectives/{id}/completions/{date}` → 201 | ✅ GREEN |
-| B9 | `should_return_204_when_authenticated_user_unmarks_an_objective_for_a_date` | unconditional → conditional (4) | POST completion retourne 201 — `DELETE /api/objectives/{id}/completions/{date}` doit retourner 204 | ✅ GREEN |
-| B10 | `should_return_completions_map_indexed_by_date_when_authenticated_user_queries_a_date_range` | scalar → collection (5) | Les tests précédents testent des actions ponctuelles — force `GET /api/objectives/completions?from=&to=` retournant `Map<String, List<Long>>` sérialisé en JSON | ✅ GREEN |
+### HIGH — Lacunes sur comportements existants importants
 
----
+| # | Test Name (convention) | Fichier cible | Priorité | Raison |
+|---|------------------------|---------------|----------|--------|
+| 6 | `should_return_false_when_token_subject_does_not_match_expected_subject` | `JwtTokenServiceTest` | HIGH | `isTokenValid` compare le sujet — seul le cas `true` (correspondance) est testé, le cas `false` (sujet différent) est absent |
+| 7 | `should_throw_jwt_exception_when_token_signature_has_been_tampered` | `JwtTokenServiceTest` | HIGH | Token avec signature altérée : cas de sécurité fondamental, non testé |
+| 8 | `should_preserve_existing_weigh_in_day_when_weigh_in_day_is_null_in_body_metrics_update` | `UserServiceTest` | HIGH | La condition `if (weighInDay != null)` dans `updateBodyMetrics` protège le champ existant — chemin null jamais validé |
+| 9 | `should_return_zero_steps_kcal_when_steps_are_exactly_at_threshold_of_4000` | `DailyRecapServiceTest` | HIGH | `Math.max(0, 4000 - 4000)` donne 0 — borne exacte absente (les tests existants utilisent 3999 d'un côté et 8000 de l'autre) |
+| 10 | `should_expose_error_state_when_getByDate_fails_with_a_network_error` | `useDailyEntry.test.ts` | HIGH | Le hook expose `error: string \| null` mais aucun test ne vérifie qu'une erreur réseau remplit ce champ |
+| 11 | `should_not_go_below_zero_when_setSteps_is_called_with_a_negative_value` | `useDailyEntry.test.ts` | HIGH | `Math.max(0, v)` dans `setSteps` — même règle que `setCalories` mais non couverte pour les pas et calories brûlées |
+| 12 | `should_call_onEdit_callback_when_modifier_button_is_clicked` | `ConfirmationView.test.tsx` | HIGH | Le prop `onEdit` est le seul point de sortie de la vue confirmée — non testé, peut régresser sans alerte |
+| 13 | `should_return_401_when_put_user_me_request_has_no_jwt_token` | `UserControllerTest` | HIGH | Toutes les autres routes protégées ont un test 401 — `PUT /api/users/me` est la seule exception |
+| 14 | `should_return_401_when_post_weighin_request_has_no_jwt_token` | `WeeklyWeighInControllerTest` | HIGH | Même lacune : `POST /api/weighin` sans JWT n'est pas couvert |
+| 15 | `should_return_404_when_recap_is_requested_for_a_date_with_no_daily_entry` | `DailyCaloriesControllerTest` | HIGH | `DailyRecapService` lève `DailyCaloriesNotFoundException` si aucune entrée — le controller doit retourner 404, non testé |
 
-## Suite C — objectives.test.ts (Vitest, frontend)
+### MEDIUM — Cas limites de règles métier et fonctions utilitaires non testées
 
-**Fichier cible:** `frontend/src/api/__tests__/objectives.test.ts`
+| # | Test Name (convention) | Fichier cible | Priorité | Raison |
+|---|------------------------|---------------|----------|--------|
+| 16 | `should_compute_mbr_correctly_for_male_using_mifflin_st_jeor_formula` | `mbr.test.ts` (à créer) | MEDIUM | `computeMbr` dans `utils/mbr.ts` est une duplication de la formule Java — aucun test frontend, divergence silencieuse possible |
+| 17 | `should_compute_mbr_correctly_for_female_using_mifflin_st_jeor_formula` | `mbr.test.ts` (à créer) | MEDIUM | Même raison, constante féminine (-161) non couverte côté TypeScript |
+| 18 | `should_compute_suggested_target_as_mbr_minus_200_rounded_to_nearest_50` | `mbr.test.ts` (à créer) | MEDIUM | `suggestedTarget` est utilisé dans le formulaire de profil — logique d'arrondi non testée |
+| 19 | `should_return_future_status_for_dates_after_today_in_last14_window` | `computeStreak.test.ts` | MEDIUM | `computeLast14` retourne `'future'` pour les dates postérieures à aujourd'hui — cas géré dans le code mais aucun test |
+| 20 | `should_exclude_unconfirmed_entries_from_streak_calculation` | `computeStreak.test.ts` | MEDIUM | Des entrées `confirmed: false` ne doivent pas incrémenter le streak — règle métier centrale explicitement codée mais non testée |
+| 21 | `should_display_objectif_atteint_when_net_calories_are_exactly_equal_to_daily_target` | `DeficitBanner.test.tsx` | MEDIUM | Borne exacte `net === target` : la condition `net <= target` devrait la couvrir, mais aucun test ne l'affirme explicitement |
+| 22 | `should_display_objectif_depasse_deficit_preserve_when_net_calories_are_exactly_equal_to_mbr` | `DeficitBanner.test.tsx` | MEDIUM | Borne exacte `net === mbr` : selon que la condition est `<` ou `<=`, le résultat peut changer — non testé |
+| 23 | `should_return_400_when_post_daily_kcal_body_is_missing_required_fields` | `DailyCaloriesControllerTest` | MEDIUM | Les annotations `@Valid` sur `CreateDailyCaloriesRequest` ne sont pas validées en test — données invalides peuvent passer |
+| 24 | `should_format_number_with_french_locale_thousand_separator` | `format.test.ts` (à créer) | MEDIUM | `formatNumber` est utilisé dans plusieurs composants visuels (calories, pas, etc.) — non testé |
+| 25 | `should_compute_week_start_as_monday_when_given_date_is_a_saturday` | `format.test.ts` (à créer) | MEDIUM | `weekStart` / `weekEnd` / `weekNumber` sont utilisés dans les vues récapitulatives — aucun test, calcul de calendrier fragile |
 
-**Prérequis :** Vitest est installé (`vitest ^4.1.8` dans `devDependencies`). Le client `api` n'expose pas encore de méthode `delete` — elle doit être ajoutée à `client.ts` en même temps que `objectives.ts`.
+### LOW — Couverture défensive et scenarios secondaires
 
-**Module mock (hissé en tête de fichier, avant tout import) :**
-```typescript
-vi.mock('../client', async () => {
-  const { ApiError } = await vi.importActual<typeof import('../client')>('../client');
-  return {
-    ApiError,
-    api: {
-      get: vi.fn(),
-      post: vi.fn(),
-      delete: vi.fn(),
-    },
-  };
-});
-```
-
-| # | Test Name | TPP | Contradiction | Status |
-|---|-----------|-----|---------------|--------|
-| C1 | `getAll calls GET /api/objectives without any userId in the path` | nil → constant (2) | Baseline — vérifie que `getAll()` appelle `api.get` avec `/api/objectives` et sans userId | ✅ GREEN |
-| C2 | `create calls POST /api/objectives with body containing dayOfWeek and label but not userId` | constant → variable (3) | `getAll` appelle `get` — `create` doit appeler `post` avec un body structuré différent → force la vérification du body et l'absence de userId | ✅ GREEN |
-| C3 | `remove calls DELETE /api/objectives/{id} with the correct id in the path` | unconditional → conditional (4) | POST ne supprime pas — `remove(id)` doit appeler `api.delete` avec `{id}` dans le chemin → force l'ajout de `delete` au client | ✅ GREEN |
-| C4 | `markDone calls POST /api/objectives/{id}/completions/{date} with the correct id and date` | unconditional → conditional (4) | `remove` appelle `delete` — `markDone` doit appeler `post` vers un chemin distinct avec id et date interpolés | ✅ GREEN |
-| C5 | `markUndone calls DELETE /api/objectives/{id}/completions/{date} with the correct id and date` | unconditional → conditional (4) | `markDone` appelle `post` sur les completions — `markUndone` doit appeler `delete` sur le même chemin → distingue DELETE de POST | ✅ GREEN |
-| C6 | `getCompletions calls GET /api/objectives/completions with from and to as query parameters` | scalar → collection (5) | Les tests précédents testent des actions ponctuelles — `getCompletions(from, to)` appelle `get` avec deux query params `from` et `to` dans l'URL | ✅ GREEN |
+| # | Test Name (convention) | Fichier cible | Priorité | Raison |
+|---|------------------------|---------------|----------|--------|
+| 26 | `should_add_days_correctly_when_crossing_a_month_boundary` | `format.test.ts` (à créer) | LOW | `addDays` avec +1 le 31 du mois : cas de débordement de mois — fondamental pour la navigation de date |
+| 27 | `should_call_onSteps_when_steps_stepper_increment_button_is_clicked` | `EntrySection.test.tsx` | LOW | Le stepper Pas appelle `onSteps` — seul le stepper Calories est explicitement testé pour le callback |
+| 28 | `should_not_trigger_any_save_when_userId_is_undefined` | `useDailyEntry.test.ts` | LOW | `if (!userId) return` dans `scheduleSave` et `confirm` — `userId = undefined` ne doit pas déclencher de fetch |
+| 29 | `should_not_complete_sport_objective_when_day_of_week_does_not_match_the_stored_objective_day` | `ObjectiveServiceTest` | LOW | Branche `obj.getDayOfWeek() == dow` dans `autoComplete` — chemin non-correspondant à couvrir après les tests CRITICAL |
+| 30 | `should_return_400_when_post_weighin_body_is_missing_date_or_weight` | `WeeklyWeighInControllerTest` | LOW | Validation `@Valid` sur `CreateWeighInRequest` — body sans `date` ou `weight` devrait retourner 400, non couvert |
 
 ---
 
 ## Fichiers à créer
 
-**Backend — migration SQL :**
-- `backend/src/main/resources/db/migration/V8__create_objectives_tables.sql`
-
-**Backend — entités JPA :**
-- `backend/src/main/java/com/nutrition/backend/Class/UserObjective.java`
-- `backend/src/main/java/com/nutrition/backend/Class/ObjectiveCompletion.java`
-
-**Backend — repositories :**
-- `backend/src/main/java/com/nutrition/backend/Repository/UserObjectiveRepository.java`
-- `backend/src/main/java/com/nutrition/backend/Repository/ObjectiveCompletionRepository.java`
-
-**Backend — DTOs :**
-- `backend/src/main/java/com/nutrition/backend/web/dto/CreateObjectiveRequest.java`
-- `backend/src/main/java/com/nutrition/backend/web/dto/ObjectiveDto.java`
-
-**Backend — exceptions (+ handlers dans `GlobalExceptionHandler`) :**
-- `backend/src/main/java/com/nutrition/backend/Exception/ObjectiveNotFoundException.java`
-- `backend/src/main/java/com/nutrition/backend/Exception/ObjectiveAccessDeniedException.java`
-
-**Backend — service et controller :**
-- `backend/src/main/java/com/nutrition/backend/Service/ObjectiveService.java`
-- `backend/src/main/java/com/nutrition/backend/Controller/ObjectiveController.java`
-
-**Frontend :**
-- `frontend/src/api/objectives.ts`
-- `frontend/src/api/__tests__/objectives.test.ts`
-- (modification) `frontend/src/api/client.ts` — ajout de `delete` à l'objet `api`
-
----
+- `/Users/semihgokol/Documents/sideProjects/nutritionIA/frontend/src/__tests__/utils/mbr.test.ts` — tests de `computeMbr`, `computeTdee`, `suggestedTarget`
+- `/Users/semihgokol/Documents/sideProjects/nutritionIA/frontend/src/__tests__/utils/format.test.ts` — tests de `formatNumber`, `formatDecimal`, `addDays`, `weekStart`, `weekEnd`, `weekNumber`
 
 ## Design Notes
 
-**Entités JPA (pattern `DailyCalories`) :**
-- `UserObjective` : `@Entity @Getter @Setter @Table(name = "user_objectives")`, champs `id`, `userId` (`@Column(name = "user_id")`), `dayOfWeek` (`@Column(name = "day_of_week")`), `label`, `position`
-- `ObjectiveCompletion` : `@Entity @Getter @Setter @Table(name = "objective_completions")`, champs `id`, `userId`, `objectiveId`, `date`
-
-**Repositories (pattern `DailyCaloriesRepository`) :**
-- `UserObjectiveRepository` : `findByUserId(Long userId)` → `List<UserObjective>`
-- `ObjectiveCompletionRepository` : `existsByObjectiveIdAndDate(Long, LocalDate)`, `deleteByObjectiveIdAndDate(Long, LocalDate)`, `findByUserIdAndDateBetween(Long, LocalDate, LocalDate)`
-
-**Ownership check (A5/A6/B6/B7) :**
-- `ObjectiveService.deleteObjective(Long objectiveId, Long userId)` : appelle `findById` → lève `ObjectiveNotFoundException` si absent, compare `objective.getUserId()` avec `userId` → lève `ObjectiveAccessDeniedException` si différent, puis `deleteById`
-- Étendre `GlobalExceptionHandler` avec : `ObjectiveNotFoundException` → 404, `ObjectiveAccessDeniedException` → 403
-
-**Idempotence `markDone` (A8) :**
-- Guard : `if (completionRepository.existsByObjectiveIdAndDate(objectiveId, date)) return;` — pas d'exception, pas de doublon
-
-**Map des completions (A10/A11/B10) :**
-- `ObjectiveService.getCompletions(Long userId, LocalDate from, LocalDate to)` retourne `Map<String, List<Long>>`
-- Implémentation cible : `completions.stream().collect(groupingBy(c -> c.getDate().toString(), mapping(ObjectiveCompletion::getObjectiveId, toList())))`
-
-**Controller (B) :**
-- `@RequestMapping("/api/objectives")`
-- `GET /` → 200 `List<ObjectiveDto>`
-- `POST /` → 201 `ObjectiveDto` (body : `CreateObjectiveRequest`)
-- `DELETE /{id}` → 204 (service reçoit `objectiveId` + `userId` extrait de `Authentication`)
-- `POST /{id}/completions/{date}` → 201
-- `DELETE /{id}/completions/{date}` → 204
-- `GET /completions?from=&to=` → 200 `Map<String, List<Long>>`
-
-**Ajout `delete` au client frontend (`client.ts`) :**
-```typescript
-delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
-```
-Le mock dans `objectives.test.ts` doit inclure `delete: vi.fn()` — identique au `delete` du mock `daily.test.ts` qui n'en avait pas besoin, mais le pattern de mock `vi.mock('../client', async () => { ... })` reste le même.
-
-**Assertions frontend (pattern `daily.test.ts`) :**
-- URL : `vi.mocked(api.get).mock.calls[0][0]`
-- Body POST : `vi.mocked(api.post).mock.calls[0]` → `[path, body]` → `expect(body).not.toHaveProperty('userId')`
-- Path DELETE : `vi.mocked(api.delete).mock.calls[0][0]`
-
-**Naming convention tests backend :** `should_[résultat]_when_[condition]` en snake_case — identique aux tests existants.
+- **Conventions Java** : `should_[résultat]_when_[condition]` en snake_case, `@ExtendWith(MockitoExtension.class)` + `@InjectMocks` + `@Mock` pour les services, `@WebMvcTest` + `@MockBean` + `@WithMockUser` + `.with(csrf())` pour les controllers
+- **Conventions TypeScript** : labels lisibles dans `describe/it`, `vi.mock` pour les modules API, `renderHook` + `waitFor` pour les hooks, `vi.useFakeTimers()` uniquement pour les debounces
+- **autoComplete** est la lacune la plus grave : 3 branches conditionnelles imbriquées (type, jour, caloriesBurned) sans aucun test — à traiter en priorité absolue avant toute évolution de la feature objectifs
+- **Duplication de logique MBR** : la formule Mifflin-St Jeor est implémentée à la fois dans `MbrCalculator.java` et `mbr.ts` — les tests Java couvrent la formule mais la copie TypeScript n'a aucun test
+- **updateStepsGoal** dans `UserService` : méthode publique exposée par l'API, utilisée par la feature objectif de pas quotidien, sans aucun test unitaire
+- **Bornes exactes non testées** : la borne 4 000 pas (DailyRecapService), la borne `net === target` (DeficitBanner), la borne `net === mbr` (DeficitBanner) — les tests existants restent à 1 unité de chaque côté sans tester la valeur limite elle-même

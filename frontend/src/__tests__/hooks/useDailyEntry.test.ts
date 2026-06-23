@@ -120,6 +120,38 @@ describe('useDailyEntry', () => {
     expect(vi.mocked(dailyApi.save).mock.calls[0][0].caloriesConsumed).toBe(1800);
   });
 
+  it('should expose error state when getByDate fails with a network error', async () => {
+    vi.mocked(dailyApi.getByDate).mockRejectedValue(new Error('Network Error'));
+
+    const { result } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.entry).toBeNull();
+  });
+
+  it('should not go below zero when setSteps is called with a negative value', async () => {
+    vi.mocked(dailyApi.getByDate).mockResolvedValue(mockEntry);
+    vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+
+    const { result } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => { result.current.setSteps(-100); });
+
+    expect(result.current.entry?.steps).toBe(0);
+  });
+
+  it('should not trigger any save when userId is undefined', async () => {
+    const { result } = renderHook(() => useDailyEntry(undefined, TODAY));
+
+    act(() => { result.current.setCalories(1800); });
+    await act(async () => { await result.current.confirm(); });
+
+    expect(vi.mocked(dailyApi.save)).not.toHaveBeenCalled();
+    expect(vi.mocked(dailyApi.getByDate)).not.toHaveBeenCalled();
+  });
+
   it('confirm annule le debounce et ne lance qu\'une seule requete', async () => {
     vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
     vi.mocked(dailyApi.save).mockResolvedValue({ ...mockEntry, confirmed: true });

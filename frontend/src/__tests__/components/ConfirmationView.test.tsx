@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ConfirmationView } from '../../components/dashboard/ConfirmationView';
 import type { DailyRecap } from '../../types/api';
 import type { StreakInfo } from '../../hooks/useStreak';
@@ -83,5 +83,20 @@ describe('ConfirmationView — bannière résultat', () => {
       />,
     );
     expect(screen.getAllByText('Surplus calorique').length).toBeGreaterThan(0);
+  });
+
+  it('calls onEdit when the modifier button is clicked', () => {
+    const onEdit = vi.fn();
+    render(
+      <ConfirmationView
+        date="2026-06-22"
+        recap={recap()}
+        streak={streak}
+        canEdit={true}
+        onEdit={onEdit}
+      />,
+    );
+    fireEvent.click(screen.getByText('Modifier'));
+    expect(onEdit).toHaveBeenCalledTimes(1);
   });
 });

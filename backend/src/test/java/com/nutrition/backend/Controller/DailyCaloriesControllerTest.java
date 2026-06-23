@@ -8,6 +8,7 @@ import com.nutrition.backend.Service.DailyRecapService;
 import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.Config.JwtAuthenticationFilter;
+import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
 import com.nutrition.backend.domain.ports.TokenService;
 import com.nutrition.backend.web.dto.CreateDailyCaloriesRequest;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
@@ -201,6 +202,28 @@ class DailyCaloriesControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.caloriesConsumed").value(2200))
                 .andExpect(jsonPath("$.confirmed").value(true));
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_return_404_when_recap_is_requested_for_a_date_with_no_daily_entry() throws Exception {
+        LocalDate date = LocalDate.of(2026, 6, 11);
+
+        when(dailyRecapService.getRecap(1L, date))
+                .thenThrow(new DailyCaloriesNotFoundException("No daily calories entry found for userId=1 on " + date));
+
+        mockMvc.perform(get("/api/daily-kcal/2026-06-11/recap"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_return_400_when_post_daily_kcal_body_is_missing_required_fields() throws Exception {
+        mockMvc.perform(post("/api/daily-kcal")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

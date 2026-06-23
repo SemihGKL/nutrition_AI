@@ -167,6 +167,92 @@ class ObjectiveServiceTest {
     }
 
     @Test
+    void should_complete_sport_objective_automatically_when_calories_burned_is_positive_and_day_of_week_matches() {
+        // Given — lundi = dow 0 selon la logique du service (DayOfWeek.getValue() - 1)
+        LocalDate monday = LocalDate.of(2026, 6, 22); // un lundi
+        int dow = monday.getDayOfWeek().getValue() - 1; // 0
+
+        UserObjective sportObj = new UserObjective();
+        sportObj.setId(10L);
+        sportObj.setUserId(1L);
+        sportObj.setType("SPORT");
+        sportObj.setDayOfWeek(dow);
+        sportObj.setLabel("Séance sport lundi");
+
+        when(userObjectiveRepository.findByUserId(1L)).thenReturn(List.of(sportObj));
+        when(objectiveCompletionRepository.existsByObjectiveIdAndDate(10L, monday)).thenReturn(false);
+
+        // When
+        objectiveService.autoComplete(1L, monday, 300);
+
+        // Then
+        verify(objectiveCompletionRepository).save(any(ObjectiveCompletion.class));
+    }
+
+    @Test
+    void should_not_complete_sport_objective_when_calories_burned_is_zero() {
+        LocalDate monday = LocalDate.of(2026, 6, 22);
+        int dow = monday.getDayOfWeek().getValue() - 1;
+
+        UserObjective sportObj = new UserObjective();
+        sportObj.setId(10L);
+        sportObj.setUserId(1L);
+        sportObj.setType("SPORT");
+        sportObj.setDayOfWeek(dow);
+        sportObj.setLabel("Séance sport lundi");
+
+        when(userObjectiveRepository.findByUserId(1L)).thenReturn(List.of(sportObj));
+
+        // When — caloriesBurned est 0
+        objectiveService.autoComplete(1L, monday, 0);
+
+        // Then — aucune complétion créée
+        verify(objectiveCompletionRepository, never()).save(any(ObjectiveCompletion.class));
+    }
+
+    @Test
+    void should_not_complete_objective_when_type_is_not_sport() {
+        LocalDate monday = LocalDate.of(2026, 6, 22);
+        int dow = monday.getDayOfWeek().getValue() - 1;
+
+        UserObjective customObj = new UserObjective();
+        customObj.setId(20L);
+        customObj.setUserId(1L);
+        customObj.setType("CUSTOM");
+        customObj.setDayOfWeek(dow);
+        customObj.setLabel("Boire 2L d'eau");
+
+        when(userObjectiveRepository.findByUserId(1L)).thenReturn(List.of(customObj));
+
+        // When — type CUSTOM, caloriesBurned positif
+        objectiveService.autoComplete(1L, monday, 300);
+
+        // Then — aucune complétion créée
+        verify(objectiveCompletionRepository, never()).save(any(ObjectiveCompletion.class));
+    }
+
+    @Test
+    void should_not_complete_sport_objective_when_day_of_week_does_not_match_the_stored_objective_day() {
+        LocalDate monday = LocalDate.of(2026, 6, 22);   // lundi = dow 0
+        LocalDate tuesday = LocalDate.of(2026, 6, 23);  // mardi = dow 1
+
+        UserObjective sportObj = new UserObjective();
+        sportObj.setId(10L);
+        sportObj.setUserId(1L);
+        sportObj.setType("SPORT");
+        sportObj.setDayOfWeek(monday.getDayOfWeek().getValue() - 1); // configuré pour lundi
+        sportObj.setLabel("Séance sport lundi");
+
+        when(userObjectiveRepository.findByUserId(1L)).thenReturn(List.of(sportObj));
+
+        // When — on appelle autoComplete un mardi
+        objectiveService.autoComplete(1L, tuesday, 300);
+
+        // Then — le jour ne correspond pas, aucune complétion
+        verify(objectiveCompletionRepository, never()).save(any(ObjectiveCompletion.class));
+    }
+
+    @Test
     void should_return_completions_map_indexed_by_date_when_completions_exist_in_date_range() {
         LocalDate from = LocalDate.of(2026, 6, 1);
         LocalDate to = LocalDate.of(2026, 6, 7);

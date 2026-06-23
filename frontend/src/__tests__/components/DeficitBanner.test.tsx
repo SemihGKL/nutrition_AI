@@ -32,4 +32,14 @@ describe('DeficitBanner', () => {
     render(<DeficitBanner net={1900} target={1800} mbr={2000} />);
     expect(screen.getByText(/\+100/)).toBeInTheDocument();
   });
+
+  it('should display objectif atteint when net calories are exactly equal to daily target', () => {
+    render(<DeficitBanner net={1800} target={1800} mbr={2000} />);
+    expect(screen.getByText('Objectif respecté')).toBeInTheDocument();
+  });
+
+  it('should display objectif depasse deficit preserve when net calories are exactly equal to mbr', () => {
+    render(<DeficitBanner net={2000} target={1800} mbr={2000} />);
+    expect(screen.getByText('Objectif dépassé — déficit préservé')).toBeInTheDocument();
+  });
 });

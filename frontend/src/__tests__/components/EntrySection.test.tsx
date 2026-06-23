@@ -94,4 +94,11 @@ describe('EntrySection — saisie du jour', () => {
     setup({ steps: 10000, stepsGoal: 10000 });
     expect(screen.getByText(/✓/)).toBeInTheDocument();
   });
+
+  it('calls onSteps when the steps stepper increment button is clicked', async () => {
+    const { onSteps } = setup({ steps: 5000 });
+    const increments = screen.getAllByRole('button', { name: 'augmenter' });
+    await userEvent.click(increments[1]); // second stepper = pas
+    expect(onSteps).toHaveBeenCalledWith(5500);
+  });
 });

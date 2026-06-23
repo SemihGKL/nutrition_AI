@@ -21,6 +21,7 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -110,6 +111,20 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.username").value("UpdatedTest"))
                 .andExpect(jsonPath("$.email").value("updated@example.com"))
                 .andExpect(jsonPath("$.dailyCalorieGoal").value(2000));
+    }
+
+    @Test
+    void should_return_401_when_put_user_me_request_has_no_jwt_token() throws Exception {
+        String body = objectMapper.writeValueAsString(
+                new UpdateUserRequest("Test", "test@example.com", "MALE", 28, 178.0, 80.0, "MONDAY", null, null)
+        );
+
+        mockMvc.perform(put("/api/users/me")
+                        .with(anonymous())
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

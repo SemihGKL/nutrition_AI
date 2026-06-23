@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -114,6 +115,31 @@ class WeeklyWeighInControllerTest {
 
         mockMvc.perform(get("/api/weighin/latest"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void should_return_401_when_post_weighin_request_has_no_jwt_token() throws Exception {
+        LocalDate date = LocalDate.of(2026, 6, 11);
+        String body = objectMapper.writeValueAsString(
+                new CreateWeighInRequest(date, 79.8, "Morning weigh-in")
+        );
+
+        mockMvc.perform(post("/api/weighin")
+                        .with(anonymous())
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_return_400_when_post_weighin_body_is_missing_date_or_weight() throws Exception {
+        mockMvc.perform(post("/api/weighin")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

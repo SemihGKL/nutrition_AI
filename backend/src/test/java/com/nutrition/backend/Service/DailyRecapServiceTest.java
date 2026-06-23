@@ -123,6 +123,67 @@ class DailyRecapServiceTest {
     }
 
     @Test
+    void should_throw_exception_when_gender_stored_in_database_is_invalid_during_recap_computation() {
+        // Given
+        Long userId = 1L;
+        LocalDate date = LocalDate.of(2026, 5, 5);
+
+        User user = new User();
+        user.setGender("INVALID"); // valeur inconnue de l'enum Gender
+        user.setCurrentWeight(80.0);
+        user.setHeight(180.0);
+        user.setAge(30);
+        user.setDailyCalorieGoal(1780);
+
+        DailyCalories entry = new DailyCalories();
+        entry.setCaloriesConsumed(1800);
+        entry.setCaloriesBurned(0);
+        entry.setSteps(0);
+        entry.setDate(date);
+        entry.setConfirmed(false);
+
+        when(userService.getUserById(userId)).thenReturn(user);
+        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
+
+        // When / Then — Gender.valueOf("INVALID") doit lever IllegalArgumentException
+        assertThatThrownBy(() -> dailyRecapService.getRecap(userId, date))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void should_return_zero_steps_kcal_when_steps_are_exactly_at_threshold_of_4000() {
+        // Given
+        Long userId = 1L;
+        LocalDate date = LocalDate.of(2026, 5, 6);
+
+        User user = new User();
+        user.setGender("MALE");
+        user.setCurrentWeight(80.0);
+        user.setHeight(180.0);
+        user.setAge(30);
+        user.setDailyCalorieGoal(1780);
+
+        DailyCalories entry = new DailyCalories();
+        entry.setCaloriesConsumed(1800);
+        entry.setCaloriesBurned(0);
+        entry.setSteps(4000); // exactement au seuil, pas au-dessus
+        entry.setDate(date);
+        entry.setConfirmed(false);
+
+        when(userService.getUserById(userId)).thenReturn(user);
+        when(dailyCaloriesService.getDailyCalories(userId, date)).thenReturn(Optional.of(entry));
+
+        // When
+        DailyRecapResponse recap = dailyRecapService.getRecap(userId, date);
+
+        // Then
+        // effectiveSteps = max(0, 4000 - 4000) = 0 → stepsKcal = 0
+        assertThat(recap.steps()).isEqualTo(4000);
+        assertThat(recap.stepsKcal()).isEqualTo(0);
+        assertThat(recap.netCalories()).isEqualTo(1800);
+    }
+
+    @Test
     void should_count_zero_extra_calories_burned_from_steps_when_steps_below_4000_threshold() {
         // Given
         Long userId = 1L;

@@ -8,6 +8,7 @@ import com.nutrition.backend.Service.ObjectiveService;
 import com.nutrition.backend.Service.UserService;
 import com.nutrition.backend.web.dto.CreateDailyCaloriesRequest;
 import com.nutrition.backend.web.dto.DailyRecapResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -49,7 +50,7 @@ public class DailyCaloriesController {
     }
 
     @PostMapping
-    public ResponseEntity<DailyCalories> saveEntry(@RequestBody CreateDailyCaloriesRequest request, Authentication auth) {
+    public ResponseEntity<DailyCalories> saveEntry(@Valid @RequestBody CreateDailyCaloriesRequest request, Authentication auth) {
         User user = userService.getByEmail(auth.getName());
 
         DailyCalories entry = new DailyCalories();

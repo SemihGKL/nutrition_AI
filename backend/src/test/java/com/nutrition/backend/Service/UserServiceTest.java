@@ -184,6 +184,39 @@ class UserServiceTest {
     }
 
     @Test
+    void should_update_daily_steps_goal_and_persist_it_when_valid_user_id_and_steps_value() {
+        Long userId = 1L;
+        User existing = new User();
+        existing.setDailyStepsGoal(5000);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existing));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        User result = userService.updateStepsGoal(userId, 8000);
+
+        assertThat(result.getDailyStepsGoal()).isEqualTo(8000);
+    }
+
+    @Test
+    void should_preserve_existing_weigh_in_day_when_weigh_in_day_is_null_in_body_metrics_update() {
+        Long userId = 1L;
+        User existing = new User();
+        existing.setWeighInDay("WEDNESDAY");
+        existing.setDailyCalorieGoal(2000);
+
+        com.nutrition.backend.domain.model.Mbr newMbr =
+                new com.nutrition.backend.domain.model.Mbr(1700.0, 2040.0, 1640.0);
+        when(mbrCalculator.calculate(any())).thenReturn(newMbr);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existing));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When — weighInDay est null : le champ existant doit être préservé
+        User result = userService.updateBodyMetrics(userId, Gender.FEMALE, 28, 165.0, 65.0, null);
+
+        assertThat(result.getWeighInDay()).isEqualTo("WEDNESDAY");
+    }
+
+    @Test
     void should_throw_exception_when_email_not_found() {
         String email = "unknown@mail.fr";
         when(userRepository.findByEmail(email)).thenReturn(Optional.empty());

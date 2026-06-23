@@ -40,6 +40,33 @@ class JwtTokenServiceTest {
     }
 
     @Test
+    void should_return_false_when_token_subject_does_not_match_expected_subject() {
+        String subject = "john@mail.fr";
+        String token = tokenService.generateToken(subject);
+
+        assertThat(tokenService.isTokenValid(token, "other@mail.fr")).isFalse();
+    }
+
+    @Test
+    void should_throw_jwt_exception_when_token_signature_has_been_tampered() {
+        String token = tokenService.generateToken("john@mail.fr");
+
+        // Un JWT est composé de trois segments séparés par '.'
+        // On modifie un caractère au milieu du segment de signature (3e partie)
+        // pour garantir que la vérification de signature échoue
+        String[] parts = token.split("\\.");
+        String signature = parts[2];
+        // Remplacer le premier caractère par un caractère différent
+        char originalChar = signature.charAt(0);
+        char replacementChar = (originalChar == 'A') ? 'B' : 'A';
+        String tamperedSignature = replacementChar + signature.substring(1);
+        String tamperedToken = parts[0] + "." + parts[1] + "." + tamperedSignature;
+
+        assertThatThrownBy(() -> tokenService.isTokenValid(tamperedToken, "john@mail.fr"))
+                .isInstanceOf(io.jsonwebtoken.JwtException.class);
+    }
+
+    @Test
     void should_throw_when_token_expired() {
         JwtTokenService expiredService = new JwtTokenService(SECRET, 1L);
         String token = expiredService.generateToken("john@mail.fr");
