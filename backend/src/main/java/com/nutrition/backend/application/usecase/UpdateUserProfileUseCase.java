@@ -5,7 +5,7 @@ import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.model.UserProfile;
 import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.service.MbrCalculator;
-import com.nutrition.backend.Exception.UserNotFoundException;
+import com.nutrition.backend.domain.exception.UserNotFoundException;
 import org.springframework.stereotype.Component;
 
 @Component

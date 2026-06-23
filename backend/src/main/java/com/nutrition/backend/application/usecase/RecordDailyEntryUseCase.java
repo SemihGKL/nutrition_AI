@@ -1,6 +1,6 @@
 package com.nutrition.backend.application.usecase;
 
-import com.nutrition.backend.Service.ObjectiveService;
+import com.nutrition.backend.application.service.ObjectiveService;
 import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.ports.DailyEntryRepository;
 import org.springframework.stereotype.Component;

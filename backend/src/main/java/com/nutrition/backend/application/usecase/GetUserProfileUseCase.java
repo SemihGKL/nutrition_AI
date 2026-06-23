@@ -2,7 +2,7 @@ package com.nutrition.backend.application.usecase;
 
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.ports.UserRepository;
-import com.nutrition.backend.Exception.UserNotFoundException;
+import com.nutrition.backend.domain.exception.UserNotFoundException;
 import org.springframework.stereotype.Component;
 
 @Component

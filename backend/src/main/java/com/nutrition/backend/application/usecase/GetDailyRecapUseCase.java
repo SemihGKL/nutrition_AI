@@ -1,6 +1,6 @@
 package com.nutrition.backend.application.usecase;
 
-import com.nutrition.backend.Exception.DailyCaloriesNotFoundException;
+import com.nutrition.backend.domain.exception.DailyCaloriesNotFoundException;
 import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Mbr;
@@ -9,7 +9,7 @@ import com.nutrition.backend.domain.ports.DailyEntryRepository;
 import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.service.MbrCalculator;
 import com.nutrition.backend.domain.service.StepsCalculator;
-import com.nutrition.backend.web.dto.DailyRecapResponse;
+import com.nutrition.backend.infrastructure.web.dto.DailyRecapResponse;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;

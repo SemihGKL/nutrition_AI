@@ -1,0 +1,19 @@
+package com.nutrition.backend.infrastructure.web;
+
+import com.nutrition.backend.domain.entity.WeightEntry;
+import com.nutrition.backend.infrastructure.web.dto.WeightEntryDto;
+
+public class WeightEntryMapper {
+
+    private WeightEntryMapper() {}
+
+    public static WeightEntryDto toDto(WeightEntry entry) {
+        return new WeightEntryDto(
+                entry.getId(),
+                entry.getUserId(),
+                entry.getDate(),
+                entry.getWeight(),
+                entry.getNote()
+        );
+    }
+}
