@@ -1,4 +1,4 @@
-package com.nutrition.backend.Config;
+package com.nutrition.backend.infrastructure.config;
 
 import com.nutrition.backend.infrastructure.persistence.UserJpaEntity;
 import com.nutrition.backend.infrastructure.persistence.UserJpaRepository;

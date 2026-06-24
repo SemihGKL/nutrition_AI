@@ -1,4 +1,4 @@
-package com.nutrition.backend.Config;
+package com.nutrition.backend.infrastructure.config;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;

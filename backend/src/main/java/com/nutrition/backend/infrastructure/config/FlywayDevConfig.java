@@ -1,4 +1,4 @@
-package com.nutrition.backend.Config;
+package com.nutrition.backend.infrastructure.config;
 
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 import org.springframework.context.annotation.Bean;

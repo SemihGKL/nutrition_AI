@@ -1,4 +1,4 @@
-package com.nutrition.backend.Config;
+package com.nutrition.backend.infrastructure.config;
 
 import com.nutrition.backend.domain.ports.TokenService;
 import com.nutrition.backend.infrastructure.security.JwtTokenService;

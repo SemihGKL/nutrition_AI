@@ -3,9 +3,7 @@ package com.nutrition.backend.domain.service;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.model.Mbr;
 import com.nutrition.backend.domain.model.UserProfile;
-import org.springframework.stereotype.Component;
 
-@Component
 public class MbrCalculator {
 
     private static final int DEFAULT_FOOD_DEFICIT = 200;
