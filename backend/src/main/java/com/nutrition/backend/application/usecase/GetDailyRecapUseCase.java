@@ -9,7 +9,6 @@ import com.nutrition.backend.domain.ports.DailyEntryRepository;
 import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.service.MbrCalculator;
 import com.nutrition.backend.domain.service.StepsCalculator;
-import com.nutrition.backend.infrastructure.web.dto.DailyRecapResponse;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -29,7 +28,7 @@ public class GetDailyRecapUseCase {
         this.mbrCalculator = mbrCalculator;
     }
 
-    public DailyRecapResponse execute(Long userId, LocalDate date) {
+    public DailyRecapResult execute(Long userId, LocalDate date) {
         DailyEntry entry = dailyEntryRepository.findByUserIdAndDate(userId, date)
                 .orElseThrow(() -> new DailyCaloriesNotFoundException(
                         "No daily calories entry found for userId=" + userId + " on " + date));
@@ -51,7 +50,7 @@ public class GetDailyRecapUseCase {
         double deficit = mbr.tdee() - netCalories;
         double deficitPercentage = mbr.deficitPercentage(netCalories);
 
-        return new DailyRecapResponse(
+        return new DailyRecapResult(
                 entry.getDate(),
                 entry.getCaloriesConsumed(),
                 entry.getCaloriesBurned(),

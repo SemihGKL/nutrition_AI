@@ -1,144 +1,225 @@
-# TDD Analysis — Audit de couverture tests NutritionIA
+# TDD Analysis — Use Cases sans couverture de tests unitaires
 
-**Test Type:** UNIT (dominant) + E2E (controllers WebMvcTest)
+**Test Type:** UNIT (logique métier pure, pas d'HTTP ni de base de données)
 
-**Bounded Context:** backend Spring Boot + frontend React/TypeScript
+**Feature Area:** `backend/src/main/java/com/nutrition/backend/application/usecase/`
 
----
-
-## Synthèse par module
-
-### Backend — Domain
-
-| Classe | Couvert | Lacunes |
-|--------|---------|---------|
-| `Mbr` | deficitPercentage (déficit, surplus, équilibre) | Valeurs limites : TDEE à zéro, MBR à zéro, consommation négative |
-| `MbrCalculator` | Homme/Femme, TDEE sédentaire, objectif calorique | Valeur limite : poids ou taille à zéro, âge extrême |
-| `JwtTokenService` | Génération, extraction, validité, expiration | Token trafiqué (signature altérée), sujet qui ne correspond pas |
-
-### Backend — Services
-
-| Classe | Couvert | Lacunes |
-|--------|---------|---------|
-| `AuthService` | Inscription (token + encodage), connexion réussie, email inconnu, mauvais mot de passe | Email déjà enregistré (doublon) |
-| `UserService` | Création, getById (trouvé/non trouvé), updateProfile, updateCalorieGoal, updateBodyMetrics, getAllUsers, getByEmail (trouvé/non trouvé) | `updateStepsGoal` non testée, `weighInDay` null ignoré dans `updateBodyMetrics` |
-| `DailyCaloriesService` | Insert, update (idempotence), getByDate (trouvé/vide), getAll (multi/vide) | — (couverture fonctionnelle complète) |
-| `DailyRecapService` | Déficit, surplus, aucune entrée, pas sous seuil 4 000 | Borne exacte 4 000 pas, genre invalide dans `Gender.valueOf` |
-| `ObjectiveService` | Get (vide/liste), create, delete (ok/mauvais user/inexistant), markDone (idempotence), markUndone, getCompletions (vide/plein) | `autoComplete` — aucun test sur les 3 branches conditionnelles |
-| `WeeklyWeighInService` | Save (retour, màj poids user, ordre persistence), getAllByUser, getLatest (trouvé/vide) | — (couverture fonctionnelle complète) |
-
-### Backend — Controllers (WebMvcTest)
-
-| Classe | Couvert | Lacunes |
-|--------|---------|---------|
-| `UserController` | GET /me (200), PUT /me (200), PUT sans dailyCalorieGoal (null) | PUT /me sans JWT (401), PUT /me avec champs invalides (400) |
-| `DailyCaloriesController` | GET all (200), GET by date (200/404/400 format invalide), POST save/update, GET recap (200), 401 sans JWT | Recap 404 (aucune entrée), POST body invalide (400) |
-| `ObjectiveController` | 401 sans JWT, GET (vide/liste), POST (201), DELETE (204/404/403), markDone (201), markUndone (204), getCompletions | markDone 404 (objectif inexistant), getCompletions sans from/to (400) |
-| `WeeklyWeighInController` | GET all (200), GET latest (200/204), POST save (200) | POST sans JWT (401), POST body invalide (400) |
-
-### Frontend — Utils
-
-| Fichier | Couvert | Lacunes |
-|---------|---------|---------|
-| `stepsToKcal` (format.ts) | Sous-seuil, borne exacte 4000, au-dessus, scaling poids, arrondi, formule complète | Couverture complète |
-| `format.ts` (autres fonctions) | Aucun test | `formatNumber`, `formatDecimal`, `addDays`, `frenchWeekday`, `frenchDay`, `frenchDateShort`, `frenchDayShort`, `weekStart`, `weekEnd`, `weekNumber` |
-| `mbr.ts` | Aucun test | `computeMbr`, `computeTdee`, `suggestedTarget` |
-
-### Frontend — Hooks
-
-| Hook | Couvert | Lacunes |
-|------|---------|---------|
-| `computeStreak` | Vide, 3 jours consécutifs, gap, streak courant nul, best streak, last14 longueur/today/miss/hit | Entrées non confirmées ignorées, dates futures dans last14 |
-| `useDailyEntry` | Chargement, entry null, confirm, debounce setCalories, confirm annule debounce | `setSteps` et `setBurned` sans tests, erreur réseau sur getByDate, `userId` undefined |
-
-### Frontend — Composants
-
-| Composant | Couvert | Lacunes |
-|-----------|---------|---------|
-| `DeficitBanner` | Sous objectif, dépassé mais sous MBR, au-dessus MBR, sans MBR, écart affiché | Borne exacte `net === target`, borne exacte `net === mbr` |
-| `ConfirmationView` | 3 états visuels bannière, 2 états bilan jour | Bouton Modifier déclenche `onEdit` |
-| `EntrySection` | Affichage steppers, sport masqué/visible, onBurned reset, estimation kcal, stepper +/-, stepsGoal indicateur | `onSteps` déclenché par le stepper Pas, calories ne descendent pas sous 0 |
-
-### Frontend — API clients
-
-| Module | Couvert | Lacunes |
-|--------|---------|---------|
-| `dailyApi` | getAll, getByDate, getByDate 404 → null, save (body sans userId), getRecap | getRecap 404 non géré |
-| `objectivesApi` | getAll, create, remove, markDone, markUndone, getCompletions | — (couverture fonctionnelle complète) |
-| `weighInApi` | getAll, getLatest, getLatest error → null, save (body sans userId) | — (couverture fonctionnelle complète) |
-
-### Frontend — Flows
-
-| Flow | Couvert | Lacunes |
-|------|---------|---------|
-| `DashboardPage` | Loading, formulaire si entry null, Confirmer désactivé à 0, Confirmer actif après saisie, ConfirmationView si confirmée, nav jour précédent non confirmé | Confirmation réussie → transition vers ConfirmationView, erreur réseau affichée |
+**Bounded Context:** backend Spring Boot — couche application
 
 ---
 
-## Liste de tests manquants — ordonnée par priorité TPP
+## Contexte d'exploration
 
-### CRITICAL — Comportements métier non couverts avec risque de régression silencieux
+### Modèles de domaine identifiés
 
-| # | Test Name (convention) | Fichier cible | Priorité | Raison |
-|---|------------------------|---------------|----------|--------|
-| 1 | `should_complete_sport_objective_automatically_when_calories_burned_is_positive_and_day_of_week_matches` | `ObjectiveServiceTest` | CRITICAL | `autoComplete` est invoqué lors de la confirmation quotidienne — 3 branches conditionnelles imbriquées (type SPORT, jour de semaine, caloriesBurned > 0), zéro test, régression indétectable |
-| 2 | `should_not_complete_sport_objective_when_calories_burned_is_zero` | `ObjectiveServiceTest` | CRITICAL | Branche explicite `caloriesBurned > 0` dans `autoComplete` — chemin négatif absent |
-| 3 | `should_not_complete_objective_when_type_is_not_sport` | `ObjectiveServiceTest` | CRITICAL | Branche `"SPORT".equals(obj.getType())` — le chemin "CUSTOM" non testé, le filtre peut disparaître sans alerte |
-| 4 | `should_update_daily_steps_goal_and_persist_it_when_valid_user_id_and_steps_value` | `UserServiceTest` | CRITICAL | `updateStepsGoal` est une méthode publique sans aucun test — exposée par le contrôleur pour l'objectif quotidien de pas |
-| 5 | `should_throw_exception_when_gender_stored_in_database_is_invalid_during_recap_computation` | `DailyRecapServiceTest` | CRITICAL | `Gender.valueOf(user.getGender())` lève `IllegalArgumentException` si la valeur est corrompue en base — aucune protection, aucun test |
+- `User` — entité immuable avec wither methods (`withBodyMetrics`, `withDailyCalorieGoal`, `withCurrentWeight`, `withEmail`, `withDailyStepsGoal`)
+- `DailyEntry` — entrée journalière (caloriesConsumed, steps, caloriesBurned, confirmed)
+- `WeightEntry` — pesée (userId, date, weight, note)
+- `Gender` — enum MALE / FEMALE
+- `UserProfile` — record (weightKg, heightCm, age, gender) utilisé pour le calcul MBR
+- `Mbr` — record (mbr, tdee, dailyCalorieGoal) avec méthode `deficitPercentage(int)`
 
-### HIGH — Lacunes sur comportements existants importants
+### Ports (interfaces)
 
-| # | Test Name (convention) | Fichier cible | Priorité | Raison |
-|---|------------------------|---------------|----------|--------|
-| 6 | `should_return_false_when_token_subject_does_not_match_expected_subject` | `JwtTokenServiceTest` | HIGH | `isTokenValid` compare le sujet — seul le cas `true` (correspondance) est testé, le cas `false` (sujet différent) est absent |
-| 7 | `should_throw_jwt_exception_when_token_signature_has_been_tampered` | `JwtTokenServiceTest` | HIGH | Token avec signature altérée : cas de sécurité fondamental, non testé |
-| 8 | `should_preserve_existing_weigh_in_day_when_weigh_in_day_is_null_in_body_metrics_update` | `UserServiceTest` | HIGH | La condition `if (weighInDay != null)` dans `updateBodyMetrics` protège le champ existant — chemin null jamais validé |
-| 9 | `should_return_zero_steps_kcal_when_steps_are_exactly_at_threshold_of_4000` | `DailyRecapServiceTest` | HIGH | `Math.max(0, 4000 - 4000)` donne 0 — borne exacte absente (les tests existants utilisent 3999 d'un côté et 8000 de l'autre) |
-| 10 | `should_expose_error_state_when_getByDate_fails_with_a_network_error` | `useDailyEntry.test.ts` | HIGH | Le hook expose `error: string \| null` mais aucun test ne vérifie qu'une erreur réseau remplit ce champ |
-| 11 | `should_not_go_below_zero_when_setSteps_is_called_with_a_negative_value` | `useDailyEntry.test.ts` | HIGH | `Math.max(0, v)` dans `setSteps` — même règle que `setCalories` mais non couverte pour les pas et calories brûlées |
-| 12 | `should_call_onEdit_callback_when_modifier_button_is_clicked` | `ConfirmationView.test.tsx` | HIGH | Le prop `onEdit` est le seul point de sortie de la vue confirmée — non testé, peut régresser sans alerte |
-| 13 | `should_return_401_when_put_user_me_request_has_no_jwt_token` | `UserControllerTest` | HIGH | Toutes les autres routes protégées ont un test 401 — `PUT /api/users/me` est la seule exception |
-| 14 | `should_return_401_when_post_weighin_request_has_no_jwt_token` | `WeeklyWeighInControllerTest` | HIGH | Même lacune : `POST /api/weighin` sans JWT n'est pas couvert |
-| 15 | `should_return_404_when_recap_is_requested_for_a_date_with_no_daily_entry` | `DailyCaloriesControllerTest` | HIGH | `DailyRecapService` lève `DailyCaloriesNotFoundException` si aucune entrée — le controller doit retourner 404, non testé |
+- `UserRepository` — save, findById, findByEmail, findAll
+- `DailyEntryRepository` — save, findByUserIdAndDate, findByUserId
+- `WeightEntryRepository` — save, findByUserIdOrderByDateDesc
+- `PasswordEncoderPort` — encode, matches
 
-### MEDIUM — Cas limites de règles métier et fonctions utilitaires non testées
+### Domain services
 
-| # | Test Name (convention) | Fichier cible | Priorité | Raison |
-|---|------------------------|---------------|----------|--------|
-| 16 | `should_compute_mbr_correctly_for_male_using_mifflin_st_jeor_formula` | `mbr.test.ts` (à créer) | MEDIUM | `computeMbr` dans `utils/mbr.ts` est une duplication de la formule Java — aucun test frontend, divergence silencieuse possible |
-| 17 | `should_compute_mbr_correctly_for_female_using_mifflin_st_jeor_formula` | `mbr.test.ts` (à créer) | MEDIUM | Même raison, constante féminine (-161) non couverte côté TypeScript |
-| 18 | `should_compute_suggested_target_as_mbr_minus_200_rounded_to_nearest_50` | `mbr.test.ts` (à créer) | MEDIUM | `suggestedTarget` est utilisé dans le formulaire de profil — logique d'arrondi non testée |
-| 19 | `should_return_future_status_for_dates_after_today_in_last14_window` | `computeStreak.test.ts` | MEDIUM | `computeLast14` retourne `'future'` pour les dates postérieures à aujourd'hui — cas géré dans le code mais aucun test |
-| 20 | `should_exclude_unconfirmed_entries_from_streak_calculation` | `computeStreak.test.ts` | MEDIUM | Des entrées `confirmed: false` ne doivent pas incrémenter le streak — règle métier centrale explicitement codée mais non testée |
-| 21 | `should_display_objectif_atteint_when_net_calories_are_exactly_equal_to_daily_target` | `DeficitBanner.test.tsx` | MEDIUM | Borne exacte `net === target` : la condition `net <= target` devrait la couvrir, mais aucun test ne l'affirme explicitement |
-| 22 | `should_display_objectif_depasse_deficit_preserve_when_net_calories_are_exactly_equal_to_mbr` | `DeficitBanner.test.tsx` | MEDIUM | Borne exacte `net === mbr` : selon que la condition est `<` ou `<=`, le résultat peut changer — non testé |
-| 23 | `should_return_400_when_post_daily_kcal_body_is_missing_required_fields` | `DailyCaloriesControllerTest` | MEDIUM | Les annotations `@Valid` sur `CreateDailyCaloriesRequest` ne sont pas validées en test — données invalides peuvent passer |
-| 24 | `should_format_number_with_french_locale_thousand_separator` | `format.test.ts` (à créer) | MEDIUM | `formatNumber` est utilisé dans plusieurs composants visuels (calories, pas, etc.) — non testé |
-| 25 | `should_compute_week_start_as_monday_when_given_date_is_a_saturday` | `format.test.ts` (à créer) | MEDIUM | `weekStart` / `weekEnd` / `weekNumber` sont utilisés dans les vues récapitulatives — aucun test, calcul de calendrier fragile |
+- `MbrCalculator.calculate(UserProfile)` — formule Mifflin-St Jeor, TDEE × 1.2 sédentaire, dailyCalorieGoal = arrondi au multiple de 50 le plus proche de (MBR − 200)
+- `StepsCalculator.toKcal(steps, weightKg)` — soustraction du plancher de 4 000 pas, proportionnel au poids (base 70 kg), × 0.025
 
-### LOW — Couverture défensive et scenarios secondaires
+### Fakes existants à créer
 
-| # | Test Name (convention) | Fichier cible | Priorité | Raison |
-|---|------------------------|---------------|----------|--------|
-| 26 | `should_add_days_correctly_when_crossing_a_month_boundary` | `format.test.ts` (à créer) | LOW | `addDays` avec +1 le 31 du mois : cas de débordement de mois — fondamental pour la navigation de date |
-| 27 | `should_call_onSteps_when_steps_stepper_increment_button_is_clicked` | `EntrySection.test.tsx` | LOW | Le stepper Pas appelle `onSteps` — seul le stepper Calories est explicitement testé pour le callback |
-| 28 | `should_not_trigger_any_save_when_userId_is_undefined` | `useDailyEntry.test.ts` | LOW | `if (!userId) return` dans `scheduleSave` et `confirm` — `userId = undefined` ne doit pas déclencher de fetch |
-| 29 | `should_not_complete_sport_objective_when_day_of_week_does_not_match_the_stored_objective_day` | `ObjectiveServiceTest` | LOW | Branche `obj.getDayOfWeek() == dow` dans `autoComplete` — chemin non-correspondant à couvrir après les tests CRITICAL |
-| 30 | `should_return_400_when_post_weighin_body_is_missing_date_or_weight` | `WeeklyWeighInControllerTest` | LOW | Validation `@Valid` sur `CreateWeighInRequest` — body sans `date` ou `weight` devrait retourner 400, non couvert |
+Aucun fake in-memory n'existe dans la codebase de test. Ils sont à créer pour chaque use case.
+
+### Convention de nommage observée (fichiers tdd.md précédent + CLAUDE.md)
+
+- Méthodes de test : `should_[résultat]_when_[condition]` en snake_case
+- Classes de test : `[ClassUnderTest]Test`
+- Framework : JUnit 5 `@Test`, AssertJ `assertThat()`
+- Doubles : fakes in-memory à la main (pas de Mockito pour les domaines propres)
 
 ---
 
-## Fichiers à créer
+## Use Case 1 — `RegisterUserUseCase`
 
-- `/Users/semihgokol/Documents/sideProjects/nutritionIA/frontend/src/__tests__/utils/mbr.test.ts` — tests de `computeMbr`, `computeTdee`, `suggestedTarget`
-- `/Users/semihgokol/Documents/sideProjects/nutritionIA/frontend/src/__tests__/utils/format.test.ts` — tests de `formatNumber`, `formatDecimal`, `addDays`, `weekStart`, `weekEnd`, `weekNumber`
+### Logique non triviale
+
+1. Le `dailyCalorieGoal` stocké sur l'User est calculé par MBR, pas le `weightGoal` passé en paramètre — le `weightGoal` est un objectif de poids (en kg), le `dailyCalorieGoal` est la cible calorique journalière issue de la formule Mifflin-St Jeor.
+2. `currentWeight` est initialisé à `startWeight` à l'inscription.
+3. Le mot de passe est encodé avant persistance.
+
+### Liste de tests ordonnés (TPP + FLFI)
+
+| # | Test Name | TPP | Contradiction | Status |
+|---|-----------|-----|---------------|--------|
+| 1 | should assign the MBR-derived calorie goal to the new user when registering with body metrics | nil → constant (2) | Baseline — peut être satisfait en retournant un User avec une constante dailyCalorieGoal | ✅ GREEN |
+| 2 | should assign a different MBR-derived calorie goal when registering a female user with the same body metrics as a male user | unconditional → conditional (4) | La constante du test 1 (calculée pour MALE) est fausse pour FEMALE → force une branche sur le genre dans MbrCalculator | ✅ GREEN |
+| 3 | should initialize current weight equal to start weight when registering a new user | constant → variable (3) | Le currentWeight doit refléter le startWeight fourni, pas une valeur fixe → force l'usage de la variable startWeight | ✅ GREEN |
+| 4 | should store the encoded password and not the raw password when registering a new user | unconditional → conditional (4) | Le test précédent laisse le rawPassword tel quel → force l'appel à passwordEncoder.encode() | ✅ GREEN |
+
+### Fichiers à créer
+
+- `backend/src/test/java/com/nutrition/backend/application/usecase/RegisterUserUseCaseTest.java`
+- (fakes inline dans le test ou dans un sous-package `fake/`) — `FakeUserRepository`, `FakePasswordEncoder`
+
+---
+
+## Use Case 2 — `LoginUserUseCase`
+
+### Logique non triviale
+
+Deux chemins d'erreur distincts avec des messages différents. Pas de calcul, mais deux invariants métier fondamentaux de sécurité (email inconnu vs mot de passe incorrect). Il serait dangereux de les confondre.
+
+### Liste de tests ordonnés (TPP + FLFI)
+
+| # | Test Name | TPP | Contradiction | Status |
+|---|-----------|-----|---------------|--------|
+| 1 | should return the authenticated user when email and password are both correct | nil → constant (2) | Baseline — retourner un User hardcodé satisfait le cas nominal | ✅ GREEN |
+| 2 | should reject login when the email is not registered in the system | unconditional → conditional (4) | Le constant User du test 1 est toujours retourné même pour un email inconnu → force un lookup par email + exception si absent | ✅ GREEN |
+| 3 | should reject login when the password does not match the stored password for the given email | unconditional → conditional (4) | Après test 2, l'user est toujours retourné dès que l'email existe → force la vérification du mot de passe via passwordEncoder.matches() | ✅ GREEN |
+
+### Fichiers à créer
+
+- `backend/src/test/java/com/nutrition/backend/application/usecase/LoginUserUseCaseTest.java`
+- Réutilise `FakeUserRepository`, `FakePasswordEncoder`
+
+---
+
+## Use Case 3 — `UpdateUserProfileUseCase`
+
+### Logique non triviale
+
+1. Si `dailyCalorieGoal` est fourni explicitement, il prend la priorité sur le calcul MBR.
+2. Si `dailyCalorieGoal` est null, la valeur est recalculée par MBR avec les nouvelles métriques corporelles.
+3. L'email n'est mis à jour que s'il est fourni (non null).
+4. Le `dailyStepsGoal` n'est mis à jour que s'il est fourni (non null).
+5. Lève `UserNotFoundException` si l'utilisateur n'existe pas.
+6. `weighInDay` conserve la valeur existante si null est fourni (géré dans `User.withBodyMetrics`).
+
+### Liste de tests ordonnés (TPP + FLFI)
+
+| # | Test Name | TPP | Contradiction | Status |
+|---|-----------|-----|---------------|--------|
+| 1 | should recalculate the daily calorie goal from body metrics when no explicit goal is provided | nil → constant (2) | Baseline — peut être satisfait en renvoyant un User avec une constante dailyCalorieGoal | ✅ GREEN |
+| 2 | should use the explicitly provided daily calorie goal instead of recalculating from MBR when a goal is explicitly set | unconditional → conditional (4) | Le calcul automatique du test 1 écrase l'objectif fourni → force un null-check sur dailyCalorieGoal avant de décider d'utiliser la valeur fournie ou le MBR | ✅ GREEN |
+| 3 | should preserve the existing email when no new email is provided during profile update | unconditional → conditional (4) | La mise à jour inconditionnelle de l'email du test 2 écrase l'email actuel même si null est fourni → force le null-check sur email | ✅ GREEN |
+| 4 | should preserve the existing daily steps goal when no new steps goal is provided during profile update | unconditional → conditional (4) | La mise à jour inconditionnelle du dailyStepsGoal écrase la valeur existante si null → force le null-check sur dailyStepsGoal | ✅ GREEN |
+| 5 | should prevent profile update when the user does not exist in the system | unconditional → conditional (4) | L'update fonctionne pour tout userId → force le findById + exception UserNotFoundException | ✅ GREEN |
+
+### Fichiers à créer
+
+- `backend/src/test/java/com/nutrition/backend/application/usecase/UpdateUserProfileUseCaseTest.java`
+- Réutilise `FakeUserRepository`
+
+---
+
+## Use Case 4 — `RecordDailyEntryUseCase`
+
+### Logique non triviale
+
+L'effet de bord : après la sauvegarde de l'entrée, `autoCompleteObjectivesUseCase.execute()` est appelé avec `userId`, `date` et `caloriesBurned`. C'est le seul comportement non trivial — la sauvegarde seule serait un thin wrapper. Le couplage avec l'auto-complétion des objectifs est le cœur du test.
+
+### Liste de tests ordonnés (TPP + FLFI)
+
+| # | Test Name | TPP | Contradiction | Status |
+|---|-----------|-----|---------------|--------|
+| 1 | should save the daily entry and return it when recording a daily entry | nil → constant (2) | Baseline — retourner l'entrée sauvegardée peut être satisfait par une implémentation triviale | ✅ GREEN |
+| 2 | should trigger objective auto-completion after saving the daily entry when calories burned are recorded | unconditional → constant (2) | Le test 1 ne vérifie pas l'effet de bord — l'auto-complétion n'est jamais appelée → force l'appel à autoCompleteObjectivesUseCase.execute() après la sauvegarde | ✅ GREEN |
+
+**Note de conception :** `AutoCompleteObjectivesUseCase` est une dépendance à fixer. Deux approches : créer un `SpyAutoCompleteObjectivesUseCase` qui enregistre les appels reçus (préférable pour un test unitaire sociable), ou utiliser la vraie implémentation avec ses propres fakes. La première option est recommandée pour isoler ce use case.
+
+### Fichiers à créer
+
+- `backend/src/test/java/com/nutrition/backend/application/usecase/RecordDailyEntryUseCaseTest.java`
+- `FakeDailyEntryRepository` (in-memory)
+- `SpyAutoCompleteObjectivesUseCase` ou fake d'`ObjectiveRepository` + fake de `CompleteObjectiveUseCase`
+
+---
+
+## Use Case 5 — `RecordWeightEntryUseCase`
+
+### Logique non triviale
+
+Effet de bord : après la sauvegarde de la pesée, le `currentWeight` de l'User est mis à jour si l'User est trouvé. Si l'User n'existe pas (`findById` retourne empty), la mise à jour est silencieusement ignorée. C'est le comportement non trivial.
+
+### Liste de tests ordonnés (TPP + FLFI)
+
+| # | Test Name | TPP | Contradiction | Status |
+|---|-----------|-----|---------------|--------|
+| 1 | should save the weight entry and return it when recording a new weight measurement | nil → constant (2) | Baseline — retourner l'entrée sauvegardée | ✅ GREEN |
+| 2 | should update the user current weight to match the new weight entry when the user exists in the system | unconditional → constant (2) | Le test 1 ne vérifie pas la mise à jour de l'User → force l'appel à userRepository.findById() + userRepository.save() avec le nouveau poids | ✅ GREEN |
+| 3 | should silently ignore the user weight update when the user associated with the weight entry does not exist | unconditional → conditional (4) | Après test 2, l'implémentation appelle save() inconditionnellement — pour un userId inexistant, elle lèverait une exception → force le `ifPresent` qui ne sauvegarde que si l'User est trouvé | ✅ GREEN |
+
+### Fichiers à créer
+
+- `backend/src/test/java/com/nutrition/backend/application/usecase/RecordWeightEntryUseCaseTest.java`
+- `FakeWeightEntryRepository`, réutilise `FakeUserRepository`
+
+---
+
+## Use Case 6 — `GetDailyRecapUseCase`
+
+### Logique non triviale
+
+C'est le use case avec le plus de logique de calcul :
+
+1. `stepsKcal = StepsCalculator.toKcal(steps, currentWeight)` — plancher de 4 000 pas, proportionnel au poids
+2. `netCalories = caloriesConsumed - caloriesBurned - stepsKcal`
+3. `deficit = tdee - netCalories`
+4. `deficitPercentage = ((tdee - netCalories) / mbr) * 100`
+5. Lève `DailyCaloriesNotFoundException` si pas d'entrée pour la date
+6. Lève `IllegalStateException` si l'User est introuvable pour un userId existant en base
+
+**Note d'architecture :** Ce use case importe `DailyRecapResponse` depuis `infrastructure.web.dto` — violation Clean Architecture (dépendance vers l'extérieur depuis l'application). Le plan de tests ne corrige pas cela mais les tests le documenteront implicitement.
+
+### Liste de tests ordonnés (TPP + FLFI)
+
+| # | Test Name | TPP | Contradiction | Status |
+|---|-----------|-----|---------------|--------|
+| 1 | should compute net calories as consumed minus burned minus steps calories when all values are positive | nil → constant (2) | Baseline — peut être satisfait par une constante netCalories | ✅ GREEN |
+| 2 | should compute zero steps calories when steps are below the threshold of 4000 | unconditional → conditional (4) | Avec des steps = 3000, la constante du test 1 est fausse → force l'appel réel à StepsCalculator qui applique le plancher | ✅ GREEN |
+| 3 | should include the MBR and TDEE values in the recap based on the user body metrics | constant → variable (3) | MBR et TDEE sont des constantes dans l'implémentation minimale → force le calcul réel via MbrCalculator avec le profil de l'User | ✅ GREEN |
+| 4 | should compute the deficit as the difference between TDEE and net calories in the daily recap | constant → variable (3) | Le déficit est une constante → force le calcul `tdee - netCalories` en utilisant les valeurs calculées des tests précédents | ✅ GREEN |
+| 5 | should compute the deficit percentage relative to the MBR value in the daily recap | constant → variable (3) | Le pourcentage est une constante → force le calcul `((tdee - netCalories) / mbr) * 100` | ✅ GREEN |
+| 6 | should prevent recap computation when no daily entry exists for the requested date | unconditional → conditional (4) | L'implémentation ne vérifie pas l'absence d'entrée → force le `orElseThrow` avec `DailyCaloriesNotFoundException` | ✅ GREEN |
+
+### Fichiers à créer
+
+- `backend/src/test/java/com/nutrition/backend/application/usecase/GetDailyRecapUseCaseTest.java`
+- `FakeDailyEntryRepository` (réutilisable depuis RecordDailyEntryUseCase), réutilise `FakeUserRepository`
+
+---
+
+## Récapitulatif global — Fichiers à créer
+
+| Fichier de test | Use case couvert |
+|----------------|-----------------|
+| `RegisterUserUseCaseTest.java` | RegisterUserUseCase |
+| `LoginUserUseCaseTest.java` | LoginUserUseCase |
+| `UpdateUserProfileUseCaseTest.java` | UpdateUserProfileUseCase |
+| `RecordDailyEntryUseCaseTest.java` | RecordDailyEntryUseCase |
+| `RecordWeightEntryUseCaseTest.java` | RecordWeightEntryUseCase |
+| `GetDailyRecapUseCaseTest.java` | GetDailyRecapUseCase |
+
+| Fake / Spy à créer | Réutilisé par |
+|--------------------|--------------|
+| `FakeUserRepository` | Register, Login, UpdateProfile, RecordWeight, GetDailyRecap |
+| `FakePasswordEncoder` | Register, Login |
+| `FakeDailyEntryRepository` | RecordDailyEntry, GetDailyRecap |
+| `FakeWeightEntryRepository` | RecordWeight |
+| `SpyAutoCompleteObjectivesUseCase` | RecordDailyEntry |
+
+---
 
 ## Design Notes
 
-- **Conventions Java** : `should_[résultat]_when_[condition]` en snake_case, `@ExtendWith(MockitoExtension.class)` + `@InjectMocks` + `@Mock` pour les services, `@WebMvcTest` + `@MockBean` + `@WithMockUser` + `.with(csrf())` pour les controllers
-- **Conventions TypeScript** : labels lisibles dans `describe/it`, `vi.mock` pour les modules API, `renderHook` + `waitFor` pour les hooks, `vi.useFakeTimers()` uniquement pour les debounces
-- **autoComplete** est la lacune la plus grave : 3 branches conditionnelles imbriquées (type, jour, caloriesBurned) sans aucun test — à traiter en priorité absolue avant toute évolution de la feature objectifs
-- **Duplication de logique MBR** : la formule Mifflin-St Jeor est implémentée à la fois dans `MbrCalculator.java` et `mbr.ts` — les tests Java couvrent la formule mais la copie TypeScript n'a aucun test
-- **updateStepsGoal** dans `UserService` : méthode publique exposée par l'API, utilisée par la feature objectif de pas quotidien, sans aucun test unitaire
-- **Bornes exactes non testées** : la borne 4 000 pas (DailyRecapService), la borne `net === target` (DeficitBanner), la borne `net === mbr` (DeficitBanner) — les tests existants restent à 1 unité de chaque côté sans tester la valeur limite elle-même
+- **Convention de nommage** : `[UseCaseName]Test`, méthodes `should_[résultat]_when_[condition]`
+- **Fakes partagés** : regrouper `FakeUserRepository`, `FakePasswordEncoder`, `FakeDailyEntryRepository`, `FakeWeightEntryRepository` dans `src/test/java/com/nutrition/backend/application/usecase/fake/` pour les réutiliser entre les tests
+- **MbrCalculator et StepsCalculator** : utiliser les vraies implémentations (pas de mock) — ce sont des domain services sans dépendances externes, les tests bénéficient de la vraie formule
+- **SpyAutoCompleteObjectivesUseCase** : ne pas mocker, ne pas instancier la vraie implémentation avec ses dépendances — créer un spy léger qui enregistre l'appel et expose les arguments reçus pour assertion
+- **Violation d'architecture dans GetDailyRecapUseCase** : `DailyRecapResponse` vient de `infrastructure.web.dto` — les tests le documenteront implicitement mais ne corrigent pas la dette ; à noter pour migration future vers un résultat de port propre
+- **Ordre d'implémentation recommandé** : commencer par `LoginUserUseCase` (le plus simple, 3 tests), puis `RegisterUserUseCase`, puis `RecordWeightEntryUseCase`, puis `UpdateUserProfileUseCase`, puis `RecordDailyEntryUseCase`, enfin `GetDailyRecapUseCase` (le plus complexe)

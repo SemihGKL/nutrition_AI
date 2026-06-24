@@ -2,9 +2,9 @@
 
 ## Project overview
 
-PWA de suivi calorique avec assistance IA. L'utilisateur saisit ses calories quotidiennes, son poids hebdomadaire, et obtient un récapitulatif généré par Claude AI (Anthropic) avec des recommandations personnalisées.
+PWA de suivi calorique. L'utilisateur saisit ses calories quotidiennes, son poids hebdomadaire, et suit sa progression via un dashboard et des récapitulatifs hebdomadaires.
 
-**État actuel** : backend Spring Boot en cours de construction. Frontend React et intégration Claude AI à venir.
+**État actuel** : backend Spring Boot et frontend React + Vite complets. Prochaine étape : déploiement.
 
 ---
 
@@ -14,9 +14,8 @@ PWA de suivi calorique avec assistance IA. L'utilisateur saisit ses calories quo
 |---|---|
 | Backend | Java 17 + Spring Boot 3.3.5 (Maven) |
 | Base de données | PostgreSQL + Liquibase (migrations) |
-| Frontend | React + Vite — **à créer** |
-| IA | Claude API (Anthropic) — **à intégrer** |
-| Auth | Spring Security + JWT — **à implémenter** |
+| Frontend | React + Vite |
+| Auth | Spring Security + JWT |
 | Tests | JUnit 5 + Mockito |
 
 ---
@@ -49,18 +48,7 @@ application/     (Use Cases, Ports)
 domain/          (Entités, Value Objects, Domain Services)
 ```
 
-### Etat actuel du code (dette architecturale)
-
-Le code existant **ne respecte pas encore** la Clean Architecture — c'est la migration à réaliser :
-
-| Package actuel | Problème | Cible |
-|---|---|---|
-| `Class/` | JPA annotations dans le "domaine" | `domain/` pur, `infrastructure/` pour JPA |
-| `Service/` | Services anémiques, pas de use cases | `application/usecases/` |
-| `Repository/` | Interfaces Spring Data dans le domaine | `domain/ports/` + `infrastructure/adapters/` |
-| `Controller/` | Logique métier possible dans les controllers | `infrastructure/web/` uniquement adaptateurs |
-
-**Ne pas aggraver la dette** : tout nouveau code suit la cible. La migration de l'existant se fait progressivement avec des tests.
+La Clean Architecture est en place et respectée. Tout nouveau code doit maintenir la règle de dépendance.
 
 ---
 
@@ -81,7 +69,7 @@ Le TDEE utilise le coefficient sédentaire (1.2). Les calories brûlées par l'a
 
 - **User** : profil complet (MBR, TDEE, objectif calorique)
 - **DailyCalories** : saisie journalière (kcal, pas, kcal brûlées, confirmation)
-- **WeeklyWeighIn** : pesée hebdomadaire (à créer)
+- **WeeklyWeighIn** : pesée hebdomadaire
 
 ---
 
@@ -115,36 +103,37 @@ void should_throw_exception_when_user_not_found() {}
 
 ---
 
-## Endpoints existants
+## Endpoints implémentés
 
 ```
+POST /api/auth/register                ✅
+POST /api/auth/login                   ✅
+POST /api/auth/refresh                 ✅
+POST /api/auth/logout                  ✅
 GET  /api/users/{id}                   ✅
-GET  /api/daily/{userId}?date=         ✅
-GET  /api/daily/{userId}/all           ✅
-```
-
-### À implémenter (Phase 1)
-```
-POST /api/auth/register
-POST /api/auth/login
-PUT  /api/users/{id}
-POST /api/users/{id}/recalculate-mbr
-POST /api/daily
-PUT  /api/daily/{id}/confirm
-POST /api/weighin
-GET  /api/weighin/{userId}
-GET  /api/weighin/{userId}/latest
-GET  /api/recap/{userId}/week?date=
-POST /api/ai/recap
+PUT  /api/users/{id}                   ✅
+GET  /api/daily-kcal                   ✅
+GET  /api/daily-kcal/{date}            ✅
+POST /api/daily-kcal                   ✅
+GET  /api/daily-kcal/{date}/recap      ✅
+GET  /api/weighin                      ✅
+GET  /api/weighin/latest               ✅
+POST /api/weighin                      ✅
+GET  /api/objectives                   ✅
+POST /api/objectives                   ✅
+DELETE /api/objectives/{id}            ✅
+POST /api/objectives/{id}/completions/{date}   ✅
+DELETE /api/objectives/{id}/completions/{date} ✅
+GET  /api/objectives/completions       ✅
 ```
 
 ---
 
 ## Priorités de développement
 
-1. **Phase 1** — Compléter le backend : `password`/`startWeight`/`currentWeight` sur User, `steps`/`caloriesBurned` sur DailyCalories, entité `WeeklyWeighIn`, Spring Security + JWT, calcul MBR/TDEE
-2. **Phase 2** — Intégration Claude AI (`AiService`, endpoint `/api/ai/recap`)
-3. **Phase 3** — Frontend React + Vite (Login / Onboarding / Dashboard / Profil / Récap)
+1. ~~Phase 1 — Backend~~ ✅
+2. ~~Phase 2 — Intégration IA~~ — abandonnée
+3. ~~Phase 3 — Frontend React + Vite~~ ✅
 4. **Phase 4** — Déploiement (Railway backend + Vercel frontend)
 
 ---

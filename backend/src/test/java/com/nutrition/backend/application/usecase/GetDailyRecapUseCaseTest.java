@@ -7,7 +7,6 @@ import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.exception.DailyCaloriesNotFoundException;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.service.MbrCalculator;
-import com.nutrition.backend.infrastructure.web.dto.DailyRecapResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +57,7 @@ class GetDailyRecapUseCaseTest {
         saveDailyEntry(2000, 10000, 300);
 
         // When
-        DailyRecapResponse result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
+        DailyRecapResult result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
 
         // Then
         assertThat(result.netCalories()).isEqualTo(1550);
@@ -72,7 +71,7 @@ class GetDailyRecapUseCaseTest {
         saveDailyEntry(1800, 3000, 200);
 
         // When
-        DailyRecapResponse result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
+        DailyRecapResult result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
 
         // Then
         assertThat(result.stepsKcal()).isEqualTo(0);
@@ -85,7 +84,7 @@ class GetDailyRecapUseCaseTest {
         saveDailyEntry(2000, 8000, 300);
 
         // When
-        DailyRecapResponse result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
+        DailyRecapResult result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
 
         // Then
         assertThat(result.mbr()).isCloseTo(MBR, within(0.01));
@@ -100,7 +99,7 @@ class GetDailyRecapUseCaseTest {
         saveDailyEntry(2000, 8000, 300);
 
         // When
-        DailyRecapResponse result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
+        DailyRecapResult result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
 
         // Then
         // stepsKcal = round(4000 * (70/70) * 0.025) = round(100) = 100
@@ -120,7 +119,7 @@ class GetDailyRecapUseCaseTest {
         double expectedDeficitPercentage = ((TDEE - 1600) / MBR) * 100;
 
         // When
-        DailyRecapResponse result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
+        DailyRecapResult result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
 
         // Then
         assertThat(result.deficitPercentage()).isCloseTo(expectedDeficitPercentage, within(0.01));

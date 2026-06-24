@@ -10,8 +10,8 @@ import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
+import com.nutrition.backend.application.usecase.DailyRecapResult;
 import com.nutrition.backend.infrastructure.web.dto.CreateDailyCaloriesRequest;
-import com.nutrition.backend.infrastructure.web.dto.DailyRecapResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -199,7 +199,7 @@ class DailyCaloriesControllerTest {
     void should_return_daily_recap_when_valid_date_is_provided() throws Exception {
         LocalDate date = LocalDate.of(2026, 6, 10);
 
-        DailyRecapResponse recap = new DailyRecapResponse(
+        DailyRecapResult recap = new DailyRecapResult(
                 date, 1900, 200, 7500, 88, 1550, 1950, 1800.0, 2160.0, 610.0, 28.2, false
         );
 

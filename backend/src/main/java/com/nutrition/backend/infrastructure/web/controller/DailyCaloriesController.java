@@ -1,5 +1,6 @@
 package com.nutrition.backend.infrastructure.web.controller;
 
+import com.nutrition.backend.application.usecase.DailyRecapResult;
 import com.nutrition.backend.application.usecase.GetDailyEntryUseCase;
 import com.nutrition.backend.application.usecase.GetDailyRecapUseCase;
 import com.nutrition.backend.application.usecase.GetUserProfileUseCase;
@@ -77,6 +78,12 @@ public class DailyCaloriesController {
     @GetMapping("/{date}/recap")
     public ResponseEntity<DailyRecapResponse> getRecap(@PathVariable String date, Authentication auth) {
         User user = getUserProfileUseCase.byEmail(auth.getName());
-        return ResponseEntity.ok(getDailyRecapUseCase.execute(user.getId(), LocalDate.parse(date)));
+        DailyRecapResult result = getDailyRecapUseCase.execute(user.getId(), LocalDate.parse(date));
+        return ResponseEntity.ok(new DailyRecapResponse(
+                result.date(), result.caloriesConsumed(), result.caloriesBurned(),
+                result.steps(), result.stepsKcal(), result.netCalories(),
+                result.dailyCalorieGoal(), result.mbr(), result.tdee(),
+                result.deficit(), result.deficitPercentage(), result.confirmed()
+        ));
     }
 }
