@@ -1,6 +1,5 @@
 package com.nutrition.backend.application.usecase;
 
-import com.nutrition.backend.application.service.ObjectiveService;
 import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.ports.DailyEntryRepository;
 import org.springframework.stereotype.Component;
@@ -9,17 +8,17 @@ import org.springframework.stereotype.Component;
 public class RecordDailyEntryUseCase {
 
     private final DailyEntryRepository dailyEntryRepository;
-    private final ObjectiveService objectiveService;
+    private final AutoCompleteObjectivesUseCase autoCompleteObjectivesUseCase;
 
     public RecordDailyEntryUseCase(DailyEntryRepository dailyEntryRepository,
-                                   ObjectiveService objectiveService) {
+                                   AutoCompleteObjectivesUseCase autoCompleteObjectivesUseCase) {
         this.dailyEntryRepository = dailyEntryRepository;
-        this.objectiveService = objectiveService;
+        this.autoCompleteObjectivesUseCase = autoCompleteObjectivesUseCase;
     }
 
     public DailyEntry execute(DailyEntry entry) {
         DailyEntry saved = dailyEntryRepository.save(entry);
-        objectiveService.autoComplete(entry.getUserId(), entry.getDate(), entry.getCaloriesBurned());
+        autoCompleteObjectivesUseCase.execute(entry.getUserId(), entry.getDate(), entry.getCaloriesBurned());
         return saved;
     }
 }

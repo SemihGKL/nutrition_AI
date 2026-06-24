@@ -1,8 +1,12 @@
 package com.nutrition.backend.infrastructure.web.controller;
 
-import com.nutrition.backend.application.service.ObjectiveService;
-import com.nutrition.backend.application.usecase.GetDailyEntryUseCase;
+import com.nutrition.backend.application.usecase.CompleteObjectiveUseCase;
+import com.nutrition.backend.application.usecase.CreateObjectiveUseCase;
+import com.nutrition.backend.application.usecase.DeleteObjectiveUseCase;
+import com.nutrition.backend.application.usecase.GetObjectiveCompletionsUseCase;
+import com.nutrition.backend.application.usecase.GetObjectivesUseCase;
 import com.nutrition.backend.application.usecase.GetUserProfileUseCase;
+import com.nutrition.backend.application.usecase.UncompleteObjectiveUseCase;
 import com.nutrition.backend.domain.entity.Objective;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.infrastructure.web.dto.CreateObjectiveRequest;
@@ -21,22 +25,34 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/objectives")
 public class ObjectiveController {
 
-    private final ObjectiveService objectiveService;
+    private final GetObjectivesUseCase getObjectivesUseCase;
+    private final CreateObjectiveUseCase createObjectiveUseCase;
+    private final DeleteObjectiveUseCase deleteObjectiveUseCase;
+    private final CompleteObjectiveUseCase completeObjectiveUseCase;
+    private final UncompleteObjectiveUseCase uncompleteObjectiveUseCase;
+    private final GetObjectiveCompletionsUseCase getObjectiveCompletionsUseCase;
     private final GetUserProfileUseCase getUserProfileUseCase;
-    private final GetDailyEntryUseCase getDailyEntryUseCase;
 
-    public ObjectiveController(ObjectiveService objectiveService,
-                               GetUserProfileUseCase getUserProfileUseCase,
-                               GetDailyEntryUseCase getDailyEntryUseCase) {
-        this.objectiveService = objectiveService;
+    public ObjectiveController(GetObjectivesUseCase getObjectivesUseCase,
+                               CreateObjectiveUseCase createObjectiveUseCase,
+                               DeleteObjectiveUseCase deleteObjectiveUseCase,
+                               CompleteObjectiveUseCase completeObjectiveUseCase,
+                               UncompleteObjectiveUseCase uncompleteObjectiveUseCase,
+                               GetObjectiveCompletionsUseCase getObjectiveCompletionsUseCase,
+                               GetUserProfileUseCase getUserProfileUseCase) {
+        this.getObjectivesUseCase = getObjectivesUseCase;
+        this.createObjectiveUseCase = createObjectiveUseCase;
+        this.deleteObjectiveUseCase = deleteObjectiveUseCase;
+        this.completeObjectiveUseCase = completeObjectiveUseCase;
+        this.uncompleteObjectiveUseCase = uncompleteObjectiveUseCase;
+        this.getObjectiveCompletionsUseCase = getObjectiveCompletionsUseCase;
         this.getUserProfileUseCase = getUserProfileUseCase;
-        this.getDailyEntryUseCase = getDailyEntryUseCase;
     }
 
     @GetMapping
     public List<ObjectiveDto> getObjectives(Authentication auth) {
         User user = getUserProfileUseCase.byEmail(auth.getName());
-        return objectiveService.getObjectives(user.getId()).stream()
+        return getObjectivesUseCase.execute(user.getId()).stream()
                 .map(o -> new ObjectiveDto(o.getId(), o.getDayOfWeek(), o.getLabel(), o.getPosition(), o.getType(), o.getTargetValue()))
                 .collect(Collectors.toList());
     }
@@ -46,17 +62,7 @@ public class ObjectiveController {
         User user = getUserProfileUseCase.byEmail(auth.getName());
         Objective objective = new Objective(null, user.getId(), request.dayOfWeek(),
                 request.label(), 0, request.type() != null ? request.type() : "CUSTOM", request.targetValue());
-        Objective saved = objectiveService.createObjective(objective);
-
-        if ("SPORT".equals(saved.getType())) {
-            LocalDate today = LocalDate.now();
-            int todayDow = today.getDayOfWeek().getValue() - 1;
-            if (saved.getDayOfWeek() == todayDow) {
-                getDailyEntryUseCase.byUserAndDate(user.getId(), today)
-                        .filter(entry -> entry.getCaloriesBurned() > 0)
-                        .ifPresent(entry -> objectiveService.markDone(saved.getId(), user.getId(), today));
-            }
-        }
+        Objective saved = createObjectiveUseCase.execute(objective);
 
         ObjectiveDto dto = new ObjectiveDto(saved.getId(), saved.getDayOfWeek(), saved.getLabel(), saved.getPosition(), saved.getType(), saved.getTargetValue());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
@@ -65,21 +71,21 @@ public class ObjectiveController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteObjective(@PathVariable Long id, Authentication auth) {
         User user = getUserProfileUseCase.byEmail(auth.getName());
-        objectiveService.deleteObjective(id, user.getId());
+        deleteObjectiveUseCase.execute(id, user.getId());
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/completions/{date}")
     public ResponseEntity<Void> markDone(@PathVariable Long id, @PathVariable String date, Authentication auth) {
         User user = getUserProfileUseCase.byEmail(auth.getName());
-        objectiveService.markDone(id, user.getId(), LocalDate.parse(date));
+        completeObjectiveUseCase.execute(id, user.getId(), LocalDate.parse(date));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @DeleteMapping("/{id}/completions/{date}")
     public ResponseEntity<Void> markUndone(@PathVariable Long id, @PathVariable String date, Authentication auth) {
         User user = getUserProfileUseCase.byEmail(auth.getName());
-        objectiveService.markUndone(id, user.getId(), LocalDate.parse(date));
+        uncompleteObjectiveUseCase.execute(id, user.getId(), LocalDate.parse(date));
         return ResponseEntity.noContent().build();
     }
 
@@ -89,6 +95,6 @@ public class ObjectiveController {
             @RequestParam String to,
             Authentication auth) {
         User user = getUserProfileUseCase.byEmail(auth.getName());
-        return objectiveService.getCompletions(user.getId(), LocalDate.parse(from), LocalDate.parse(to));
+        return getObjectiveCompletionsUseCase.execute(user.getId(), LocalDate.parse(from), LocalDate.parse(to));
     }
 }

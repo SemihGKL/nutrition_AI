@@ -1,11 +1,15 @@
 package com.nutrition.backend.infrastructure.web.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nutrition.backend.application.usecase.CompleteObjectiveUseCase;
+import com.nutrition.backend.application.usecase.CreateObjectiveUseCase;
+import com.nutrition.backend.application.usecase.DeleteObjectiveUseCase;
+import com.nutrition.backend.application.usecase.GetObjectiveCompletionsUseCase;
+import com.nutrition.backend.application.usecase.GetObjectivesUseCase;
+import com.nutrition.backend.application.usecase.GetUserProfileUseCase;
+import com.nutrition.backend.application.usecase.UncompleteObjectiveUseCase;
 import com.nutrition.backend.domain.exception.ObjectiveAccessDeniedException;
 import com.nutrition.backend.domain.exception.ObjectiveNotFoundException;
-import com.nutrition.backend.application.service.ObjectiveService;
-import com.nutrition.backend.application.usecase.GetDailyEntryUseCase;
-import com.nutrition.backend.application.usecase.GetUserProfileUseCase;
 import com.nutrition.backend.domain.entity.Objective;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
@@ -50,10 +54,22 @@ class ObjectiveControllerTest {
     GetUserProfileUseCase getUserProfileUseCase;
 
     @MockBean
-    ObjectiveService objectiveService;
+    GetObjectivesUseCase getObjectivesUseCase;
 
     @MockBean
-    GetDailyEntryUseCase getDailyEntryUseCase;
+    CreateObjectiveUseCase createObjectiveUseCase;
+
+    @MockBean
+    DeleteObjectiveUseCase deleteObjectiveUseCase;
+
+    @MockBean
+    CompleteObjectiveUseCase completeObjectiveUseCase;
+
+    @MockBean
+    UncompleteObjectiveUseCase uncompleteObjectiveUseCase;
+
+    @MockBean
+    GetObjectiveCompletionsUseCase getObjectiveCompletionsUseCase;
 
     private User testUser;
 
@@ -73,7 +89,7 @@ class ObjectiveControllerTest {
     @Test
     @WithMockUser(username = "user")
     void should_return_empty_list_when_authenticated_user_has_no_objectives() throws Exception {
-        when(objectiveService.getObjectives(1L)).thenReturn(List.of());
+        when(getObjectivesUseCase.execute(1L)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/objectives"))
                 .andExpect(status().isOk())
@@ -86,7 +102,7 @@ class ObjectiveControllerTest {
         Objective obj1 = new Objective(1L, 1L, 1, "Boire 2L d'eau", 0, "CUSTOM", null);
         Objective obj2 = new Objective(2L, 1L, 3, "30 min de sport", 1, "CUSTOM", null);
 
-        when(objectiveService.getObjectives(1L)).thenReturn(List.of(obj1, obj2));
+        when(getObjectivesUseCase.execute(1L)).thenReturn(List.of(obj1, obj2));
 
         mockMvc.perform(get("/api/objectives"))
                 .andExpect(status().isOk())
@@ -102,7 +118,7 @@ class ObjectiveControllerTest {
     void should_return_201_when_authenticated_user_creates_a_valid_objective() throws Exception {
         Objective saved = new Objective(10L, 1L, 2, "Méditer 10 min", 0, "CUSTOM", null);
 
-        when(objectiveService.createObjective(any(Objective.class))).thenReturn(saved);
+        when(createObjectiveUseCase.execute(any(Objective.class))).thenReturn(saved);
 
         String body = objectMapper.writeValueAsString(new CreateObjectiveRequest(2, "Méditer 10 min", null, null));
 
@@ -119,7 +135,7 @@ class ObjectiveControllerTest {
     @Test
     @WithMockUser(username = "user")
     void should_return_204_when_authenticated_user_deletes_their_own_objective() throws Exception {
-        doNothing().when(objectiveService).deleteObjective(5L, 1L);
+        doNothing().when(deleteObjectiveUseCase).execute(5L, 1L);
 
         mockMvc.perform(delete("/api/objectives/5")
                         .with(csrf()))
@@ -129,7 +145,7 @@ class ObjectiveControllerTest {
     @Test
     @WithMockUser(username = "user")
     void should_return_404_when_authenticated_user_deletes_an_objective_that_does_not_exist() throws Exception {
-        doThrow(new ObjectiveNotFoundException(99L)).when(objectiveService).deleteObjective(99L, 1L);
+        doThrow(new ObjectiveNotFoundException(99L)).when(deleteObjectiveUseCase).execute(99L, 1L);
 
         mockMvc.perform(delete("/api/objectives/99")
                         .with(csrf()))
@@ -139,7 +155,7 @@ class ObjectiveControllerTest {
     @Test
     @WithMockUser(username = "user")
     void should_return_403_when_authenticated_user_deletes_an_objective_that_belongs_to_another_user() throws Exception {
-        doThrow(new ObjectiveAccessDeniedException(7L)).when(objectiveService).deleteObjective(7L, 1L);
+        doThrow(new ObjectiveAccessDeniedException(7L)).when(deleteObjectiveUseCase).execute(7L, 1L);
 
         mockMvc.perform(delete("/api/objectives/7")
                         .with(csrf()))
@@ -149,7 +165,7 @@ class ObjectiveControllerTest {
     @Test
     @WithMockUser(username = "user")
     void should_return_201_when_authenticated_user_marks_an_objective_as_done_for_a_date() throws Exception {
-        doNothing().when(objectiveService).markDone(anyLong(), anyLong(), any());
+        doNothing().when(completeObjectiveUseCase).execute(anyLong(), anyLong(), any());
 
         mockMvc.perform(post("/api/objectives/5/completions/2026-06-10")
                         .with(csrf()))
@@ -159,7 +175,7 @@ class ObjectiveControllerTest {
     @Test
     @WithMockUser(username = "user")
     void should_return_204_when_authenticated_user_unmarks_an_objective_for_a_date() throws Exception {
-        doNothing().when(objectiveService).markUndone(anyLong(), anyLong(), any());
+        doNothing().when(uncompleteObjectiveUseCase).execute(anyLong(), anyLong(), any());
 
         mockMvc.perform(delete("/api/objectives/5/completions/2026-06-10")
                         .with(csrf()))
@@ -173,7 +189,7 @@ class ObjectiveControllerTest {
                 "2026-06-03", List.of(10L, 11L),
                 "2026-06-05", List.of(10L)
         );
-        when(objectiveService.getCompletions(eq(1L), any(), any())).thenReturn(completions);
+        when(getObjectiveCompletionsUseCase.execute(eq(1L), any(), any())).thenReturn(completions);
 
         mockMvc.perform(get("/api/objectives/completions")
                         .param("from", "2026-06-01")

@@ -70,16 +70,10 @@ Le code existant **ne respecte pas encore** la Clean Architecture — c'est la m
 ```
 Homme : MBR = (10 × poids_kg) + (6.25 × taille_cm) − (5 × âge) + 5
 Femme : MBR = (10 × poids_kg) + (6.25 × taille_cm) − (5 × âge) − 161
-TDEE  = MBR × coefficient_activité
+TDEE  = MBR × 1.2 (sédentaire de base)
 ```
 
-| Niveau d'activité | Coefficient |
-|---|---|
-| Sédentaire | 1.2 |
-| Légèrement actif (1-3j/sem) | 1.375 |
-| Modérément actif (3-5j/sem) | 1.55 |
-| Très actif (6-7j/sem) | 1.725 |
-| Extrêmement actif | 1.9 |
+Le TDEE utilise le coefficient sédentaire (1.2). Les calories brûlées par l'activité sportive sont comptabilisées dynamiquement via les objectifs de type SPORT renseignés par l'utilisateur (calories brûlées saisies dans l'entrée quotidienne).
 
 **Déficit recommandé** : 300–500 kcal/jour sous le TDEE.
 
