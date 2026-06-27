@@ -10,7 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,7 +39,7 @@ class IssueRefreshTokenUseCaseTest {
         RefreshToken saved = captor.getValue();
         assertThat(saved.userId()).isEqualTo(userId);
         assertThat(saved.token()).isEqualTo(rawToken);
-        assertThat(saved.expiresAt()).isAfter(LocalDateTime.now().plusDays(6));
+        assertThat(saved.expiresAt()).isAfter(Instant.now().plus(6, ChronoUnit.DAYS));
     }
 
     @Test

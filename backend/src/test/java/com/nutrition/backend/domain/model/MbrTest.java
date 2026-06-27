@@ -2,6 +2,7 @@ package com.nutrition.backend.domain.model;
 
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class MbrTest {
@@ -40,5 +41,17 @@ class MbrTest {
 
         // Then: déficit = 0, déficit% = 0.0
         assertEquals(0.0, result, 0.01);
+    }
+
+    @Test
+    void should_prevent_mbr_creation_when_mbr_value_is_zero() {
+        assertThatThrownBy(() -> new Mbr(0, 2000, 1700))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void should_prevent_mbr_creation_when_mbr_value_is_negative() {
+        assertThatThrownBy(() -> new Mbr(-500, 2000, 1700))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

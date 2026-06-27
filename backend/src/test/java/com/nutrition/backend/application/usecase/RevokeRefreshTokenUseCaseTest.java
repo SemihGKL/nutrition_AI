@@ -8,7 +8,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.mockito.Mockito.*;
@@ -24,7 +25,7 @@ class RevokeRefreshTokenUseCaseTest {
 
     @Test
     void should_delete_token_when_found() {
-        RefreshToken token = new RefreshToken(1L, 42L, "raw-token", LocalDateTime.now().plusDays(7));
+        RefreshToken token = new RefreshToken(1L, 42L, "raw-token", Instant.now().plus(7, ChronoUnit.DAYS));
         when(refreshTokenRepository.findByToken("raw-token")).thenReturn(Optional.of(token));
 
         revokeRefreshTokenUseCase.execute("raw-token");

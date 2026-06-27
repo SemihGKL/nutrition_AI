@@ -21,7 +21,7 @@ public class AutoCompleteObjectivesUseCase {
     public void execute(Long userId, LocalDate date, int caloriesBurned) {
         int dow = date.getDayOfWeek().getValue() - 1; // 0=Lundi ... 6=Dimanche
         for (Objective obj : objectiveRepository.findByUserId(userId)) {
-            if ("SPORT".equals(obj.getType()) && obj.getDayOfWeek() == dow && caloriesBurned > 0) {
+            if ("SPORT".equals(obj.getType()) && (obj.getDayOfWeek() == dow || obj.getDayOfWeek() == -1) && caloriesBurned > 0) {
                 completeObjectiveUseCase.execute(obj.getId(), userId, date);
             }
         }

@@ -7,7 +7,8 @@ import com.nutrition.backend.domain.ports.TokenService;
 import com.nutrition.backend.domain.ports.UserRepository;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Component
@@ -45,7 +46,7 @@ public class RefreshAccessTokenUseCase {
         String newAccessToken = tokenService.generateToken(email);
 
         String newRawToken = UUID.randomUUID().toString();
-        RefreshToken newRefreshToken = new RefreshToken(null, stored.userId(), newRawToken, LocalDateTime.now().plusDays(7));
+        RefreshToken newRefreshToken = new RefreshToken(null, stored.userId(), newRawToken, Instant.now().plus(7, ChronoUnit.DAYS));
         refreshTokenRepository.save(newRefreshToken);
 
         return new Result(newAccessToken, newRawToken);

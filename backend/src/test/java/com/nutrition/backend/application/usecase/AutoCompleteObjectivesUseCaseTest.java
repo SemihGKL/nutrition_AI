@@ -1,41 +1,43 @@
 package com.nutrition.backend.application.usecase;
 
+import com.nutrition.backend.application.usecase.fake.FakeObjectiveCompletionRepository;
+import com.nutrition.backend.application.usecase.fake.FakeObjectiveRepository;
 import com.nutrition.backend.domain.entity.Objective;
-import com.nutrition.backend.domain.ports.ObjectiveRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.List;
 
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@ExtendWith(MockitoExtension.class)
 class AutoCompleteObjectivesUseCaseTest {
 
-    @Mock
-    private ObjectiveRepository objectiveRepository;
+    private static final Long USER_ID = 1L;
 
-    @Mock
+    private FakeObjectiveRepository objectiveRepository;
+    private FakeObjectiveCompletionRepository completionRepository;
     private CompleteObjectiveUseCase completeObjectiveUseCase;
+    private AutoCompleteObjectivesUseCase useCase;
 
-    @InjectMocks
-    private AutoCompleteObjectivesUseCase autoCompleteObjectivesUseCase;
+    @BeforeEach
+    void setUp() {
+        objectiveRepository = new FakeObjectiveRepository();
+        completionRepository = new FakeObjectiveCompletionRepository();
+        completeObjectiveUseCase = new CompleteObjectiveUseCase(objectiveRepository, completionRepository);
+        useCase = new AutoCompleteObjectivesUseCase(objectiveRepository, completeObjectiveUseCase);
+    }
 
     @Test
     void should_complete_sport_objective_automatically_when_calories_burned_is_positive_and_day_of_week_matches() {
         LocalDate monday = LocalDate.of(2026, 6, 22);
         int dow = monday.getDayOfWeek().getValue() - 1; // 0
 
-        Objective sportObj = new Objective(10L, 1L, dow, "Séance sport lundi", 0, "SPORT", null);
-        when(objectiveRepository.findByUserId(1L)).thenReturn(List.of(sportObj));
+        Objective sportObj = new Objective(10L, USER_ID, dow, "Séance sport lundi", 0, "SPORT", null);
+        objectiveRepository.add(sportObj);
 
-        autoCompleteObjectivesUseCase.execute(1L, monday, 300);
+        useCase.execute(USER_ID, monday, 300);
 
-        verify(completeObjectiveUseCase).execute(10L, 1L, monday);
+        assertThat(completionRepository.existsByObjectiveIdAndDate(10L, monday)).isTrue();
     }
 
     @Test
@@ -43,12 +45,12 @@ class AutoCompleteObjectivesUseCaseTest {
         LocalDate monday = LocalDate.of(2026, 6, 22);
         int dow = monday.getDayOfWeek().getValue() - 1;
 
-        Objective sportObj = new Objective(10L, 1L, dow, "Séance sport lundi", 0, "SPORT", null);
-        when(objectiveRepository.findByUserId(1L)).thenReturn(List.of(sportObj));
+        Objective sportObj = new Objective(10L, USER_ID, dow, "Séance sport lundi", 0, "SPORT", null);
+        objectiveRepository.add(sportObj);
 
-        autoCompleteObjectivesUseCase.execute(1L, monday, 0);
+        useCase.execute(USER_ID, monday, 0);
 
-        verify(completeObjectiveUseCase, never()).execute(anyLong(), anyLong(), any());
+        assertThat(completionRepository.getAll()).isEmpty();
     }
 
     @Test
@@ -56,12 +58,12 @@ class AutoCompleteObjectivesUseCaseTest {
         LocalDate monday = LocalDate.of(2026, 6, 22);
         int dow = monday.getDayOfWeek().getValue() - 1;
 
-        Objective customObj = new Objective(20L, 1L, dow, "Boire 2L d'eau", 0, "CUSTOM", null);
-        when(objectiveRepository.findByUserId(1L)).thenReturn(List.of(customObj));
+        Objective customObj = new Objective(20L, USER_ID, dow, "Boire 2L d'eau", 0, "CUSTOM", null);
+        objectiveRepository.add(customObj);
 
-        autoCompleteObjectivesUseCase.execute(1L, monday, 300);
+        useCase.execute(USER_ID, monday, 300);
 
-        verify(completeObjectiveUseCase, never()).execute(anyLong(), anyLong(), any());
+        assertThat(completionRepository.getAll()).isEmpty();
     }
 
     @Test
@@ -69,11 +71,23 @@ class AutoCompleteObjectivesUseCaseTest {
         LocalDate monday = LocalDate.of(2026, 6, 22);
         LocalDate tuesday = LocalDate.of(2026, 6, 23);
 
-        Objective sportObj = new Objective(10L, 1L, monday.getDayOfWeek().getValue() - 1, "Séance sport lundi", 0, "SPORT", null);
-        when(objectiveRepository.findByUserId(1L)).thenReturn(List.of(sportObj));
+        Objective sportObj = new Objective(10L, USER_ID, monday.getDayOfWeek().getValue() - 1, "Séance sport lundi", 0, "SPORT", null);
+        objectiveRepository.add(sportObj);
 
-        autoCompleteObjectivesUseCase.execute(1L, tuesday, 300);
+        useCase.execute(USER_ID, tuesday, 300);
 
-        verify(completeObjectiveUseCase, never()).execute(anyLong(), anyLong(), any());
+        assertThat(completionRepository.getAll()).isEmpty();
+    }
+
+    @Test
+    void should_complete_daily_sport_objective_automatically_when_day_of_week_is_minus_one_and_calories_burned_is_positive() {
+        LocalDate wednesday = LocalDate.of(2026, 6, 24);
+
+        Objective dailySportObj = new Objective(30L, USER_ID, -1, "Sport quotidien", 0, "SPORT", null);
+        objectiveRepository.add(dailySportObj);
+
+        useCase.execute(USER_ID, wednesday, 200);
+
+        assertThat(completionRepository.existsByObjectiveIdAndDate(30L, wednesday)).isTrue();
     }
 }

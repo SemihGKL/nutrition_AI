@@ -3,6 +3,7 @@ package com.nutrition.backend.application.usecase;
 import com.nutrition.backend.application.usecase.fake.FakeObjectiveCompletionRepository;
 import com.nutrition.backend.application.usecase.fake.FakeObjectiveRepository;
 import com.nutrition.backend.domain.entity.Objective;
+import com.nutrition.backend.domain.entity.ObjectiveCompletion;
 import com.nutrition.backend.domain.exception.ObjectiveAccessDeniedException;
 import com.nutrition.backend.domain.exception.ObjectiveNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +14,7 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class CompleteObjectiveUseCaseTest {
+class UncompleteObjectiveUseCaseTest {
 
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 2L;
@@ -22,40 +23,24 @@ class CompleteObjectiveUseCaseTest {
 
     FakeObjectiveRepository objectiveRepository;
     FakeObjectiveCompletionRepository objectiveCompletionRepository;
-    CompleteObjectiveUseCase useCase;
+    UncompleteObjectiveUseCase useCase;
 
     @BeforeEach
     void setUp() {
         objectiveRepository = new FakeObjectiveRepository();
         objectiveCompletionRepository = new FakeObjectiveCompletionRepository();
-        useCase = new CompleteObjectiveUseCase(objectiveRepository, objectiveCompletionRepository);
+        useCase = new UncompleteObjectiveUseCase(objectiveRepository, objectiveCompletionRepository);
     }
 
     @Test
-    void should_mark_objective_as_done_when_objective_belongs_to_the_requesting_user_and_no_completion_exists_for_that_date() {
+    void should_remove_completion_when_objective_belongs_to_the_requesting_user_and_completion_exists() {
         Objective objective = new Objective(OBJECTIVE_ID, USER_ID, 3, "Running", 1, "SPORT", 30);
         objectiveRepository.add(objective);
+        objectiveCompletionRepository.add(new ObjectiveCompletion(1L, USER_ID, OBJECTIVE_ID, DATE));
 
         useCase.execute(OBJECTIVE_ID, USER_ID, DATE);
 
-        assertThat(objectiveCompletionRepository.getAll())
-                .hasSize(1)
-                .allSatisfy(completion -> {
-                    assertThat(completion.getObjectiveId()).isEqualTo(OBJECTIVE_ID);
-                    assertThat(completion.getUserId()).isEqualTo(USER_ID);
-                    assertThat(completion.getDate()).isEqualTo(DATE);
-                });
-    }
-
-    @Test
-    void should_not_create_duplicate_completion_when_objective_is_already_marked_done_for_that_date() {
-        Objective objective = new Objective(OBJECTIVE_ID, USER_ID, 3, "Running", 1, "SPORT", 30);
-        objectiveRepository.add(objective);
-
-        useCase.execute(OBJECTIVE_ID, USER_ID, DATE);
-        useCase.execute(OBJECTIVE_ID, USER_ID, DATE);
-
-        assertThat(objectiveCompletionRepository.getAll()).hasSize(1);
+        assertThat(objectiveCompletionRepository.getAll()).isEmpty();
     }
 
     @Test
