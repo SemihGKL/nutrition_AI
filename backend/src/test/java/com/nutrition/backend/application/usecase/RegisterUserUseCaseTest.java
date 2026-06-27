@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RegisterUserUseCaseTest {
 
@@ -85,5 +86,53 @@ class RegisterUserUseCaseTest {
         // Then
         assertThat(result.getPasswordHash()).isNotEqualTo(rawPassword);
         assertThat(result.getPasswordHash()).isEqualTo("encoded_" + rawPassword);
+    }
+
+    @Test
+    void should_throw_when_height_is_zero() {
+        // Given
+        double height = 0;
+
+        // When / Then
+        assertThatThrownBy(() -> registerUserUseCase.execute(
+                "alice", "alice@example.com", "password",
+                65, Gender.MALE, 30, height, 70.0, "MONDAY"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void should_throw_when_height_is_negative() {
+        // Given
+        double height = -5;
+
+        // When / Then
+        assertThatThrownBy(() -> registerUserUseCase.execute(
+                "alice", "alice@example.com", "password",
+                65, Gender.MALE, 30, height, 70.0, "MONDAY"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void should_throw_when_start_weight_is_zero() {
+        // Given
+        double startWeight = 0;
+
+        // When / Then
+        assertThatThrownBy(() -> registerUserUseCase.execute(
+                "alice", "alice@example.com", "password",
+                65, Gender.MALE, 30, 175.0, startWeight, "MONDAY"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void should_throw_when_start_weight_is_negative() {
+        // Given
+        double startWeight = -10;
+
+        // When / Then
+        assertThatThrownBy(() -> registerUserUseCase.execute(
+                "alice", "alice@example.com", "password",
+                65, Gender.MALE, 30, 175.0, startWeight, "MONDAY"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

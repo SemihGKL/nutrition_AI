@@ -101,4 +101,30 @@ class UpdateUserProfileUseCaseTest {
                 "MONDAY", null, null))
                 .isInstanceOf(UserNotFoundException.class);
     }
+
+    @Test
+    void should_throw_when_height_is_zero_on_update() {
+        // Given
+        User user = buildAndSaveUser("user@example.com", null);
+        double height = 0;
+
+        // When / Then
+        assertThatThrownBy(() -> updateUserProfileUseCase.execute(
+                user.getId(), "testuser", null, Gender.MALE, 30, height, 70.0,
+                "MONDAY", null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void should_throw_when_current_weight_is_zero_on_update() {
+        // Given
+        User user = buildAndSaveUser("user@example.com", null);
+        double currentWeight = 0;
+
+        // When / Then
+        assertThatThrownBy(() -> updateUserProfileUseCase.execute(
+                user.getId(), "testuser", null, Gender.MALE, 30, 175.0, currentWeight,
+                "MONDAY", null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

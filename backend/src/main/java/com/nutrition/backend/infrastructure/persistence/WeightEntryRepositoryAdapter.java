@@ -30,7 +30,7 @@ public class WeightEntryRepositoryAdapter implements WeightEntryRepository {
 
     @Override
     public List<WeightEntry> findByUserIdOrderByDateDesc(Long userId) {
-        return weeklyWeighInJpaRepository.findByUserIdOrderByDateDesc(userId).stream()
+        return weeklyWeighInJpaRepository.findTop104ByUserIdOrderByDateDesc(userId).stream()
                 .map(WeightEntryEntityMapper::toDomain)
                 .collect(Collectors.toList());
     }

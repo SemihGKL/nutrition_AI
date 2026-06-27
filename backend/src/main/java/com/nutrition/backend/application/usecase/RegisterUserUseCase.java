@@ -26,6 +26,12 @@ public class RegisterUserUseCase {
     public User execute(String username, String email, String rawPassword,
                         int weightGoal, Gender gender, int age,
                         double height, double startWeight, String weighInDay) {
+        if (height <= 0) {
+            throw new IllegalArgumentException("La taille doit être supérieure à 0");
+        }
+        if (startWeight <= 0) {
+            throw new IllegalArgumentException("Le poids de départ doit être supérieur à 0");
+        }
         UserProfile profile = new UserProfile(startWeight, height, age, gender);
         int calculatedGoal = (int) mbrCalculator.calculate(profile).dailyCalorieGoal();
         String passwordHash = passwordEncoder.encode(rawPassword);

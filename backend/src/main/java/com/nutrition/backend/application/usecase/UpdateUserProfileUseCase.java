@@ -22,6 +22,12 @@ public class UpdateUserProfileUseCase {
     public User execute(Long id, String username, String email, Gender gender,
                         int age, double height, double currentWeight,
                         String weighInDay, Integer dailyCalorieGoal, Integer dailyStepsGoal) {
+        if (height <= 0) {
+            throw new IllegalArgumentException("La taille doit être supérieure à 0");
+        }
+        if (currentWeight <= 0) {
+            throw new IllegalArgumentException("Le poids courant doit être supérieur à 0");
+        }
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable avec l'ID : " + id));
 

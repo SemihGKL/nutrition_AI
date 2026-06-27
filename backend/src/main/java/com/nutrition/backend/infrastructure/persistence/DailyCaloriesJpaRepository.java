@@ -10,5 +10,5 @@ public interface DailyCaloriesJpaRepository extends JpaRepository<DailyCaloriesJ
 
     Optional<DailyCaloriesJpaEntity> findByUserIdAndDate(Long userId, LocalDate date);
 
-    List<DailyCaloriesJpaEntity> findByUserId(Long userId);
+    List<DailyCaloriesJpaEntity> findTop365ByUserIdOrderByDateDesc(Long userId);
 }
