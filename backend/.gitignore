@@ -32,8 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 
-# Environment and configuration files
+# Fichiers d'environnement avec secrets réels — NE PAS committer
 *.env
-application.properties
-application-dev.properties
-application-prod.properties
+# Les application*.properties ne contiennent que des ${VAR} — versionnés intentionnellement

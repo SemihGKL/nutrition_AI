@@ -1,7 +1,7 @@
 import { readPersistedToken } from '../auth/session';
 import { sessionBus } from '../auth/sessionBus';
 
-const BASE = '';
+const BASE = import.meta.env.VITE_API_URL ?? '';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = readPersistedToken();
