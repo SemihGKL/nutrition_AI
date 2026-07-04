@@ -4,6 +4,8 @@ import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.model.Mbr;
 import com.nutrition.backend.domain.model.UserProfile;
 
+// ⚠️ SYNC : dupliqué côté front (frontend/src/utils/mbr.ts) pour l'aperçu live.
+// Toute modification (MBR, TDEE ×1.2, cible = round((mbr-200)/50)*50) doit y être répercutée.
 public class MbrCalculator {
 
     private static final int DEFAULT_FOOD_DEFICIT = 200;

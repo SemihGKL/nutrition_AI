@@ -24,8 +24,13 @@ export function WeighInProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     if (!user?.id) return;
-    const data = await weighInApi.getLatest();
-    setLatestWeighIn(data);
+    try {
+      const data = await weighInApi.getLatest();
+      setLatestWeighIn(data);
+    } catch {
+      // Erreur transitoire (serveur/réseau) : on garde la dernière valeur connue
+      // plutôt que d'afficher à tort le badge « pesée à faire ».
+    }
   }, [user?.id]);
 
   useEffect(() => { refresh(); }, [refresh]);

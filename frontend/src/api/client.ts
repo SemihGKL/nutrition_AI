@@ -60,11 +60,10 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
     throw new ApiError(res.status, text);
   }
 
-  if (res.status === 204 || res.headers.get('content-length') === '0') {
-    return undefined as T;
-  }
-
-  return res.json() as Promise<T>;
+  // Corps éventuellement vide (204, ou 200/201 sans contenu comme markDone) :
+  // parse robuste qui ne dépend pas de l'en-tête Content-Length.
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export class ApiError extends Error {

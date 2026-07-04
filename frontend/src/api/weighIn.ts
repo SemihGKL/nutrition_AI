@@ -17,8 +17,12 @@ export const weighInApi = {
   getAll: (): Promise<WeighIn[]> =>
     api.get<WeighIn[]>('/api/weighin'),
 
-  getLatest: (): Promise<WeighIn | null> =>
-    api.get<WeighIn>('/api/weighin/latest').catch(() => null),
+  // 204 (aucune pesée) → le client renvoie undefined, qu'on normalise en null.
+  // Les vraies erreurs (500, réseau) remontent : à l'appelant de décider (cf. useWeighIn).
+  getLatest: async (): Promise<WeighIn | null> => {
+    const res = await api.get<WeighIn | undefined>('/api/weighin/latest');
+    return res ?? null;
+  },
 
   save: (data: WeighInRequest): Promise<WeighIn> =>
     api.post<WeighIn>('/api/weighin', data),
