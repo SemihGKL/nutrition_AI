@@ -40,15 +40,19 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
   const [editing, setEditing] = useState(false);
   const [weighInWeight, setWeighInWeight] = useState(user?.currentWeight ?? 70);
   const [savingWeighIn, setSavingWeighIn] = useState(false);
+  const [weighInError, setWeighInError] = useState<string | null>(null);
 
   const handleWeighIn = async () => {
     if (!user) return;
     setSavingWeighIn(true);
+    setWeighInError(null);
     try {
       await weighInApi.save({ date: isoToday(), weight: weighInWeight });
       const updatedUser = await usersApi.getMe();
       updateUser(updatedUser);
       await refresh();
+    } catch {
+      setWeighInError("Échec de l'enregistrement — réessaie.");
     } finally {
       setSavingWeighIn(false);
     }
@@ -135,6 +139,11 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
             >
               {savingWeighIn ? 'Enregistrement…' : 'Enregistrer ma pesée'}
             </button>
+            {weighInError && (
+              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--red)' }}>
+                {weighInError}
+              </div>
+            )}
           </div>
         )}
 
