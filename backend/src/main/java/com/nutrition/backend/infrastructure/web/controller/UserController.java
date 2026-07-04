@@ -47,7 +47,8 @@ public class UserController {
                 request.currentWeight(),
                 request.weighInDay(),
                 request.dailyCalorieGoal(),
-                request.dailyStepsGoal()
+                request.dailyStepsGoal(),
+                request.weightGoal()
         );
         return ResponseEntity.ok(UserMapper.toDto(updated));
     }

@@ -41,7 +41,7 @@ class UpdateUserProfileUseCaseTest {
         // When
         User result = updateUserProfileUseCase.execute(
                 user.getId(), "testuser", null, Gender.MALE, 28, 180.0, 75.0,
-                "MONDAY", null, null);
+                "MONDAY", null, null, null);
 
         // Then
         assertThat(result.getDailyCalorieGoal()).isEqualTo(expectedCalorieGoal);
@@ -56,7 +56,7 @@ class UpdateUserProfileUseCaseTest {
         // When
         User result = updateUserProfileUseCase.execute(
                 user.getId(), "testuser", null, Gender.MALE, 28, 180.0, 75.0,
-                "MONDAY", explicitGoal, null);
+                "MONDAY", explicitGoal, null, null);
 
         // Then
         assertThat(result.getDailyCalorieGoal()).isEqualTo(explicitGoal);
@@ -70,7 +70,7 @@ class UpdateUserProfileUseCaseTest {
         // When — email is null (not provided)
         User result = updateUserProfileUseCase.execute(
                 user.getId(), "testuser", null, Gender.MALE, 30, 175.0, 70.0,
-                "MONDAY", 1800, null);
+                "MONDAY", 1800, null, null);
 
         // Then
         assertThat(result.getEmail()).isEqualTo("original@example.com");
@@ -84,10 +84,38 @@ class UpdateUserProfileUseCaseTest {
         // When — dailyStepsGoal is null (not provided)
         User result = updateUserProfileUseCase.execute(
                 user.getId(), "testuser", null, Gender.MALE, 30, 175.0, 70.0,
-                "MONDAY", 1800, null);
+                "MONDAY", 1800, null, null);
 
         // Then
         assertThat(result.getDailyStepsGoal()).isEqualTo(8000);
+    }
+
+    @Test
+    void should_update_weight_goal_when_a_new_goal_is_provided() {
+        // Given — seeded weightGoal = 65
+        User user = buildAndSaveUser("user@example.com", null);
+
+        // When
+        User result = updateUserProfileUseCase.execute(
+                user.getId(), "testuser", null, Gender.MALE, 30, 175.0, 70.0,
+                "MONDAY", 1800, null, 60);
+
+        // Then
+        assertThat(result.getWeightGoal()).isEqualTo(60);
+    }
+
+    @Test
+    void should_preserve_existing_weight_goal_when_no_new_goal_is_provided() {
+        // Given — seeded weightGoal = 65
+        User user = buildAndSaveUser("user@example.com", null);
+
+        // When — weightGoal is null (not provided)
+        User result = updateUserProfileUseCase.execute(
+                user.getId(), "testuser", null, Gender.MALE, 30, 175.0, 70.0,
+                "MONDAY", 1800, null, null);
+
+        // Then
+        assertThat(result.getWeightGoal()).isEqualTo(65);
     }
 
     @Test
@@ -98,7 +126,7 @@ class UpdateUserProfileUseCaseTest {
         // When / Then
         assertThatThrownBy(() -> updateUserProfileUseCase.execute(
                 nonExistentId, "testuser", "user@example.com", Gender.MALE, 30, 175.0, 70.0,
-                "MONDAY", null, null))
+                "MONDAY", null, null, null))
                 .isInstanceOf(UserNotFoundException.class);
     }
 
@@ -111,7 +139,7 @@ class UpdateUserProfileUseCaseTest {
         // When / Then
         assertThatThrownBy(() -> updateUserProfileUseCase.execute(
                 user.getId(), "testuser", null, Gender.MALE, 30, height, 70.0,
-                "MONDAY", null, null))
+                "MONDAY", null, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -124,7 +152,7 @@ class UpdateUserProfileUseCaseTest {
         // When / Then
         assertThatThrownBy(() -> updateUserProfileUseCase.execute(
                 user.getId(), "testuser", null, Gender.MALE, 30, 175.0, currentWeight,
-                "MONDAY", null, null))
+                "MONDAY", null, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

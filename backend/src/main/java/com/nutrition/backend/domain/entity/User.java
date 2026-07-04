@@ -85,6 +85,11 @@ public final class User {
                 startWeight, currentWeight, dailyCalorieGoal, weightGoal, weighInDay, dailyStepsGoal, version);
     }
 
+    public User withWeightGoal(int weightGoal) {
+        return new User(id, username, email, passwordHash, gender, age, height,
+                startWeight, currentWeight, dailyCalorieGoal, weightGoal, weighInDay, dailyStepsGoal, version);
+    }
+
     public User withDailyStepsGoal(Integer dailyStepsGoal) {
         return new User(id, username, email, passwordHash, gender, age, height,
                 startWeight, currentWeight, dailyCalorieGoal, weightGoal, weighInDay, dailyStepsGoal, version);

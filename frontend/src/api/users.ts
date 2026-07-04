@@ -10,6 +10,7 @@ export interface UpdateUserPayload {
   weighInDay: string;
   dailyCalorieGoal: number;
   dailyStepsGoal?: number | null;
+  weightGoal?: number | null;
 }
 
 export const usersApi = {

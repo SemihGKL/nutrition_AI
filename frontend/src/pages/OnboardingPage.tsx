@@ -31,6 +31,7 @@ interface FormState {
   age: string;
   height: string;
   weight: string;
+  weightGoal: string;
   gender: 'MALE' | 'FEMALE';
   weighInDay: string;
   target: number;
@@ -53,6 +54,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
     age: '',
     height: '',
     weight: '',
+    weightGoal: '',
     gender: 'MALE',
     weighInDay: 'MONDAY',
     target: 1800,
@@ -78,6 +80,8 @@ export function OnboardingPage({ onDone, onBack }: Props) {
     if (!form.height || h < 100 || h > 230) errs.height = '100–230 cm';
     const w = parseFloat(form.weight);
     if (!form.weight || w < 30 || w > 300) errs.weight = '30–300 kg';
+    const wg = parseFloat(form.weightGoal);
+    if (!form.weightGoal || wg < 30 || wg > 300) errs.weightGoal = '30–300 kg';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -103,7 +107,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
         age: parseInt(form.age),
         height: parseFloat(form.height),
         startWeight: parseFloat(form.weight),
-        weightGoal: 0,
+        weightGoal: parseInt(form.weightGoal, 10),
         weighInDay: form.weighInDay,
       });
       login(token, user);
@@ -166,6 +170,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
             <Field label="Âge" type="number" value={form.age} onChange={v => set('age', v)} hint="en années" error={errors.age} />
             <Field label="Taille (cm)" type="number" value={form.height} onChange={v => set('height', v)} error={errors.height} />
             <Field label="Poids actuel (kg)" type="number" value={form.weight} onChange={v => set('weight', v)} error={errors.weight} />
+            <Field label="Poids objectif (kg)" type="number" value={form.weightGoal} onChange={v => set('weightGoal', v)} error={errors.weightGoal} />
 
             <div>
               <div style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, marginBottom: 6 }}>Genre</div>

@@ -21,7 +21,8 @@ public class UpdateUserProfileUseCase {
 
     public User execute(Long id, String username, String email, Gender gender,
                         int age, double height, double currentWeight,
-                        String weighInDay, Integer dailyCalorieGoal, Integer dailyStepsGoal) {
+                        String weighInDay, Integer dailyCalorieGoal, Integer dailyStepsGoal,
+                        Integer weightGoal) {
         if (height <= 0) {
             throw new IllegalArgumentException("La taille doit être supérieure à 0");
         }
@@ -43,6 +44,9 @@ public class UpdateUserProfileUseCase {
         }
         if (dailyStepsGoal != null) {
             user = user.withDailyStepsGoal(dailyStepsGoal);
+        }
+        if (weightGoal != null) {
+            user = user.withWeightGoal(weightGoal);
         }
 
         return userRepository.save(user);

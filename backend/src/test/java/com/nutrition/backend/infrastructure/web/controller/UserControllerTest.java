@@ -77,11 +77,11 @@ class UserControllerTest {
 
         // Email non modifiable via l'update : le contrôleur passe null (email conservé).
         when(updateUserProfileUseCase.execute(eq(1L), eq("UpdatedTest"), isNull(),
-                eq(Gender.MALE), eq(29), eq(178.0), eq(79.0), eq("MONDAY"), eq(2000), isNull()))
+                eq(Gender.MALE), eq(29), eq(178.0), eq(79.0), eq("MONDAY"), eq(2000), isNull(), eq(75)))
                 .thenReturn(updatedUser);
 
         String body = objectMapper.writeValueAsString(
-                new UpdateUserRequest("UpdatedTest", "MALE", 29, 178.0, 79.0, "MONDAY", 2000, null)
+                new UpdateUserRequest("UpdatedTest", "MALE", 29, 178.0, 79.0, "MONDAY", 2000, null, 75)
         );
 
         mockMvc.perform(put("/api/users/me")
@@ -97,7 +97,7 @@ class UserControllerTest {
     @Test
     void should_return_401_when_put_user_me_request_has_no_jwt_token() throws Exception {
         String body = objectMapper.writeValueAsString(
-                new UpdateUserRequest("Test", "MALE", 28, 178.0, 80.0, "MONDAY", null, null)
+                new UpdateUserRequest("Test", "MALE", 28, 178.0, 80.0, "MONDAY", null, null, null)
         );
 
         mockMvc.perform(put("/api/users/me")
@@ -115,11 +115,11 @@ class UserControllerTest {
                 Gender.MALE, 28, 178.0, 85.0, 78.0, 1950, 75, "WEDNESDAY", null);
 
         when(updateUserProfileUseCase.execute(eq(1L), eq("Test"), isNull(),
-                eq(Gender.MALE), eq(28), eq(178.0), eq(78.0), eq("WEDNESDAY"), isNull(), isNull()))
+                eq(Gender.MALE), eq(28), eq(178.0), eq(78.0), eq("WEDNESDAY"), isNull(), isNull(), isNull()))
                 .thenReturn(updatedUser);
 
         String body = objectMapper.writeValueAsString(
-                new UpdateUserRequest("Test", "MALE", 28, 178.0, 78.0, "WEDNESDAY", null, null)
+                new UpdateUserRequest("Test", "MALE", 28, 178.0, 78.0, "WEDNESDAY", null, null, null)
         );
 
         mockMvc.perform(put("/api/users/me")
