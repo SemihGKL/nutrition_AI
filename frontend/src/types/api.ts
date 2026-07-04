@@ -27,7 +27,7 @@ export interface DailyCalories {
   caloriesBurned: number;
   steps: number;
   confirmed: boolean;
-  user: { id: number };
+  userId: number;
 }
 
 export interface DailyRecap {

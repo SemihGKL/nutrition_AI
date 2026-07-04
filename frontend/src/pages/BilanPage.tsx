@@ -31,6 +31,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const [weighIns, setWeighIns] = useState<WeighIn[]>([]);
   const [weighInWeight, setWeighInWeight] = useState(user?.currentWeight ?? 70);
   const [savingWeighIn, setSavingWeighIn] = useState(false);
+  const [weighInError, setWeighInError] = useState<string | null>(null);
   const { refresh: refreshBadge } = useWeighInContext();
 
   useEffect(() => {
@@ -41,11 +42,14 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const handleWeighIn = async () => {
     if (!user) return;
     setSavingWeighIn(true);
+    setWeighInError(null);
     try {
       await weighInApi.save({ date: isoToday(), weight: weighInWeight });
       const updated = await weighInApi.getAll();
       setWeighIns(updated);
       await refreshBadge();
+    } catch {
+      setWeighInError("Échec de l'enregistrement — réessaie.");
     } finally {
       setSavingWeighIn(false);
     }
@@ -175,6 +179,11 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
             >
               {savingWeighIn ? 'Enregistrement…' : 'Enregistrer ma pesée'}
             </button>
+            {weighInError && (
+              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--red)' }}>
+                {weighInError}
+              </div>
+            )}
           </div>
         )}
 

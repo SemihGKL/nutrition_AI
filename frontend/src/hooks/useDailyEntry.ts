@@ -125,7 +125,7 @@ export function useDailyEntry(
       caloriesBurned: 0,
       steps: 0,
       confirmed: false,
-      user: { id: userId! },
+      userId: userId!,
     };
     return { ...base, ...patch };
   }

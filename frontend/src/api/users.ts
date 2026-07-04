@@ -13,8 +13,6 @@ export interface UpdateUserPayload {
 }
 
 export const usersApi = {
-  getAll: () => api.get<User[]>('/api/users'),
-  getById: (id: number) => api.get<User>(`/api/users/${id}`),
   getMe: () => api.get<User>('/api/users/me'),
   update: (_id: number, payload: UpdateUserPayload) =>
     api.put<User>('/api/users/me', payload),
