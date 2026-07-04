@@ -174,7 +174,7 @@ export function DashboardPage({ onTabChange }: Props) {
         <div style={{ height: 12 }} />
       </div>
 
-      <BottomNav active="jour" />
+      <BottomNav active="jour" onChange={onTabChange} />
       <HomeIndicator />
     </PageShell>
   );
