@@ -12,6 +12,7 @@ import com.nutrition.backend.domain.ports.TokenService;
 import com.nutrition.backend.infrastructure.web.UserMapper;
 import com.nutrition.backend.infrastructure.web.dto.AuthResponse;
 import com.nutrition.backend.infrastructure.web.dto.CreateUserRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -32,18 +33,23 @@ public class AuthController {
     private final RefreshAccessTokenUseCase refreshAccessTokenUseCase;
     private final RevokeRefreshTokenUseCase revokeRefreshTokenUseCase;
 
+    /** true en prod (HTTPS) : le cookie refresh_token n'est alors envoyé que sur des connexions sécurisées. */
+    private final boolean cookieSecure;
+
     public AuthController(RegisterUserUseCase registerUserUseCase,
                           LoginUserUseCase loginUserUseCase,
                           TokenService tokenService,
                           IssueRefreshTokenUseCase issueRefreshTokenUseCase,
                           RefreshAccessTokenUseCase refreshAccessTokenUseCase,
-                          RevokeRefreshTokenUseCase revokeRefreshTokenUseCase) {
+                          RevokeRefreshTokenUseCase revokeRefreshTokenUseCase,
+                          @Value("${app.cookie.secure:false}") boolean cookieSecure) {
         this.registerUserUseCase = registerUserUseCase;
         this.loginUserUseCase = loginUserUseCase;
         this.tokenService = tokenService;
         this.issueRefreshTokenUseCase = issueRefreshTokenUseCase;
         this.refreshAccessTokenUseCase = refreshAccessTokenUseCase;
         this.revokeRefreshTokenUseCase = revokeRefreshTokenUseCase;
+        this.cookieSecure = cookieSecure;
     }
 
     @PostMapping("/register")
@@ -109,6 +115,7 @@ public class AuthController {
     private ResponseCookie buildRefreshCookie(String value, Duration maxAge) {
         return ResponseCookie.from("refresh_token", value)
                 .httpOnly(true)
+                .secure(cookieSecure)
                 .path("/api/auth")
                 .maxAge(maxAge)
                 .sameSite("Strict")
