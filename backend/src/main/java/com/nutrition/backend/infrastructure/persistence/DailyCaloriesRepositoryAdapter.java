@@ -2,7 +2,6 @@ package com.nutrition.backend.infrastructure.persistence;
 
 import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.ports.DailyEntryRepository;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,12 +14,9 @@ import java.util.stream.Collectors;
 public class DailyCaloriesRepositoryAdapter implements DailyEntryRepository {
 
     private final DailyCaloriesJpaRepository jpaRepository;
-    private final UserJpaRepository userJpaRepository;
 
-    public DailyCaloriesRepositoryAdapter(DailyCaloriesJpaRepository jpaRepository,
-                                          UserJpaRepository userJpaRepository) {
+    public DailyCaloriesRepositoryAdapter(DailyCaloriesJpaRepository jpaRepository) {
         this.jpaRepository = jpaRepository;
-        this.userJpaRepository = userJpaRepository;
     }
 
     @Override
@@ -39,36 +35,20 @@ public class DailyCaloriesRepositoryAdapter implements DailyEntryRepository {
     @Transactional
     @Override
     public DailyEntry save(DailyEntry entry) {
-        UserJpaEntity userJpaEntity = userJpaRepository.findById(entry.getUserId())
+        // Upsert atomique sur (user_id, date) : plus de race "find puis save"
+        // ni de retry dans une transaction condamnée.
+        jpaRepository.upsert(
+                entry.getUserId(),
+                entry.getDate(),
+                entry.getCaloriesConsumed(),
+                entry.getSteps(),
+                entry.getCaloriesBurned(),
+                entry.isConfirmed()
+        );
+        return jpaRepository.findByUserIdAndDate(entry.getUserId(), entry.getDate())
+                .map(DailyCaloriesEntityMapper::toDomain)
                 .orElseThrow(() -> new IllegalStateException(
-                        "User JPA entity not found for id: " + entry.getUserId()));
-
-        Optional<DailyCaloriesJpaEntity> existing =
-                jpaRepository.findByUserIdAndDate(entry.getUserId(), entry.getDate());
-
-        DailyCaloriesJpaEntity entityToSave;
-        if (existing.isPresent()) {
-            DailyEntry merged = DailyEntry.merge(
-                    DailyCaloriesEntityMapper.toDomain(existing.get()),
-                    entry
-            );
-            entityToSave = DailyCaloriesEntityMapper.toJpaEntity(merged, userJpaEntity);
-            entityToSave.setId(existing.get().getId());
-        } else {
-            entityToSave = DailyCaloriesEntityMapper.toJpaEntity(entry, userJpaEntity);
-        }
-
-        try {
-            DailyCaloriesJpaEntity saved = jpaRepository.save(entityToSave);
-            return DailyCaloriesEntityMapper.toDomain(saved);
-        } catch (DataIntegrityViolationException e) {
-            // Race condition : une autre requête a inséré le même (userId, date) entre le find et le save
-            DailyCaloriesJpaEntity concurrent = jpaRepository.findByUserIdAndDate(entry.getUserId(), entry.getDate())
-                    .orElseThrow(() -> new IllegalStateException("Race condition: insert failed but entry not found"));
-            DailyEntry merged = DailyEntry.merge(DailyCaloriesEntityMapper.toDomain(concurrent), entry);
-            DailyCaloriesJpaEntity entityMerged = DailyCaloriesEntityMapper.toJpaEntity(merged, userJpaEntity);
-            entityMerged.setId(concurrent.getId());
-            return DailyCaloriesEntityMapper.toDomain(jpaRepository.save(entityMerged));
-        }
+                        "Entrée journalière introuvable après upsert : userId="
+                                + entry.getUserId() + " date=" + entry.getDate()));
     }
 }
