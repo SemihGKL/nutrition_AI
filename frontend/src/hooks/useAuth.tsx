@@ -6,6 +6,8 @@ import {
   readPersistedUser,
   persistAuthSession,
   clearAuthSession,
+  TOKEN_STORAGE_KEY,
+  USER_STORAGE_KEY,
 } from '../auth/session';
 import { refreshSession } from '../api/client';
 import { authApi } from '../api/auth';
@@ -85,6 +87,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     sessionBus.onSessionExpired(expireSession);
   }, [expireSession]);
+
+  // Synchronisation multi-onglets : l'événement `storage` ne se déclenche que dans
+  // les AUTRES onglets. Déconnexion / login / maj profil dans un onglet → les autres
+  // se resynchronisent au lieu d'afficher un état périmé.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.storageArea && e.storageArea !== localStorage) return;
+      if (e.key !== null && e.key !== TOKEN_STORAGE_KEY && e.key !== USER_STORAGE_KEY) return;
+      const token = readPersistedToken();
+      if (!token) {
+        setState({ token: null, user: null, isLoading: false, sessionExpired: false });
+      } else {
+        setState(s => ({ ...s, token, user: readPersistedUser() }));
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const login = useCallback((token: string, user: User) => {
     persistAuthSession(token, user);
