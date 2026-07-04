@@ -27,6 +27,12 @@ public class FakeRefreshTokenRepository implements RefreshTokenRepository {
         store.values().removeIf(t -> t.userId().equals(userId));
     }
 
+    @Override
+    public void replaceUserTokens(Long userId, RefreshToken newToken) {
+        store.values().removeIf(t -> t.userId().equals(userId));
+        store.put(newToken.token(), newToken);
+    }
+
     public long countByUserId(Long userId) {
         return store.values().stream().filter(t -> t.userId().equals(userId)).count();
     }
