@@ -21,7 +21,8 @@ public final class UserEntityMapper {
                 entity.getDailyCalorieGoal(),
                 entity.getWeightGoal(),
                 entity.getWeighInDay(),
-                entity.getDailyStepsGoal()
+                entity.getDailyStepsGoal(),
+                entity.getVersion()
         );
     }
 
@@ -40,6 +41,7 @@ public final class UserEntityMapper {
         entity.setWeightGoal(user.getWeightGoal());
         entity.setWeighInDay(user.getWeighInDay());
         entity.setDailyStepsGoal(user.getDailyStepsGoal());
+        entity.setVersion(user.getVersion());
         return entity;
     }
 }

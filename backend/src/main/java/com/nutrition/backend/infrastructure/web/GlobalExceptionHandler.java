@@ -6,6 +6,7 @@ import com.nutrition.backend.domain.exception.ObjectiveAccessDeniedException;
 import com.nutrition.backend.domain.exception.ObjectiveNotFoundException;
 import com.nutrition.backend.domain.exception.UserNotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -50,6 +51,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
         // Contrainte d'unicité / clé étrangère violée (ex. course sur un email ou une complétion).
         return error(HttpStatus.CONFLICT, "Conflit — la ressource existe déjà ou viole une contrainte.");
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, Object>> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
+        // Deux modifications concurrentes du même utilisateur (ex. pesée vs édition de profil).
+        return error(HttpStatus.CONFLICT, "Modification concurrente détectée — recharge puis réessaie.");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
