@@ -52,8 +52,26 @@ function AppTabs() {
   }
 }
 
+function AppSplash() {
+  return (
+    <div style={{
+      width: '100%', maxWidth: 480, height: '100dvh',
+      background: 'var(--paper)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+    }}>
+      <span style={{
+        fontFamily: 'var(--font-script)', fontStyle: 'italic',
+        fontSize: 40, color: 'var(--orange)',
+      }}>
+        kaloriim
+      </span>
+    </div>
+  );
+}
+
 function AppRoutes() {
-  const { token } = useAuth();
+  const { token, isLoading } = useAuth();
+  if (isLoading) return <AppSplash />;
   if (!token) return <AuthRoutes />;
   return (
     <WeighInProvider>

@@ -24,4 +24,7 @@ export const authApi = {
 
   register: (payload: RegisterPayload) =>
     api.post<AuthTokens>('/api/auth/register', payload),
+
+  // Révoque le refresh token côté serveur et efface le cookie.
+  logout: () => api.post<void>('/api/auth/logout', {}),
 };

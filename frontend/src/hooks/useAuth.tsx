@@ -7,7 +7,8 @@ import {
   persistAuthSession,
   clearAuthSession,
 } from '../auth/session';
-
+import { refreshSession } from '../api/client';
+import { authApi } from '../api/auth';
 import { sessionBus } from '../auth/sessionBus';
 
 interface AuthState {
@@ -25,25 +26,53 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function loadValidatedSession(): Pick<AuthState, 'token' | 'user'> {
-  if (!hasActiveSession()) {
-    clearAuthSession();
-    return { token: null, user: null };
-  }
-  return {
-    token: readPersistedToken(),
-    user: readPersistedUser(),
-  };
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    ...loadValidatedSession(),
-    isLoading: false,
-    sessionExpired: false,
+  const [state, setState] = useState<AuthState>(() => {
+    // Fast-path synchrone : access token présent et non expiré → connecté immédiatement.
+    if (hasActiveSession()) {
+      return {
+        token: readPersistedToken(),
+        user: readPersistedUser(),
+        isLoading: false,
+        sessionExpired: false,
+      };
+    }
+    // Sinon : un cookie de refresh valide existe peut-être → on tranche en asynchrone.
+    return { token: null, user: null, isLoading: true, sessionExpired: false };
   });
 
+  // Refresh silencieux au démarrage : l'access token (15 min) est expiré/absent mais
+  // une session est mémorisée → on tente d'obtenir un nouveau token via le cookie refresh
+  // (7 jours) AVANT de déconnecter. Sans ça, tout rechargement après 15 min éjecte l'user.
+  useEffect(() => {
+    if (!state.isLoading) return;
+    let cancelled = false;
+
+    const rememberedUser = readPersistedUser();
+    if (!rememberedUser) {
+      clearAuthSession();
+      setState({ token: null, user: null, isLoading: false, sessionExpired: false });
+      return;
+    }
+
+    refreshSession().then(newToken => {
+      if (cancelled) return;
+      if (newToken) {
+        persistAuthSession(newToken, rememberedUser);
+        setState({ token: newToken, user: rememberedUser, isLoading: false, sessionExpired: false });
+      } else {
+        clearAuthSession();
+        setState({ token: null, user: null, isLoading: false, sessionExpired: false });
+      }
+    });
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const logout = useCallback(() => {
+    // Révoque le refresh token côté serveur (fire-and-forget), efface localement tout de suite.
+    authApi.logout().catch(() => {});
     clearAuthSession();
     setState({ token: null, user: null, isLoading: false, sessionExpired: false });
   }, []);
