@@ -5,12 +5,14 @@ import com.nutrition.backend.domain.entity.Objective;
 import com.nutrition.backend.domain.entity.ObjectiveCompletion;
 import com.nutrition.backend.domain.entity.RefreshToken;
 import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.entity.WeightEntry;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.DailyEntryRepository;
 import com.nutrition.backend.domain.ports.ObjectiveCompletionRepository;
 import com.nutrition.backend.domain.ports.ObjectiveRepository;
 import com.nutrition.backend.domain.ports.RefreshTokenRepository;
 import com.nutrition.backend.domain.ports.UserRepository;
+import com.nutrition.backend.domain.ports.WeightEntryRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -53,6 +55,7 @@ class PersistenceConcurrencyTest {
     @Autowired RefreshTokenRepository refreshTokenRepository;
     @Autowired ObjectiveRepository objectiveRepository;
     @Autowired ObjectiveCompletionRepository objectiveCompletionRepository;
+    @Autowired WeightEntryRepository weightEntryRepository;
 
     private User newPersistedUser(String email) {
         return userRepository.save(new User(
@@ -131,6 +134,22 @@ class PersistenceConcurrencyTest {
         // Seconde écriture basée sur la même version périmée → conflit optimiste
         assertThatThrownBy(() -> userRepository.save(loadedB.withCurrentWeight(90.0)))
                 .isInstanceOf(ObjectOptimisticLockingFailureException.class);
+    }
+
+    // ── P4 : upsert des pesées ──────────────────────────────────────────────
+
+    @Test
+    void should_overwrite_weighin_on_same_user_and_date() {
+        User u = newPersistedUser("p4@test.com");
+        LocalDate date = LocalDate.of(2026, 6, 4);
+
+        weightEntryRepository.save(new WeightEntry(null, u.getId(), date, 80.0, null));
+        weightEntryRepository.save(new WeightEntry(null, u.getId(), date, 79.4, "corrigée"));
+
+        var all = weightEntryRepository.findByUserIdOrderByDateDesc(u.getId());
+        assertThat(all).hasSize(1);
+        assertThat(all.get(0).getWeight()).isEqualTo(79.4);
+        assertThat(all.get(0).getNote()).isEqualTo("corrigée");
     }
 
     // ── M1 : rotation atomique du refresh token ─────────────────────────────
