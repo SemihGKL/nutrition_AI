@@ -1,10 +1,14 @@
 package com.nutrition.backend.infrastructure.persistence;
 
 import com.nutrition.backend.domain.entity.DailyEntry;
+import com.nutrition.backend.domain.entity.Objective;
+import com.nutrition.backend.domain.entity.ObjectiveCompletion;
 import com.nutrition.backend.domain.entity.RefreshToken;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.DailyEntryRepository;
+import com.nutrition.backend.domain.ports.ObjectiveCompletionRepository;
+import com.nutrition.backend.domain.ports.ObjectiveRepository;
 import com.nutrition.backend.domain.ports.RefreshTokenRepository;
 import com.nutrition.backend.domain.ports.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -47,6 +51,8 @@ class PersistenceConcurrencyTest {
     @Autowired DailyEntryRepository dailyEntryRepository;
     @Autowired UserRepository userRepository;
     @Autowired RefreshTokenRepository refreshTokenRepository;
+    @Autowired ObjectiveRepository objectiveRepository;
+    @Autowired ObjectiveCompletionRepository objectiveCompletionRepository;
 
     private User newPersistedUser(String email) {
         return userRepository.save(new User(
@@ -88,6 +94,26 @@ class PersistenceConcurrencyTest {
 
         assertThatCode(() -> CompletableFuture.allOf(futures).join()).doesNotThrowAnyException();
         assertThat(dailyEntryRepository.findByUserId(u.getId())).hasSize(1);
+    }
+
+    // ── P3 : complétion d'objectif idempotente ──────────────────────────────
+
+    @Test
+    void should_not_throw_on_concurrent_objective_completions_for_same_day() {
+        User u = newPersistedUser("p3@test.com");
+        Objective obj = objectiveRepository.save(new Objective(null, u.getId(), 0, "Sport", 0, "SPORT", null));
+        LocalDate date = LocalDate.of(2026, 6, 3);
+        int n = 8;
+
+        CompletableFuture<?>[] futures = new CompletableFuture[n];
+        for (int i = 0; i < n; i++) {
+            futures[i] = CompletableFuture.runAsync(() ->
+                    objectiveCompletionRepository.insertIfAbsent(
+                            new ObjectiveCompletion(null, u.getId(), obj.getId(), date)));
+        }
+
+        assertThatCode(() -> CompletableFuture.allOf(futures).join()).doesNotThrowAnyException();
+        assertThat(objectiveCompletionRepository.findByUserIdAndDateBetween(u.getId(), date, date)).hasSize(1);
     }
 
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────

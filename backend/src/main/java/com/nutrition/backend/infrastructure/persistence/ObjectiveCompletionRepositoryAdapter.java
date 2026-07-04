@@ -3,6 +3,7 @@ package com.nutrition.backend.infrastructure.persistence;
 import com.nutrition.backend.domain.entity.ObjectiveCompletion;
 import com.nutrition.backend.domain.ports.ObjectiveCompletionRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -39,5 +40,12 @@ public class ObjectiveCompletionRepositoryAdapter implements ObjectiveCompletion
         ObjectiveCompletionJpaEntity entity = ObjectiveEntityMapper.completionToJpaEntity(completion);
         ObjectiveCompletionJpaEntity saved = objectiveCompletionJpaRepository.save(entity);
         return ObjectiveEntityMapper.completionToDomain(saved);
+    }
+
+    @Override
+    @Transactional
+    public void insertIfAbsent(ObjectiveCompletion completion) {
+        objectiveCompletionJpaRepository.insertIfAbsent(
+                completion.getUserId(), completion.getObjectiveId(), completion.getDate());
     }
 }
