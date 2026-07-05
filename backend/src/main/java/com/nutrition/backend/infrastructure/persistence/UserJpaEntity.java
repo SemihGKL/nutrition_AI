@@ -15,6 +15,10 @@ public class UserJpaEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @NotNull
     @Column(name = "username", nullable = false)
     private String username;

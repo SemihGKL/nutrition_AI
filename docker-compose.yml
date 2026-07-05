@@ -6,12 +6,15 @@ services:
       POSTGRES_DB: nutritionAI
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # Bind sur la loopback uniquement : le backend tourne sur le même hôte (systemd).
+    # Sans le préfixe 127.0.0.1, Docker publie le port en manipulant iptables
+    # directement et CONTOURNE ufw → la base serait joignable depuis Internet.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gkl -d nutritionAI"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5

@@ -48,12 +48,18 @@ describe('weighInApi', () => {
     expect(calledPath).toBe('/api/weighin/latest');
   });
 
-  it('getLatest returns null when the request fails', async () => {
-    vi.mocked(api.get).mockRejectedValue(new Error('Network error'));
+  it('getLatest returns null when there is no weigh-in (empty 204 → undefined)', async () => {
+    vi.mocked(api.get).mockResolvedValue(undefined);
 
     const result = await weighInApi.getLatest();
 
     expect(result).toBeNull();
+  });
+
+  it('getLatest propagates errors instead of masking them as "no weigh-in"', async () => {
+    vi.mocked(api.get).mockRejectedValue(new Error('Network error'));
+
+    await expect(weighInApi.getLatest()).rejects.toThrow('Network error');
   });
 
   it('save calls POST /api/weighin with body containing date weight and note but no userId', async () => {

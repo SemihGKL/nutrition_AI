@@ -35,17 +35,20 @@ public class UserController {
         User current = getUserProfileUseCase.byEmail(auth.getName());
         Gender gender = Gender.valueOf(request.gender().toUpperCase());
 
+        // Email volontairement immuable via ce endpoint : le sujet du JWT étant l'email,
+        // le changer ici casserait la session (byEmail → 404). On passe null → conservé.
         User updated = updateUserProfileUseCase.execute(
                 current.getId(),
                 request.username(),
-                request.email(),
+                null,
                 gender,
                 request.age(),
                 request.height(),
                 request.currentWeight(),
                 request.weighInDay(),
                 request.dailyCalorieGoal(),
-                request.dailyStepsGoal()
+                request.dailyStepsGoal(),
+                request.weightGoal()
         );
         return ResponseEntity.ok(UserMapper.toDto(updated));
     }

@@ -32,7 +32,7 @@ const mockEntry: DailyCalories = {
   caloriesBurned: 200,
   steps: 8000,
   confirmed: false,
-  user: { id: USER_ID },
+  userId: USER_ID,
 };
 
 const mockRecap: DailyRecap = {

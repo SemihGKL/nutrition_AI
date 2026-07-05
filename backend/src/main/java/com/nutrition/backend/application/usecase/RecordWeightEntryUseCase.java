@@ -5,6 +5,7 @@ import com.nutrition.backend.domain.entity.WeightEntry;
 import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.ports.WeightEntryRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class RecordWeightEntryUseCase {
@@ -18,6 +19,7 @@ public class RecordWeightEntryUseCase {
         this.userRepository = userRepository;
     }
 
+    @Transactional
     public WeightEntry execute(WeightEntry entry) {
         WeightEntry saved = weightEntryRepository.save(entry);
         userRepository.findById(entry.getUserId()).ifPresent(user -> {

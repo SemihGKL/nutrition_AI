@@ -1,0 +1,34 @@
+# Unité systemd d'exemple pour le backend NutritionIA.
+# À copier sur le VPS dans /etc/systemd/system/nutritionIA.service puis :
+#   sudo systemctl daemon-reload && sudo systemctl enable --now nutritionIA
+#
+# Le workflow .github/workflows/deploy.yml se contente de `systemctl restart nutritionIA`,
+# il ne définit NI le profil NI les secrets : c'est cette unité qui doit le faire.
+
+[Unit]
+Description=NutritionIA backend (Spring Boot)
+After=network.target
+# La base tourne dans Docker (docker-compose). Le backend est configuré pour
+# redémarrer tant qu'elle n'est pas prête (voir Restart ci-dessous).
+
+[Service]
+Type=simple
+User=nutritionia
+WorkingDirectory=/opt/nutritionIA
+
+# ── Profil + secrets ────────────────────────────────────────────────
+# SANS ceci, spring.profiles.active retombe sur "dev" (cf. application.properties) :
+# on chargerait alors le seed de test et DataInitializer EN PRODUCTION.
+EnvironmentFile=/etc/nutritionIA/nutritionIA.env
+
+# ── Mémoire ─────────────────────────────────────────────────────────
+# Heap borné explicitement : sans -Xmx, la JVM prend ~1/4 de la RAM et
+# peut faire tomber Postgres/nginx sur un petit VPS (OOM killer). À ajuster.
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar /opt/nutritionIA/app.jar
+
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -18,10 +18,9 @@ public class IssueRefreshTokenUseCase {
     }
 
     public String execute(Long userId) {
-        refreshTokenRepository.deleteByUserId(userId);
         String rawToken = UUID.randomUUID().toString();
         RefreshToken refreshToken = new RefreshToken(null, userId, rawToken, Instant.now().plus(7, ChronoUnit.DAYS));
-        refreshTokenRepository.save(refreshToken);
+        refreshTokenRepository.replaceUserTokens(userId, refreshToken);
         return rawToken;
     }
 }

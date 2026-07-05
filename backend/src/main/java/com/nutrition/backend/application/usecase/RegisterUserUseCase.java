@@ -1,6 +1,7 @@
 package com.nutrition.backend.application.usecase;
 
 import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.exception.EmailAlreadyUsedException;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.model.UserProfile;
 import com.nutrition.backend.domain.ports.PasswordEncoderPort;
@@ -31,6 +32,9 @@ public class RegisterUserUseCase {
         }
         if (startWeight <= 0) {
             throw new IllegalArgumentException("Le poids de départ doit être supérieur à 0");
+        }
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new EmailAlreadyUsedException();
         }
         UserProfile profile = new UserProfile(startWeight, height, age, gender);
         int calculatedGoal = (int) mbrCalculator.calculate(profile).dailyCalorieGoal();

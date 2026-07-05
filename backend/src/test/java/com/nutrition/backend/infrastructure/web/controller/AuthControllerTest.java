@@ -7,8 +7,10 @@ import com.nutrition.backend.application.usecase.RefreshAccessTokenUseCase;
 import com.nutrition.backend.application.usecase.RegisterUserUseCase;
 import com.nutrition.backend.application.usecase.RevokeRefreshTokenUseCase;
 import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.exception.EmailAlreadyUsedException;
 import com.nutrition.backend.domain.exception.InvalidRefreshTokenException;
 import com.nutrition.backend.domain.model.Gender;
+import org.springframework.dao.DataIntegrityViolationException;
 import com.nutrition.backend.domain.ports.TokenService;
 import com.nutrition.backend.infrastructure.config.SecurityConfig;
 import com.nutrition.backend.infrastructure.web.dto.CreateUserRequest;
@@ -94,6 +96,47 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.token").value("mocked-jwt-token"))
                 .andExpect(jsonPath("$.user.email").value("test@example.com"))
                 .andExpect(jsonPath("$.user.username").value("Test"));
+    }
+
+    @Test
+    void should_return_409_when_registering_with_an_already_used_email() throws Exception {
+        when(registerUserUseCase.execute(
+                anyString(), anyString(), anyString(),
+                anyInt(), any(Gender.class), anyInt(),
+                anyDouble(), anyDouble(), anyString()
+        )).thenThrow(new EmailAlreadyUsedException());
+
+        String body = objectMapper.writeValueAsString(
+                new CreateUserRequest("Test", "dup@example.com", "password123",
+                        "MALE", 28, 178.0, 85.0, 75, "MONDAY")
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void should_return_409_when_a_data_integrity_violation_occurs() throws Exception {
+        // Course : deux inscriptions concurrentes passent le pré-check puis heurtent la contrainte DB.
+        when(registerUserUseCase.execute(
+                anyString(), anyString(), anyString(),
+                anyInt(), any(Gender.class), anyInt(),
+                anyDouble(), anyDouble(), anyString()
+        )).thenThrow(new DataIntegrityViolationException("uq_users_email"));
+
+        String body = objectMapper.writeValueAsString(
+                new CreateUserRequest("Test", "race@example.com", "password123",
+                        "MALE", 28, 178.0, 85.0, 75, "MONDAY")
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isConflict());
     }
 
     @Test

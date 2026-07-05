@@ -1,4 +1,5 @@
 import type { DailyCalories, DayStatus } from '../types/api';
+import { isoToday } from '../utils/format';
 
 export interface StreakInfo {
   current: number;
@@ -18,7 +19,9 @@ function subtractDays(dateStr: string, days: number): string {
 }
 
 export function computeStreak(entries: DailyCalories[], viewedDate: string): StreakInfo {
-  const today = isoDate(new Date());
+  // Date locale (même base que isoToday et les dates de saisie), pas UTC : sinon
+  // le jour confirmé en local n'est pas reconnu près de minuit / hors fuseau UTC.
+  const today = isoToday();
   const confirmedSet = new Set(
     entries.filter(e => e.confirmed).map(e => e.date),
   );

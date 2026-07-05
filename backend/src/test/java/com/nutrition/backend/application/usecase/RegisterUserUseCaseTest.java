@@ -3,6 +3,7 @@ package com.nutrition.backend.application.usecase;
 import com.nutrition.backend.application.usecase.fake.FakePasswordEncoder;
 import com.nutrition.backend.application.usecase.fake.FakeUserRepository;
 import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.exception.EmailAlreadyUsedException;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.service.MbrCalculator;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,6 +87,20 @@ class RegisterUserUseCaseTest {
         // Then
         assertThat(result.getPasswordHash()).isNotEqualTo(rawPassword);
         assertThat(result.getPasswordHash()).isEqualTo("encoded_" + rawPassword);
+    }
+
+    @Test
+    void should_throw_email_already_used_when_email_is_already_registered() {
+        // Given — un compte existe déjà avec cet email
+        registerUserUseCase.execute(
+                "alice", "dup@example.com", "password",
+                65, Gender.MALE, 30, 175.0, 70.0, "MONDAY");
+
+        // When / Then — une seconde inscription avec le même email est rejetée (409)
+        assertThatThrownBy(() -> registerUserUseCase.execute(
+                "alice2", "dup@example.com", "password2",
+                70, Gender.FEMALE, 28, 168.0, 62.0, "TUESDAY"))
+                .isInstanceOf(EmailAlreadyUsedException.class);
     }
 
     @Test

@@ -29,10 +29,9 @@ public class CompleteObjectiveUseCase {
             throw new ObjectiveAccessDeniedException(objectiveId);
         }
 
-        if (objectiveCompletionRepository.existsByObjectiveIdAndDate(objectiveId, date)) {
-            return;
-        }
+        // Insertion idempotente : plus de check-then-act. Deux appels concurrents
+        // (auto-complétion SPORT + coche manuelle) ne lèvent plus de 409.
         ObjectiveCompletion completion = new ObjectiveCompletion(null, userId, objectiveId, date);
-        objectiveCompletionRepository.save(completion);
+        objectiveCompletionRepository.insertIfAbsent(completion);
     }
 }

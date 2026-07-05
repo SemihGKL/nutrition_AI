@@ -36,6 +36,15 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
         jpaRepository.deleteByUserId(userId);
     }
 
+    @Override
+    @Transactional
+    public void replaceUserTokens(Long userId, RefreshToken newToken) {
+        jpaRepository.deleteByUserId(userId);
+        jpaRepository.save(new RefreshTokenJpaEntity(
+                newToken.id(), newToken.userId(), newToken.token(), newToken.expiresAt()
+        ));
+    }
+
     private RefreshToken toDomain(RefreshTokenJpaEntity entity) {
         return new RefreshToken(entity.getId(), entity.getUserId(), entity.getToken(), entity.getExpiresAt());
     }

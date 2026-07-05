@@ -5,7 +5,7 @@ import type { DailyCalories } from '../../types/api';
 const TODAY = '2026-06-22';
 
 function entry(date: string, confirmed: boolean): DailyCalories {
-  return { date, caloriesConsumed: 1800, caloriesBurned: 0, steps: 0, confirmed, user: { id: 1 } };
+  return { date, caloriesConsumed: 1800, caloriesBurned: 0, steps: 0, confirmed, userId: 1 };
 }
 
 describe('computeStreak', () => {

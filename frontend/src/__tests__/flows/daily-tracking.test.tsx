@@ -145,7 +145,7 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
       caloriesBurned: 0,
       steps: 0,
       confirmed: true,
-      user: { id: 1 },
+      userId: 1,
     };
     vi.mocked(dailyApi.getByDate).mockResolvedValue(confirmedEntry);
     vi.mocked(dailyApi.getRecap).mockResolvedValue({ ...mockRecap, confirmed: true });

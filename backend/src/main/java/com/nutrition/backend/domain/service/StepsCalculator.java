@@ -1,5 +1,7 @@
 package com.nutrition.backend.domain.service;
 
+// ⚠️ SYNC : dupliqué côté front (frontend/src/utils/format.ts → stepsToKcal) pour
+// l'aperçu live. Toute modification de la formule doit être répercutée là-bas.
 public final class StepsCalculator {
 
     private StepsCalculator() {}

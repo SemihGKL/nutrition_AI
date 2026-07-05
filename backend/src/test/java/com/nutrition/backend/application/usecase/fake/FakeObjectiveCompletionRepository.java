@@ -41,6 +41,12 @@ public class FakeObjectiveCompletionRepository implements ObjectiveCompletionRep
         return stored;
     }
 
+    @Override
+    public void insertIfAbsent(ObjectiveCompletion completion) {
+        if (existsByObjectiveIdAndDate(completion.getObjectiveId(), completion.getDate())) return;
+        save(completion);
+    }
+
     public void add(ObjectiveCompletion completion) {
         store.add(completion);
     }

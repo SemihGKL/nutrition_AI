@@ -10,4 +10,10 @@ public interface ObjectiveCompletionRepository {
     void deleteByObjectiveIdAndDate(Long objectiveId, LocalDate date);
     List<ObjectiveCompletion> findByUserIdAndDateBetween(Long userId, LocalDate from, LocalDate to);
     ObjectiveCompletion save(ObjectiveCompletion completion);
+
+    /**
+     * Insère une complétion de façon idempotente (no-op si (objectiveId, date) existe déjà).
+     * Évite la course check-then-act entre l'auto-complétion SPORT et la coche manuelle.
+     */
+    void insertIfAbsent(ObjectiveCompletion completion);
 }

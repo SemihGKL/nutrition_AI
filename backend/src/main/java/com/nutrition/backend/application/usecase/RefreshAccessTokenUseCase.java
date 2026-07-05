@@ -37,8 +37,6 @@ public class RefreshAccessTokenUseCase {
             throw new InvalidRefreshTokenException();
         }
 
-        refreshTokenRepository.deleteByUserId(stored.userId());
-
         String email = userRepository.findById(stored.userId())
                 .orElseThrow(InvalidRefreshTokenException::new)
                 .getEmail();
@@ -47,7 +45,8 @@ public class RefreshAccessTokenUseCase {
 
         String newRawToken = UUID.randomUUID().toString();
         RefreshToken newRefreshToken = new RefreshToken(null, stored.userId(), newRawToken, Instant.now().plus(7, ChronoUnit.DAYS));
-        refreshTokenRepository.save(newRefreshToken);
+        // Rotation atomique : supprime l'ancien token et pose le nouveau en une seule transaction.
+        refreshTokenRepository.replaceUserTokens(stored.userId(), newRefreshToken);
 
         return new Result(newAccessToken, newRawToken);
     }

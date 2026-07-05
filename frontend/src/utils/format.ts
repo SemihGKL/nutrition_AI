@@ -1,4 +1,6 @@
 // Only steps above sedentary baseline (4000) count — baseline is already baked into MBR × 1.2
+// ⚠️ SYNC : duplique le backend (domain/service/StepsCalculator.java). Toute modif
+// doit être répercutée côté back, sinon l'aperçu du dashboard et le recap serveur divergent.
 export function stepsToKcal(steps: number, weightKg: number): number {
   const effectiveSteps = Math.max(0, steps - 4000);
   return Math.round(effectiveSteps * (weightKg / 70) * 0.025);
