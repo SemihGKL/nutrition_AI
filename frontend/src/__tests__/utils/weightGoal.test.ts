@@ -9,6 +9,7 @@ function make(overrides: Partial<WeightGoalInput> = {}): WeightGoalInput {
     currentWeight: 76,
     weightGoal: 72,
     dailyTargetDeficit: 500, // → 500/7700 kg/j
+    avgDailyCaloriesBurned: 0,
     weighIns: [],
     today: TODAY,
     ...overrides,

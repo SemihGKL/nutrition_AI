@@ -32,6 +32,7 @@ export interface WeightGoalInput {
   currentWeight: number;      // idéalement la dernière pesée, sinon le profil
   weightGoal: number;
   dailyTargetDeficit: number; // mbr − objectif calorique quotidien (kcal/j)
+  avgDailyCaloriesBurned: number; // moyenne kcal sport/j sur les 30 derniers jours
   weighIns: WeighInPoint[];
   today: string;              // ISO yyyy-mm-dd
 }
@@ -61,6 +62,9 @@ export interface WeightGoalProjection {
   // Estimation affichée (au plus proche de la réalité)
   daysToGoal: number | null;
   targetDate: string | null;
+
+  // Sport moyen intégré dans le plan
+  avgDailyCaloriesBurned: number;
 }
 
 function daysBetween(fromIso: string, toIso: string): number {
@@ -77,7 +81,7 @@ function classifyPace(planDays: number, realDays: number): Pace {
 }
 
 export function projectWeightGoal(input: WeightGoalInput): WeightGoalProjection {
-  const { startWeight, currentWeight, weightGoal, dailyTargetDeficit, weighIns, today } = input;
+  const { startWeight, currentWeight, weightGoal, dailyTargetDeficit, avgDailyCaloriesBurned, weighIns, today } = input;
 
   const empty: WeightGoalProjection = {
     status: 'no-goal',
@@ -86,6 +90,7 @@ export function projectWeightGoal(input: WeightGoalInput): WeightGoalProjection 
     hasRealPace: false, realDailyLossKg: null, realDaysRemaining: null,
     realTargetDate: null, pace: 'unknown', deltaDays: null,
     daysToGoal: null, targetDate: null,
+    avgDailyCaloriesBurned: 0,
   };
 
   if (!weightGoal || weightGoal <= 0) return empty;
@@ -102,15 +107,16 @@ export function projectWeightGoal(input: WeightGoalInput): WeightGoalProjection 
     return { ...empty, status: 'reached', totalToLose, doneKg, progressPct: 100 };
   }
 
-  const base = { ...empty, remainingKg, totalToLose, doneKg, progressPct };
+  const base = { ...empty, remainingKg, totalToLose, doneKg, progressPct, avgDailyCaloriesBurned };
 
-  // L'objectif calorique doit créer un déficit pour espérer perdre du poids.
-  if (dailyTargetDeficit <= 0) {
+  // Le déficit effectif intègre le sport moyen enregistré sur les 30 derniers jours.
+  const effectiveDeficit = dailyTargetDeficit + avgDailyCaloriesBurned;
+  if (effectiveDeficit <= 0) {
     return { ...base, status: 'no-deficit' };
   }
 
-  const planDailyLossKg = dailyTargetDeficit / KCAL_PER_KG;
-  const planDaysRemaining = Math.ceil((remainingKg * KCAL_PER_KG) / dailyTargetDeficit);
+  const planDailyLossKg = effectiveDeficit / KCAL_PER_KG;
+  const planDaysRemaining = Math.ceil((remainingKg * KCAL_PER_KG) / effectiveDeficit);
   const planTargetDate = addDays(today, planDaysRemaining);
 
   // Rythme réel via les pesées (première ↔ dernière sur la période observée).
@@ -154,5 +160,6 @@ export function projectWeightGoal(input: WeightGoalInput): WeightGoalProjection 
     hasRealPace, realDailyLossKg, realDaysRemaining, realTargetDate,
     pace, deltaDays,
     daysToGoal, targetDate,
+    avgDailyCaloriesBurned,
   };
 }

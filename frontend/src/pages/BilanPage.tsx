@@ -100,6 +100,14 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
 
   const weekRange = `${frenchDateShort(monday)} → ${frenchDateShort(weekEnd(today))}`;
 
+  const avgDailyCaloriesBurned = useMemo(() => {
+    const thirtyDaysAgo = addDays(today, -30);
+    const recent = allEntries.filter(e => e.date >= thirtyDaysAgo);
+    if (recent.length === 0) return 0;
+    const total = recent.reduce((s, e) => s + (e.caloriesBurned ?? 0), 0);
+    return Math.round(total / recent.length);
+  }, [allEntries, today]);
+
   // Cap sur le poids cible : jours restants au rythme du plan, ré-estimés au
   // rythme réel dès qu'assez de pesées existent (avance / retard).
   const goalProjection = useMemo<WeightGoalProjection>(() =>
@@ -108,10 +116,11 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
       currentWeight: latestWeighIn?.weight ?? user?.currentWeight ?? 0,
       weightGoal: user?.weightGoal ?? 0,
       dailyTargetDeficit: mbr - target,
+      avgDailyCaloriesBurned,
       weighIns: weighIns.map(w => ({ date: w.date, weight: w.weight })),
       today,
     }),
-  [user, latestWeighIn, mbr, target, weighIns, today]);
+  [user, latestWeighIn, mbr, target, avgDailyCaloriesBurned, weighIns, today]);
 
   return (
     <PageShell>
@@ -515,6 +524,30 @@ function WeightGoalCard({ projection, weightGoal, startWeight, onGoToProfil }: {
       {p.hasRealPace && p.realDaysRemaining !== null && p.planDaysRemaining !== null && (
         <div className="tabular" style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}>
           au rythme du plan : ~{formatNumber(p.planDaysRemaining)} j
+        </div>
+      )}
+
+      {/* Message sport */}
+      {p.avgDailyCaloriesBurned > 0 ? (
+        <div style={{
+          marginTop: 12, padding: '8px 10px',
+          background: 'var(--paper-3)', borderRadius: 'var(--radius)',
+          fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.5,
+        }}>
+          sport pris en compte · <span className="tabular" style={{ fontWeight: 600, color: 'var(--ink-2)' }}>+{formatNumber(p.avgDailyCaloriesBurned)} kcal/j</span> en moyenne · continue, chaque séance accélère ton objectif !
+        </div>
+      ) : (
+        <div style={{
+          marginTop: 12, padding: '12px 14px',
+          background: 'var(--green-tint)', border: '1px solid var(--green-soft)',
+          borderRadius: 'var(--radius)', lineHeight: 1.6,
+        }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--green)', marginBottom: 4 }}>
+            le sport, c'est du bonus
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+            chaque séance saisie réduit ton délai estimé · commence petit, l'effet est immédiat.
+          </div>
         </div>
       )}
     </div>
