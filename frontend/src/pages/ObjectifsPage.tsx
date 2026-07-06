@@ -1,13 +1,34 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { StatusBar } from '../components/dashboard/StatusBar';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { Check, Plus } from '../components/ui/icons';
 import { isoToday, weekStart, addDays } from '../utils/format';
 import { objectivesApi, type CompletionsMap } from '../api/objectives';
 import type { ObjectiveDto } from '../types/api';
+import { useAuth } from '../hooks/useAuth';
 
 const DAYS      = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const DAYS_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+interface Suggestion { icon: string; label: string; }
+
+function buildSuggestions(weight?: number | null): Suggestion[] {
+  const w = weight ?? 70;
+  const waterL   = (w * 35 / 1000).toFixed(1);
+  const proteinG = Math.round(w * 1.8);
+  return [
+    { icon: '💧', label: `Boire ${waterL} L d'eau` },
+    { icon: '🥩', label: `${proteinG} g de protéines` },
+    { icon: '🥗', label: '5 portions de légumes' },
+    { icon: '🚶', label: '30 min de marche' },
+    { icon: '😴', label: 'Dormir 8h' },
+    { icon: '📵', label: 'Pas d\'écran avant le coucher' },
+    { icon: '📖', label: 'Lire 1 page de Qur\'an' },
+    { icon: '🕌', label: 'Réviser mes sourates' },
+    { icon: '🤲', label: 'Faire mes invocations du matin' },
+    { icon: '🌙', label: 'Faire mes invocations du soir' },
+  ];
+}
 
 function currentDayOfWeek(): number {
   return (new Date().getDay() + 6) % 7;
@@ -18,11 +39,14 @@ interface Props {
 }
 
 export function ObjectifsPage({ onTabChange }: Props) {
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<ObjectiveDto[]>([]);
   const [completions, setCompletions] = useState<CompletionsMap>({});
   const [addingForDay, setAddingForDay] = useState<number | null>(null);
   const [newLabel, setNewLabel] = useState('');
   const [loadError, setLoadError] = useState(false);
+
+  const suggestions = useMemo(() => buildSuggestions(user?.currentWeight), [user?.currentWeight]);
 
   const today   = isoToday();
   const todayDow = currentDayOfWeek();
@@ -252,6 +276,7 @@ export function ObjectifsPage({ onTabChange }: Props) {
               completedIds={completedIds}
               isAdding={isAdding}
               newLabel={newLabel}
+              suggestions={suggestions}
               onToggle={toggleComplete}
               onDelete={deleteTask}
               onStartAdd={() => { setAddingForDay(dow); setNewLabel(''); }}
@@ -299,6 +324,7 @@ interface DayCardProps {
   completedIds: number[];
   isAdding: boolean;
   newLabel: string;
+  suggestions: Suggestion[];
   onToggle: (id: number, date: string) => void;
   onDelete: (id: number) => void;
   onStartAdd: () => void;
@@ -309,7 +335,7 @@ interface DayCardProps {
 
 function DayCard({
   dayName, dayDate, isToday, isPast, tasks, completedIds, isAdding,
-  newLabel, onToggle, onDelete, onStartAdd, onCancelAdd, onConfirmAdd, onLabelChange,
+  newLabel, suggestions, onToggle, onDelete, onStartAdd, onCancelAdd, onConfirmAdd, onLabelChange,
 }: DayCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const doneCount = tasks.filter(t => completedIds.includes(t.id)).length;
@@ -402,31 +428,68 @@ function DayCard({
       )}
 
       {isAdding && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '8px 14px',
-          borderTop: tasks.length > 0 ? '1px solid var(--hairline)' : 'none',
-        }}>
-          <input
-            ref={inputRef}
-            value={newLabel}
-            onChange={e => onLabelChange(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') onConfirmAdd();
-              if (e.key === 'Escape') onCancelAdd();
-            }}
-            placeholder="Nouvelle habitude…"
-            style={{
-              flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              fontSize: 14, color: 'var(--ink)', fontFamily: 'var(--font-body)',
-            }}
-          />
-          <button onClick={onConfirmAdd} style={{ background: 'var(--orange)', border: 'none', borderRadius: 8, padding: '4px 10px', color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-            OK
-          </button>
-          <button onClick={onCancelAdd} style={{ background: 'transparent', border: 'none', color: 'var(--ink-3)', fontSize: 18, cursor: 'pointer', padding: '4px 6px' }}>
-            ×
-          </button>
+        <div style={{ borderTop: tasks.length > 0 ? '1px solid var(--hairline)' : 'none' }}>
+          {/* Suggestions */}
+          <div style={{ padding: '10px 14px 6px' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-3)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 7 }}>
+              Suggestions
+            </div>
+            <div style={{
+              display: 'flex', gap: 6, overflowX: 'auto',
+              paddingBottom: 4,
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            } as React.CSSProperties}>
+              {suggestions.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    onLabelChange(s.label);
+                    inputRef.current?.focus();
+                  }}
+                  style={{
+                    flexShrink: 0,
+                    background: newLabel === s.label ? 'var(--orange)' : 'var(--paper-3)',
+                    border: `1px solid ${newLabel === s.label ? 'var(--orange)' : 'var(--hairline)'}`,
+                    borderRadius: 20,
+                    padding: '5px 11px',
+                    fontSize: 12,
+                    color: newLabel === s.label ? '#fff' : 'var(--ink)',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-body)',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 100ms',
+                  }}
+                >
+                  {s.icon} {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Input */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 14px 10px' }}>
+            <input
+              ref={inputRef}
+              value={newLabel}
+              onChange={e => onLabelChange(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') onConfirmAdd();
+                if (e.key === 'Escape') onCancelAdd();
+              }}
+              placeholder="Ou tape une habitude personnalisée…"
+              style={{
+                flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                fontSize: 14, color: 'var(--ink)', fontFamily: 'var(--font-body)',
+              }}
+            />
+            <button onClick={onConfirmAdd} style={{ background: 'var(--orange)', border: 'none', borderRadius: 8, padding: '4px 10px', color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              OK
+            </button>
+            <button onClick={onCancelAdd} style={{ background: 'transparent', border: 'none', color: 'var(--ink-3)', fontSize: 18, cursor: 'pointer', padding: '4px 6px' }}>
+              ×
+            </button>
+          </div>
         </div>
       )}
 
