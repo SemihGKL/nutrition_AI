@@ -33,6 +33,8 @@ export function useDailyEntry(
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingEntryRef = useRef<DailyCalories | null>(null);
+  const userIdRef = useRef(userId);
+  useEffect(() => { userIdRef.current = userId; }, [userId]);
 
   useEffect(() => {
     const flushOnUnload = () => {
@@ -59,6 +61,23 @@ export function useDailyEntry(
     window.addEventListener('beforeunload', flushOnUnload);
     return () => window.removeEventListener('beforeunload', flushOnUnload);
   }, [userId]);
+
+  // Flush any pending debounced save when navigating away within the SPA,
+  // so auto-completions (e.g. SPORT objectives) are recorded before ObjectifsPage loads.
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      const toSave = pendingEntryRef.current;
+      if (toSave && userIdRef.current) {
+        dailyApi.save(toSave).catch(() => {});
+        pendingEntryRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchEntry = useCallback(async () => {
     if (!userId) return;
