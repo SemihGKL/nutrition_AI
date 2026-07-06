@@ -1,7 +1,8 @@
 import type { User } from '../types/api';
 
-export const TOKEN_STORAGE_KEY = 'kaloriim_token';
-export const USER_STORAGE_KEY  = 'kaloriim_user';
+export const TOKEN_STORAGE_KEY    = 'kaloriim_token';
+export const USER_STORAGE_KEY     = 'kaloriim_user';
+export const TUTORIAL_STORAGE_KEY = 'kaloriim_tutorial_seen';
 
 // ── Persistence ──────────────────────────────────────────────
 
