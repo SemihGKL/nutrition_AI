@@ -107,7 +107,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
         age: parseInt(form.age),
         height: parseFloat(form.height),
         startWeight: parseFloat(form.weight),
-        weightGoal: parseInt(form.weightGoal, 10),
+        weightGoal: parseFloat(form.weightGoal),
         weighInDay: form.weighInDay,
       });
       login(token, user);

@@ -22,6 +22,7 @@ export function ObjectifsPage({ onTabChange }: Props) {
   const [completions, setCompletions] = useState<CompletionsMap>({});
   const [addingForDay, setAddingForDay] = useState<number | null>(null);
   const [newLabel, setNewLabel] = useState('');
+  const [loadError, setLoadError] = useState(false);
 
   const today   = isoToday();
   const todayDow = currentDayOfWeek();
@@ -29,12 +30,17 @@ export function ObjectifsPage({ onTabChange }: Props) {
   const sunday  = addDays(monday, 6);
 
   const loadData = useCallback(async () => {
-    const [fetchedTasks, fetchedCompletions] = await Promise.all([
-      objectivesApi.getAll(),
-      objectivesApi.getCompletions(monday, sunday),
-    ]);
-    setTasks(fetchedTasks);
-    setCompletions(fetchedCompletions);
+    setLoadError(false);
+    try {
+      const [fetchedTasks, fetchedCompletions] = await Promise.all([
+        objectivesApi.getAll(),
+        objectivesApi.getCompletions(monday, sunday),
+      ]);
+      setTasks(fetchedTasks);
+      setCompletions(fetchedCompletions);
+    } catch {
+      setLoadError(true);
+    }
   }, [monday, sunday]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -49,34 +55,50 @@ export function ObjectifsPage({ onTabChange }: Props) {
   async function addTask(dow: number) {
     const trimmed = newLabel.trim();
     if (!trimmed) return;
-    const created = await objectivesApi.create(dow, trimmed, 'CUSTOM');
-    setTasks(prev => [...prev, created]);
-    setAddingForDay(null);
-    setNewLabel('');
+    try {
+      const created = await objectivesApi.create(dow, trimmed, 'CUSTOM');
+      setTasks(prev => [...prev, created]);
+      setAddingForDay(null);
+      setNewLabel('');
+    } catch {
+      // l'input reste ouvert pour que l'utilisateur puisse réessayer
+    }
   }
 
   async function deleteTask(id: number) {
-    await objectivesApi.remove(id);
-    setTasks(prev => prev.filter(t => t.id !== id));
-    setCompletions(prev => {
-      const next: CompletionsMap = {};
-      for (const [date, ids] of Object.entries(prev)) {
-        const filtered = ids.filter(tid => tid !== id);
-        if (filtered.length > 0) next[date] = filtered;
-      }
-      return next;
-    });
+    try {
+      await objectivesApi.remove(id);
+      setTasks(prev => prev.filter(t => t.id !== id));
+      setCompletions(prev => {
+        const next: CompletionsMap = {};
+        for (const [date, ids] of Object.entries(prev)) {
+          const filtered = ids.filter(tid => tid !== id);
+          if (filtered.length > 0) next[date] = filtered;
+        }
+        return next;
+      });
+    } catch {
+      // si suppression échoue on ne touche pas à l'état local
+    }
   }
 
   async function toggleComplete(taskId: number, date: string) {
     const current = completions[date] ?? [];
     const done = current.includes(taskId);
     if (done) {
-      await objectivesApi.markUndone(taskId, date);
       setCompletions(prev => ({ ...prev, [date]: (prev[date] ?? []).filter(id => id !== taskId) }));
+      try {
+        await objectivesApi.markUndone(taskId, date);
+      } catch {
+        setCompletions(prev => ({ ...prev, [date]: [...(prev[date] ?? []), taskId] }));
+      }
     } else {
-      await objectivesApi.markDone(taskId, date);
       setCompletions(prev => ({ ...prev, [date]: [...(prev[date] ?? []), taskId] }));
+      try {
+        await objectivesApi.markDone(taskId, date);
+      } catch {
+        setCompletions(prev => ({ ...prev, [date]: (prev[date] ?? []).filter(id => id !== taskId) }));
+      }
     }
   }
 
@@ -85,8 +107,12 @@ export function ObjectifsPage({ onTabChange }: Props) {
     if (existing) {
       await deleteTask(existing.id);
     } else {
-      const created = await objectivesApi.create(dow, 'Séance sport', 'SPORT');
-      setTasks(prev => [...prev, created]);
+      try {
+        const created = await objectivesApi.create(dow, 'Séance sport', 'SPORT');
+        setTasks(prev => [...prev, created]);
+      } catch {
+        // si création échoue on ne touche pas à l'état local
+      }
     }
   }
 
@@ -116,6 +142,27 @@ export function ObjectifsPage({ onTabChange }: Props) {
   })();
 
   // ─── render ───────────────────────────────────────────────────────────────────
+
+  if (loadError) {
+    return (
+      <PageShell>
+        <StatusBar />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '0 24px' }}>
+          <div style={{ fontSize: 13, color: 'var(--ink-3)', textAlign: 'center' }}>
+            Impossible de charger les objectifs
+          </div>
+          <button
+            onClick={loadData}
+            style={{ background: 'var(--orange)', border: 'none', borderRadius: 10, padding: '10px 20px', color: '#fff', fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Réessayer
+          </button>
+        </div>
+        <BottomNav active="objectifs" onChange={onTabChange} />
+        <HomeIndicator />
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>

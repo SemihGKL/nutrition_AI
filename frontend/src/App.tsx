@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { DashboardPage } from './pages/DashboardPage';
 import { SemainePage } from './pages/SemainePage';
@@ -31,10 +31,12 @@ function AppTabs() {
   const [tab, setTab] = useState<NavTab>('jour');
   const [allEntries, setAllEntries] = useState<DailyCalories[]>([]);
 
-  useEffect(() => {
+  const refreshEntries = useCallback(() => {
     if (!user) return;
     dailyApi.getAll().then(setAllEntries).catch(() => {});
-  }, [user, tab]);
+  }, [user]);
+
+  useEffect(() => { refreshEntries(); }, [refreshEntries, tab]);
 
   const streak = user ? computeStreak(allEntries, isoToday()) : { current: 0, best: 0, last14: [] };
 
@@ -48,7 +50,7 @@ function AppTabs() {
     case 'profil':
       return <ProfilPage onTabChange={setTab} streakCount={streak.current} />;
     default:
-      return <DashboardPage onTabChange={setTab} />;
+      return <DashboardPage onTabChange={setTab} allEntries={allEntries} onEntriesRefresh={refreshEntries} />;
   }
 }
 
