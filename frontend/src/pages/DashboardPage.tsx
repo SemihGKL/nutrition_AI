@@ -13,7 +13,6 @@ import { ConfirmationView } from '../components/dashboard/ConfirmationView';
 import { useAuth } from '../hooks/useAuth';
 import { useDailyEntry } from '../hooks/useDailyEntry';
 import { computeStreak } from '../hooks/useStreak';
-import { dailyApi } from '../api/daily';
 import { isoToday, addDays, stepsToKcal } from '../utils/format';
 import type { DailyCalories } from '../types/api';
 import type { StreakInfo } from '../hooks/useStreak';
@@ -22,12 +21,13 @@ const EMPTY_STREAK: StreakInfo = { current: 0, best: 0, last14: Array(14).fill('
 
 interface Props {
   onTabChange: (tab: NavTab) => void;
+  allEntries: DailyCalories[];
+  onEntriesRefresh: () => void;
 }
 
-export function DashboardPage({ onTabChange }: Props) {
+export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Props) {
   const { user } = useAuth();
   const [viewedDate, setViewedDate] = useState(isoToday);
-  const [allEntries, setAllEntries] = useState<DailyCalories[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const today = isoToday();
   const isToday = viewedDate === today;
@@ -37,11 +37,6 @@ export function DashboardPage({ onTabChange }: Props) {
 
   const { entry, recap, isLoading, isSaving, setCalories, setSteps, setBurned, confirm } =
     useDailyEntry(user?.id, viewedDate);
-
-  useEffect(() => {
-    if (!user) return;
-    dailyApi.getAll().then(setAllEntries).catch(() => {});
-  }, [user]);
 
   const streak = user ? computeStreak(allEntries, viewedDate) : EMPTY_STREAK;
 
@@ -60,8 +55,7 @@ export function DashboardPage({ onTabChange }: Props) {
 
   const handleConfirm = async () => {
     await confirm();
-    const fresh = await dailyApi.getAll();
-    setAllEntries(fresh);
+    onEntriesRefresh();
     setIsEditing(false);
   };
 

@@ -12,6 +12,7 @@ import {
   formatNumber, formatDecimal, frenchDayShort, stepsToKcal,
 } from '../utils/format';
 import { computeMbr } from '../utils/mbr';
+import { projectWeightGoal, type WeightGoalProjection } from '../utils/weightGoal';
 
 interface Props {
   onTabChange: (tab: NavTab) => void;
@@ -98,6 +99,28 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const actualLoss = weightDiff !== null ? -weightDiff : null;
 
   const weekRange = `${frenchDateShort(monday)} → ${frenchDateShort(weekEnd(today))}`;
+
+  const avgDailyCaloriesBurned = useMemo(() => {
+    const thirtyDaysAgo = addDays(today, -30);
+    const recent = allEntries.filter(e => e.date >= thirtyDaysAgo);
+    if (recent.length === 0) return 0;
+    const total = recent.reduce((s, e) => s + (e.caloriesBurned ?? 0), 0);
+    return Math.round(total / recent.length);
+  }, [allEntries, today]);
+
+  // Cap sur le poids cible : jours restants au rythme du plan, ré-estimés au
+  // rythme réel dès qu'assez de pesées existent (avance / retard).
+  const goalProjection = useMemo<WeightGoalProjection>(() =>
+    projectWeightGoal({
+      startWeight: user?.startWeight ?? user?.currentWeight ?? 0,
+      currentWeight: latestWeighIn?.weight ?? user?.currentWeight ?? 0,
+      weightGoal: user?.weightGoal ?? 0,
+      dailyTargetDeficit: mbr - target,
+      avgDailyCaloriesBurned,
+      weighIns: weighIns.map(w => ({ date: w.date, weight: w.weight })),
+      today,
+    }),
+  [user, latestWeighIn, mbr, target, avgDailyCaloriesBurned, weighIns, today]);
 
   return (
     <PageShell>
@@ -186,6 +209,14 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
             )}
           </div>
         )}
+
+        {/* Weight-goal projection */}
+        <WeightGoalCard
+          projection={goalProjection}
+          weightGoal={user?.weightGoal ?? 0}
+          startWeight={user?.startWeight ?? user?.currentWeight ?? 0}
+          onGoToProfil={() => onTabChange('profil')}
+        />
 
         {/* Day-by-day table */}
         <div style={{
@@ -341,6 +372,185 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
       <BottomNav active="bilan" onChange={onTabChange} />
       <HomeIndicator />
     </PageShell>
+  );
+}
+
+const PACE_META: Record<WeightGoalProjection['pace'], { chip: string; color: string; bg: string }> = {
+  ahead:      { chip: 'en avance',     color: 'var(--green)',  bg: 'var(--green-tint)' },
+  'on-track': { chip: 'dans les temps', color: 'var(--green)',  bg: 'var(--green-tint)' },
+  behind:     { chip: 'en retard',     color: 'var(--orange)', bg: 'var(--orange-tint)' },
+  stalled:    { chip: 'au ralenti',    color: 'var(--orange)', bg: 'var(--orange-tint)' },
+  unknown:    { chip: 'est. plan',     color: 'var(--ink-3)',  bg: 'var(--paper-3)' },
+};
+
+function longFrenchDate(dateStr: string): string {
+  return new Date(dateStr + 'T00:00:00')
+    .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function paceSentence(p: WeightGoalProjection): string {
+  switch (p.pace) {
+    case 'ahead':
+      return `en avance de ~${formatNumber(p.deltaDays ?? 0)} j sur ton plan — continue comme ça.`;
+    case 'on-track':
+      return 'pile dans les temps par rapport à ton plan.';
+    case 'behind':
+      return `en retard de ~${formatNumber(Math.abs(p.deltaDays ?? 0))} j sur ton plan.`;
+    case 'stalled':
+      return "ton poids stagne sur la période — au rythme actuel, l'objectif s'éloigne.";
+    default:
+      return 'estimation basée sur ton plan — enregistre tes pesées pour l\'affiner au réel.';
+  }
+}
+
+function WeightGoalCard({ projection, weightGoal, startWeight, onGoToProfil }: {
+  projection: WeightGoalProjection;
+  weightGoal: number;
+  startWeight: number;
+  onGoToProfil: () => void;
+}) {
+  const p = projection;
+
+  if (p.status === 'no-goal') {
+    return (
+      <div style={{
+        background: 'var(--paper-2)', borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--hairline-2)', padding: 16, marginBottom: 14,
+      }}>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.3, marginBottom: 4 }}>cap sur l'objectif</div>
+        <div style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.5, marginBottom: 12 }}>
+          définis un poids cible pour estimer le nombre de jours qu'il te reste.
+        </div>
+        <button
+          onClick={onGoToProfil}
+          style={{
+            width: '100%', padding: '10px 0', borderRadius: 'var(--radius)',
+            background: 'var(--paper-3)', color: 'var(--ink)', border: '1px solid var(--hairline)',
+            fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)',
+          }}
+        >
+          Définir mon poids cible
+        </button>
+      </div>
+    );
+  }
+
+  if (p.status === 'reached') {
+    return (
+      <div style={{
+        background: 'var(--green-tint)', border: '1px solid var(--green-soft)',
+        borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 14,
+      }}>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.3 }}>cap sur l'objectif</div>
+        <div className="display" style={{ fontSize: 20, fontWeight: 500, color: 'var(--green)', marginTop: 4 }}>
+          🎉 poids cible atteint
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 4 }}>
+          cible {formatDecimal(weightGoal)} kg — bravo pour la constance.
+        </div>
+      </div>
+    );
+  }
+
+  if (p.status === 'no-deficit') {
+    return (
+      <div style={{
+        background: 'var(--orange-tint)', border: '1px solid var(--orange-soft)',
+        borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 14,
+      }}>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.3, marginBottom: 4 }}>cap sur l'objectif</div>
+        <div style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+          ton objectif calorique ne crée pas de déficit — abaisse-le pour viser {formatDecimal(weightGoal)} kg.
+        </div>
+      </div>
+    );
+  }
+
+  // status === 'projected'
+  const meta = PACE_META[p.pace];
+  const headColor = p.pace === 'behind' || p.pace === 'stalled'
+    ? 'var(--orange)'
+    : p.pace === 'unknown' ? 'var(--ink)' : 'var(--green)';
+  const weeks = p.daysToGoal !== null ? Math.round(p.daysToGoal / 7) : null;
+
+  return (
+    <div style={{
+      background: 'var(--paper-2)', borderRadius: 'var(--radius-md)',
+      border: '1px solid var(--hairline-2)', padding: 16, marginBottom: 14,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.3 }}>cap sur l'objectif</div>
+        <div style={{
+          fontSize: 12, fontWeight: 700, color: meta.color, background: meta.bg,
+          borderRadius: 999, padding: '3px 10px',
+        }}>
+          {meta.chip}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <span className="display tabular" style={{ fontSize: 44, fontWeight: 500, color: headColor, lineHeight: 1, letterSpacing: '-0.025em' }}>
+          ≈ {formatNumber(p.daysToGoal ?? 0)}
+        </span>
+        <span style={{ fontSize: 15, color: 'var(--ink-2)' }}>jours</span>
+      </div>
+      {p.targetDate && (
+        <div className="tabular" style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 6 }}>
+          {weeks !== null && `~${weeks} semaine${weeks > 1 ? 's' : ''} · `}objectif atteint vers le {longFrenchDate(p.targetDate)}
+        </div>
+      )}
+
+      {/* Journey bar : départ → cible */}
+      <div style={{ marginTop: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>
+            il reste <span className="tabular" style={{ fontWeight: 600, color: 'var(--ink)' }}>{formatDecimal(p.remainingKg)} kg</span>
+          </span>
+          <span className="tabular" style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>{p.progressPct}%</span>
+        </div>
+        <div style={{ height: 8, background: 'var(--paper-3)', borderRadius: 999, overflow: 'hidden' }}>
+          <div style={{ width: `${Math.max(2, p.progressPct)}%`, height: '100%', background: 'var(--green)', borderRadius: 999, opacity: 0.85 }} />
+        </div>
+        <div className="tabular" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--ink-3)' }}>
+          <span>départ {formatDecimal(startWeight)} kg</span>
+          <span>cible {formatDecimal(weightGoal)} kg</span>
+        </div>
+      </div>
+
+      {/* Lecture avance / retard */}
+      <div style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 12, lineHeight: 1.5 }}>
+        {paceSentence(p)}
+      </div>
+      {p.hasRealPace && p.realDaysRemaining !== null && p.planDaysRemaining !== null && (
+        <div className="tabular" style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}>
+          au rythme du plan : ~{formatNumber(p.planDaysRemaining)} j
+        </div>
+      )}
+
+      {/* Message sport */}
+      {p.avgDailyCaloriesBurned > 0 ? (
+        <div style={{
+          marginTop: 12, padding: '8px 10px',
+          background: 'var(--paper-3)', borderRadius: 'var(--radius)',
+          fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.5,
+        }}>
+          sport pris en compte · <span className="tabular" style={{ fontWeight: 600, color: 'var(--ink-2)' }}>+{formatNumber(p.avgDailyCaloriesBurned)} kcal/j</span> en moyenne · continue, chaque séance accélère ton objectif !
+        </div>
+      ) : (
+        <div style={{
+          marginTop: 12, padding: '12px 14px',
+          background: 'var(--green-tint)', border: '1px solid var(--green-soft)',
+          borderRadius: 'var(--radius)', lineHeight: 1.6,
+        }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--green)', marginBottom: 4 }}>
+            le sport, c'est du bonus
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+            chaque séance saisie réduit ton délai estimé · commence petit, l'effet est immédiat.
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

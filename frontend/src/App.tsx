@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { DashboardPage } from './pages/DashboardPage';
 import { SemainePage } from './pages/SemainePage';
@@ -7,6 +7,7 @@ import { ObjectifsPage } from './pages/ObjectifsPage';
 import { ProfilPage } from './pages/ProfilPage';
 import { LoginPage } from './pages/LoginPage';
 import { OnboardingPage } from './pages/OnboardingPage';
+import { TutorialOverlay } from './components/ui/TutorialOverlay';
 import { computeStreak } from './hooks/useStreak';
 import { dailyApi } from './api/daily';
 import { useEffect } from 'react';
@@ -14,6 +15,7 @@ import type { NavTab } from './components/ui/BottomNav';
 import type { DailyCalories } from './types/api';
 import { isoToday } from './utils/format';
 import { WeighInProvider } from './hooks/useWeighIn';
+import { TUTORIAL_STORAGE_KEY } from './auth/session';
 
 type AuthPage = 'login' | 'register';
 
@@ -30,26 +32,44 @@ function AppTabs() {
   const { user } = useAuth();
   const [tab, setTab] = useState<NavTab>('jour');
   const [allEntries, setAllEntries] = useState<DailyCalories[]>([]);
+  const tutorialKey = user ? `${TUTORIAL_STORAGE_KEY}_${user.id}` : null;
+  const [showTutorial, setShowTutorial] = useState(
+    () => !!tutorialKey && !localStorage.getItem(tutorialKey)
+  );
 
-  useEffect(() => {
+  const refreshEntries = useCallback(() => {
     if (!user) return;
     dailyApi.getAll().then(setAllEntries).catch(() => {});
-  }, [user, tab]);
+  }, [user]);
+
+  useEffect(() => { refreshEntries(); }, [refreshEntries, tab]);
 
   const streak = user ? computeStreak(allEntries, isoToday()) : { current: 0, best: 0, last14: [] };
 
-  switch (tab) {
-    case 'semaine':
-      return <SemainePage onTabChange={setTab} streakCount={streak.current} streak={streak} allEntries={allEntries} />;
-    case 'bilan':
-      return <BilanPage onTabChange={setTab} allEntries={allEntries} />;
-    case 'objectifs':
-      return <ObjectifsPage onTabChange={setTab} />;
-    case 'profil':
-      return <ProfilPage onTabChange={setTab} streakCount={streak.current} />;
-    default:
-      return <DashboardPage onTabChange={setTab} />;
-  }
+  return (
+    <>
+      {(() => {
+        switch (tab) {
+          case 'semaine':
+            return <SemainePage onTabChange={setTab} streakCount={streak.current} streak={streak} allEntries={allEntries} />;
+          case 'bilan':
+            return <BilanPage onTabChange={setTab} allEntries={allEntries} />;
+          case 'objectifs':
+            return <ObjectifsPage onTabChange={setTab} />;
+          case 'profil':
+            return <ProfilPage onTabChange={setTab} streakCount={streak.current} />;
+          default:
+            return <DashboardPage onTabChange={setTab} allEntries={allEntries} onEntriesRefresh={refreshEntries} />;
+        }
+      })()}
+      {showTutorial && tutorialKey && (
+        <TutorialOverlay onDone={() => {
+          localStorage.setItem(tutorialKey, '1');
+          setShowTutorial(false);
+        }} />
+      )}
+    </>
+  );
 }
 
 function AppSplash() {

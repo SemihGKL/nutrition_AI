@@ -101,7 +101,7 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
     vi.mocked(dailyApi.getAll).mockResolvedValue([]);
 
-    render(<DashboardPage onTabChange={vi.fn()} />);
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
     expect(screen.getByText('chargement…')).toBeInTheDocument();
   });
 
@@ -109,7 +109,7 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
     vi.mocked(dailyApi.getAll).mockResolvedValue([]);
 
-    render(<DashboardPage onTabChange={vi.fn()} />);
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
     await waitFor(() => expect(screen.getByText('saisie du jour')).toBeInTheDocument());
     expect(screen.getByText('Calories consommées')).toBeInTheDocument();
   });
@@ -118,7 +118,7 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
     vi.mocked(dailyApi.getAll).mockResolvedValue([]);
 
-    render(<DashboardPage onTabChange={vi.fn()} />);
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
     await waitFor(() => screen.getByText('Confirmer ma journée'));
 
     expect(screen.getByRole('button', { name: /Confirmer ma journée/ })).toBeDisabled();
@@ -128,7 +128,7 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
     vi.mocked(dailyApi.getAll).mockResolvedValue([]);
 
-    render(<DashboardPage onTabChange={vi.fn()} />);
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
     await waitFor(() => screen.getByText('Confirmer ma journée'));
 
     // Premier bouton "augmenter" = stepper Calories consommees
@@ -151,7 +151,7 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     vi.mocked(dailyApi.getRecap).mockResolvedValue({ ...mockRecap, confirmed: true });
     vi.mocked(dailyApi.getAll).mockResolvedValue([confirmedEntry]);
 
-    render(<DashboardPage onTabChange={vi.fn()} />);
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[confirmedEntry]} onEntriesRefresh={vi.fn()} />);
     await waitFor(() => expect(screen.queryByText('chargement…')).not.toBeInTheDocument());
 
     // ConfirmationView expose un bouton "Modifier"
@@ -162,7 +162,7 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
     vi.mocked(dailyApi.getAll).mockResolvedValue([]);
 
-    render(<DashboardPage onTabChange={vi.fn()} />);
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
     // Attend que la vue du jour courant soit chargee
     await waitFor(() => screen.getByText('saisie du jour'));
 
