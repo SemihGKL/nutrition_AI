@@ -96,6 +96,9 @@ export function LoginPage({ onRegister }: Props) {
           type="email"
           value={email}
           onChange={setEmail}
+          name="email"
+          id="login-email"
+          autoComplete="email"
         />
         <Field
           label="Mot de passe"
@@ -103,6 +106,9 @@ export function LoginPage({ onRegister }: Props) {
           value={password}
           onChange={setPassword}
           error={error ?? undefined}
+          name="password"
+          id="login-password"
+          autoComplete="current-password"
         />
 
         <div style={{ marginTop: 4 }}>
@@ -156,16 +162,27 @@ interface FieldProps {
   value: string;
   onChange: (v: string) => void;
   error?: string;
+  name?: string;
+  id?: string;
+  autoComplete?: string;
 }
 
-function Field({ label, type = 'text', value, onChange, error }: FieldProps) {
+function Field({ label, type = 'text', value, onChange, error, name, id, autoComplete }: FieldProps) {
+  const isEmail = type === 'email';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500 }}>
+      <label htmlFor={id} style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500 }}>
         {label}
       </label>
       <input
         type={type}
+        name={name}
+        id={id}
+        autoComplete={autoComplete}
+        inputMode={isEmail ? 'email' : undefined}
+        autoCapitalize={isEmail ? 'none' : undefined}
+        autoCorrect={isEmail ? 'off' : undefined}
+        spellCheck={isEmail ? false : undefined}
         value={value}
         onChange={e => onChange(e.target.value)}
         style={{
