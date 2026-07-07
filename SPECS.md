@@ -194,15 +194,6 @@ Généré automatiquement chaque fin de semaine :
 
 ---
 
-## Backlog
-
-### Réinitialisation de mot de passe par email
-- **Endpoints** : `POST /api/auth/forgot-password` (email → envoie un lien) + `POST /api/auth/reset-password` (token + nouveau mdp)
-- **Backend** : use cases `RequestPasswordReset` + `ResetPassword`, port `EmailPort`, entité `PasswordResetToken`, migration Liquibase
-- **Frontend** : lien "Mot de passe oublié" sur la page login, page formulaire email, page nouveau mdp (token en query param)
-- **Provider email à choisir** : Resend recommandé (3 000 mails/mois gratuits, API simple)
-
----
 
 ## Ce qui est déjà fait (backend)
 
