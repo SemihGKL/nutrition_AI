@@ -84,5 +84,23 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             sudo systemctl restart nutritionIA
-            sleep 8
-            sudo systemctl is-active --quiet nutritionIA && echo "✅ Backend running" || (echo "❌ Backend failed" && sudo journalctl -u nutritionIA --no-pager -n 30 && exit 1)
+
+            # Sonde de readiness RÉELLE : on attend un 200 sur /actuator/health
+            # (direct sur 8080, sans passer par nginx). `systemctl is-active` ne
+            # suffit pas : avec Type=simple il renvoie "active" dès que le process
+            # java est forké, même si le contexte Spring plante juste après. C'est
+            # ce faux positif qui a masqué un crash-loop de ~10 h (incident 07/2026,
+            # cf. deploy/TROUBLESHOOTING.md).
+            echo "Attente du démarrage du backend (readiness /actuator/health, max 90s)..."
+            for i in $(seq 1 30); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/actuator/health || true)
+              if [ "$code" = "200" ]; then
+                echo "✅ Backend UP (health 200 après ${i} tentative(s))"
+                exit 0
+              fi
+              sleep 3
+            done
+
+            echo "❌ Backend PAS prêt après 90s — dernières lignes de log :"
+            sudo journalctl -u nutritionIA --no-pager -n 60
+            exit 1
