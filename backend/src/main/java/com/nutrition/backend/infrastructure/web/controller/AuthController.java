@@ -4,14 +4,19 @@ import com.nutrition.backend.application.usecase.IssueRefreshTokenUseCase;
 import com.nutrition.backend.application.usecase.LoginUserUseCase;
 import com.nutrition.backend.application.usecase.RefreshAccessTokenUseCase;
 import com.nutrition.backend.application.usecase.RegisterUserUseCase;
+import com.nutrition.backend.application.usecase.RequestPasswordResetUseCase;
+import com.nutrition.backend.application.usecase.ResetPasswordUseCase;
 import com.nutrition.backend.application.usecase.RevokeRefreshTokenUseCase;
 import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.exception.InvalidPasswordResetTokenException;
 import com.nutrition.backend.domain.exception.InvalidRefreshTokenException;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
 import com.nutrition.backend.infrastructure.web.UserMapper;
 import com.nutrition.backend.infrastructure.web.dto.AuthResponse;
 import com.nutrition.backend.infrastructure.web.dto.CreateUserRequest;
+import com.nutrition.backend.infrastructure.web.dto.ForgotPasswordRequest;
+import com.nutrition.backend.infrastructure.web.dto.ResetPasswordRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -32,9 +37,12 @@ public class AuthController {
     private final IssueRefreshTokenUseCase issueRefreshTokenUseCase;
     private final RefreshAccessTokenUseCase refreshAccessTokenUseCase;
     private final RevokeRefreshTokenUseCase revokeRefreshTokenUseCase;
+    private final RequestPasswordResetUseCase requestPasswordResetUseCase;
+    private final ResetPasswordUseCase resetPasswordUseCase;
 
     /** true en prod (HTTPS) : le cookie refresh_token n'est alors envoyé que sur des connexions sécurisées. */
     private final boolean cookieSecure;
+    private final String baseUrl;
 
     public AuthController(RegisterUserUseCase registerUserUseCase,
                           LoginUserUseCase loginUserUseCase,
@@ -42,14 +50,20 @@ public class AuthController {
                           IssueRefreshTokenUseCase issueRefreshTokenUseCase,
                           RefreshAccessTokenUseCase refreshAccessTokenUseCase,
                           RevokeRefreshTokenUseCase revokeRefreshTokenUseCase,
-                          @Value("${app.cookie.secure:false}") boolean cookieSecure) {
+                          RequestPasswordResetUseCase requestPasswordResetUseCase,
+                          ResetPasswordUseCase resetPasswordUseCase,
+                          @Value("${app.cookie.secure:false}") boolean cookieSecure,
+                          @Value("${app.base-url:http://localhost:5173}") String baseUrl) {
         this.registerUserUseCase = registerUserUseCase;
         this.loginUserUseCase = loginUserUseCase;
         this.tokenService = tokenService;
         this.issueRefreshTokenUseCase = issueRefreshTokenUseCase;
         this.refreshAccessTokenUseCase = refreshAccessTokenUseCase;
         this.revokeRefreshTokenUseCase = revokeRefreshTokenUseCase;
+        this.requestPasswordResetUseCase = requestPasswordResetUseCase;
+        this.resetPasswordUseCase = resetPasswordUseCase;
         this.cookieSecure = cookieSecure;
+        this.baseUrl = baseUrl;
     }
 
     @PostMapping("/register")
@@ -110,6 +124,22 @@ public class AuthController {
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
                 .build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        requestPasswordResetUseCase.execute(request.email(), baseUrl);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            resetPasswordUseCase.execute(request.token(), request.newPassword());
+            return ResponseEntity.ok().build();
+        } catch (InvalidPasswordResetTokenException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     private ResponseCookie buildRefreshCookie(String value, Duration maxAge) {

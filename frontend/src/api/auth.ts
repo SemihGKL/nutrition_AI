@@ -27,4 +27,10 @@ export const authApi = {
 
   // Révoque le refresh token côté serveur et efface le cookie.
   logout: () => api.post<void>('/api/auth/logout', {}),
+
+  forgotPassword: (email: string) =>
+    api.post<void>('/api/auth/forgot-password', { email }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    api.post<void>('/api/auth/reset-password', { token, newPassword }),
 };

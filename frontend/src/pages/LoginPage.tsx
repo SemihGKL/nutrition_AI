@@ -5,9 +5,10 @@ import { ApiError } from '../api/client';
 
 interface Props {
   onRegister: () => void;
+  onForgotPassword: () => void;
 }
 
-export function LoginPage({ onRegister }: Props) {
+export function LoginPage({ onRegister, onForgotPassword }: Props) {
   const { login, sessionExpired } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -137,9 +138,26 @@ export function LoginPage({ onRegister }: Props) {
       </form>
 
       <button
+        onClick={onForgotPassword}
+        style={{
+          marginTop: 16,
+          background: 'none',
+          border: 'none',
+          color: 'var(--ink-2)',
+          fontSize: 14,
+          cursor: 'pointer',
+          textDecoration: 'underline',
+          textUnderlineOffset: 3,
+          fontFamily: 'var(--font-body)',
+        }}
+      >
+        mot de passe oublié ?
+      </button>
+
+      <button
         onClick={onRegister}
         style={{
-          marginTop: 20,
+          marginTop: 8,
           background: 'none',
           border: 'none',
           color: 'var(--ink-2)',
