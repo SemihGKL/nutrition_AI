@@ -5,6 +5,8 @@ import com.nutrition.backend.application.usecase.IssueRefreshTokenUseCase;
 import com.nutrition.backend.application.usecase.LoginUserUseCase;
 import com.nutrition.backend.application.usecase.RefreshAccessTokenUseCase;
 import com.nutrition.backend.application.usecase.RegisterUserUseCase;
+import com.nutrition.backend.application.usecase.RequestPasswordResetUseCase;
+import com.nutrition.backend.application.usecase.ResetPasswordUseCase;
 import com.nutrition.backend.application.usecase.RevokeRefreshTokenUseCase;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.exception.EmailAlreadyUsedException;
@@ -63,6 +65,12 @@ class AuthControllerTest {
 
     @MockBean
     RevokeRefreshTokenUseCase revokeRefreshTokenUseCase;
+
+    @MockBean
+    RequestPasswordResetUseCase requestPasswordResetUseCase;
+
+    @MockBean
+    ResetPasswordUseCase resetPasswordUseCase;
 
     private User testUser;
 

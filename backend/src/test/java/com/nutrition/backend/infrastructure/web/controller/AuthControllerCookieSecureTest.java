@@ -5,6 +5,8 @@ import com.nutrition.backend.application.usecase.IssueRefreshTokenUseCase;
 import com.nutrition.backend.application.usecase.LoginUserUseCase;
 import com.nutrition.backend.application.usecase.RefreshAccessTokenUseCase;
 import com.nutrition.backend.application.usecase.RegisterUserUseCase;
+import com.nutrition.backend.application.usecase.RequestPasswordResetUseCase;
+import com.nutrition.backend.application.usecase.ResetPasswordUseCase;
 import com.nutrition.backend.application.usecase.RevokeRefreshTokenUseCase;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
@@ -58,6 +60,12 @@ class AuthControllerCookieSecureTest {
 
     @MockBean
     RevokeRefreshTokenUseCase revokeRefreshTokenUseCase;
+
+    @MockBean
+    RequestPasswordResetUseCase requestPasswordResetUseCase;
+
+    @MockBean
+    ResetPasswordUseCase resetPasswordUseCase;
 
     @Test
     void should_mark_refresh_cookie_secure_when_secure_flag_is_enabled() throws Exception {

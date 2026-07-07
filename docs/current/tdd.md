@@ -1,225 +1,133 @@
-# TDD Analysis — Use Cases sans couverture de tests unitaires
+# TDD Analysis — Réinitialisation de mot de passe par email
 
-**Test Type:** UNIT (logique métier pure, pas d'HTTP ni de base de données)
+**Test Type:** UNIT (logique métier pure, pas de mots-clés HTTP ou base de données dans les use cases)
 
 **Feature Area:** `backend/src/main/java/com/nutrition/backend/application/usecase/`
 
-**Bounded Context:** backend Spring Boot — couche application
+**Bounded Context:** auth (authentification utilisateur)
 
 ---
 
-## Contexte d'exploration
+## Contexte et conventions observées
 
-### Modèles de domaine identifiés
-
-- `User` — entité immuable avec wither methods (`withBodyMetrics`, `withDailyCalorieGoal`, `withCurrentWeight`, `withEmail`, `withDailyStepsGoal`)
-- `DailyEntry` — entrée journalière (caloriesConsumed, steps, caloriesBurned, confirmed)
-- `WeightEntry` — pesée (userId, date, weight, note)
-- `Gender` — enum MALE / FEMALE
-- `UserProfile` — record (weightKg, heightCm, age, gender) utilisé pour le calcul MBR
-- `Mbr` — record (mbr, tdee, dailyCalorieGoal) avec méthode `deficitPercentage(int)`
-
-### Ports (interfaces)
-
-- `UserRepository` — save, findById, findByEmail, findAll
-- `DailyEntryRepository` — save, findByUserIdAndDate, findByUserId
-- `WeightEntryRepository` — save, findByUserIdOrderByDateDesc
-- `PasswordEncoderPort` — encode, matches
-
-### Domain services
-
-- `MbrCalculator.calculate(UserProfile)` — formule Mifflin-St Jeor, TDEE × 1.2 sédentaire, dailyCalorieGoal = arrondi au multiple de 50 le plus proche de (MBR − 200)
-- `StepsCalculator.toKcal(steps, weightKg)` — soustraction du plancher de 4 000 pas, proportionnel au poids (base 70 kg), × 0.025
-
-### Fakes existants à créer
-
-Aucun fake in-memory n'existe dans la codebase de test. Ils sont à créer pour chaque use case.
-
-### Convention de nommage observée (fichiers tdd.md précédent + CLAUDE.md)
-
-- Méthodes de test : `should_[résultat]_when_[condition]` en snake_case
-- Classes de test : `[ClassUnderTest]Test`
-- Framework : JUnit 5 `@Test`, AssertJ `assertThat()`
-- Doubles : fakes in-memory à la main (pas de Mockito pour les domaines propres)
+- Entités immuables avec constructeur complet + méthodes `with*()` (pattern `User`)
+- Records immuables avec méthodes de prédicat (pattern `RefreshToken` → `isExpired()`)
+- Ports = interfaces dans `domain/ports/` ; fakes in-memory dans `src/test/.../fake/`
+- Exceptions domaine étendent `RuntimeException` dans `domain/exception/`
+- Les use cases reçoivent des types primitifs en entrée ; retournent l'entité ou lancent une exception domaine
+- Convention test : `should_[résultat]_when_[condition]` — AssertJ, JUnit 5, aucun Mockito
+- `IssueRefreshTokenUseCaseTest` utilise Mockito (violation existante) — **ne pas reproduire** ; suivre le pattern `LoginUserUseCaseTest` avec de vrais fakes
 
 ---
 
-## Use Case 1 — `RegisterUserUseCase`
+## USE CASE 1 — RequestPasswordResetUseCase
 
-### Logique non triviale
+### Rôle métier
+Accepte un email. Si l'email est connu, génère un token UUID valide 1 heure, supprime les anciens tokens de l'utilisateur, et envoie un email contenant le lien de réinitialisation. Si l'email est inconnu, ne fait rien (pas d'exception — sécurité par opacité).
 
-1. Le `dailyCalorieGoal` stocké sur l'User est calculé par MBR, pas le `weightGoal` passé en paramètre — le `weightGoal` est un objectif de poids (en kg), le `dailyCalorieGoal` est la cible calorique journalière issue de la formule Mifflin-St Jeor.
-2. `currentWeight` est initialisé à `startWeight` à l'inscription.
-3. Le mot de passe est encodé avant persistance.
-
-### Liste de tests ordonnés (TPP + FLFI)
+### Ordered Test List (TPP + FLFI)
 
 | # | Test Name | TPP | Contradiction | Status |
 |---|-----------|-----|---------------|--------|
-| 1 | should assign the MBR-derived calorie goal to the new user when registering with body metrics | nil → constant (2) | Baseline — peut être satisfait en retournant un User avec une constante dailyCalorieGoal | ✅ GREEN |
-| 2 | should assign a different MBR-derived calorie goal when registering a female user with the same body metrics as a male user | unconditional → conditional (4) | La constante du test 1 (calculée pour MALE) est fausse pour FEMALE → force une branche sur le genre dans MbrCalculator | ✅ GREEN |
-| 3 | should initialize current weight equal to start weight when registering a new user | constant → variable (3) | Le currentWeight doit refléter le startWeight fourni, pas une valeur fixe → force l'usage de la variable startWeight | ✅ GREEN |
-| 4 | should store the encoded password and not the raw password when registering a new user | unconditional → conditional (4) | Le test précédent laisse le rawPassword tel quel → force l'appel à passwordEncoder.encode() | ✅ GREEN |
+| 1 | `should_do_nothing_when_email_is_not_registered` | nil → constant (2) | Baseline — peut être satisfait par un use case dont le corps est vide (no-op total) | ✅ GREEN |
+| 2 | `should_save_a_password_reset_token_when_email_is_registered` | unconditional → conditional (4) | Le no-op du test 1 ne persiste rien — il faut désormais distinguer email connu / inconnu et sauvegarder un token → force une branche conditionnelle sur la présence de l'user | ✅ GREEN |
+| 3 | `should_generate_a_token_that_expires_in_one_hour_when_email_is_registered` | constant → variable (3) | Une implémentation naïve pourrait mettre une `expiresAt` constante ou nulle — force le calcul `Instant.now().plus(1, HOURS)` en vérifiant que l'expiration est bien dans ~1h | ✅ GREEN |
+| 4 | `should_delete_previous_reset_tokens_before_saving_the_new_one_when_email_is_registered` | value → mutated value (8) | L'implémentation courante ne nettoie pas les anciens tokens — un second appel laisserait deux tokens actifs → force l'appel à `deleteByUserId` avant `save` | ✅ GREEN |
+| 5 | `should_send_a_reset_email_containing_the_token_when_email_is_registered` | statement → side effect (4) | Le port `EmailPort` n'est pas encore appelé — force l'ajout de `sendPasswordResetEmail` avec le token généré dans le lien | ✅ GREEN |
 
-### Fichiers à créer
+### Fakes à créer
 
-- `backend/src/test/java/com/nutrition/backend/application/usecase/RegisterUserUseCaseTest.java`
-- (fakes inline dans le test ou dans un sous-package `fake/`) — `FakeUserRepository`, `FakePasswordEncoder`
+- **`FakePasswordResetTokenRepository`** — implémente `PasswordResetTokenRepository` ; `Map<String, PasswordResetToken>` par token, `Map<Long, List<PasswordResetToken>>` par userId ; méthode `getAll()` pour assertions ; `deleteByUserId` supprime toutes les entrées du userId
+- **`SpyEmailPort`** — implémente `EmailPort` ; enregistre les appels `sendPasswordResetEmail(toEmail, resetLink)` ; méthodes `getLastSentTo()` et `getLastSentLink()` pour assertions
 
 ---
 
-## Use Case 2 — `LoginUserUseCase`
+## USE CASE 2 — ResetPasswordUseCase
 
-### Logique non triviale
+### Rôle métier
+Accepte un token et un nouveau mot de passe. Vérifie que le token existe, n'est pas expiré, et n'a pas déjà été utilisé (`isValid()`). Si valide : met à jour le `passwordHash` de l'utilisateur via `withPasswordHash()`, marque le token comme `used`. Si invalide : lève une exception domaine.
 
-Deux chemins d'erreur distincts avec des messages différents. Pas de calcul, mais deux invariants métier fondamentaux de sécurité (email inconnu vs mot de passe incorrect). Il serait dangereux de les confondre.
-
-### Liste de tests ordonnés (TPP + FLFI)
+### Ordered Test List (TPP + FLFI)
 
 | # | Test Name | TPP | Contradiction | Status |
 |---|-----------|-----|---------------|--------|
-| 1 | should return the authenticated user when email and password are both correct | nil → constant (2) | Baseline — retourner un User hardcodé satisfait le cas nominal | ✅ GREEN |
-| 2 | should reject login when the email is not registered in the system | unconditional → conditional (4) | Le constant User du test 1 est toujours retourné même pour un email inconnu → force un lookup par email + exception si absent | ✅ GREEN |
-| 3 | should reject login when the password does not match the stored password for the given email | unconditional → conditional (4) | Après test 2, l'user est toujours retourné dès que l'email existe → force la vérification du mot de passe via passwordEncoder.matches() | ✅ GREEN |
+| 1 | `should_reject_password_reset_when_token_does_not_exist` | nil → constant (2) | Baseline — l'implémentation la plus simple lance toujours une exception (aucune lookup nécessaire) ; satisfait le cas "token absent" | ✅ GREEN |
+| 2 | `should_update_user_password_when_token_is_valid` | unconditional → conditional (4) | Le rejet systématique du test 1 échoue ici — force une branche "token trouvé + non expiré + non utilisé → mise à jour passwordHash" | ✅ GREEN |
+| 3 | `should_mark_token_as_used_after_successful_password_reset` | value → mutated value (8) | Après le test 2, le token reste `used = false` en base — force la persistance du token avec `used = true` après la mise à jour | ✅ GREEN |
+| 4 | `should_reject_password_reset_when_token_is_expired` | unconditional → conditional (4) | L'implémentation accepte tout token trouvé indépendamment de l'expiration — force le contrôle `isExpired()` dans la validation | ✅ GREEN |
+| 5 | `should_reject_password_reset_when_token_has_already_been_used` | unconditional → conditional (4) | La branche "valide" du test 2-3 accepterait un token `used = true` — force le contrôle `!used` dans `isValid()` | ✅ GREEN |
+| 6 | `should_not_update_user_password_when_token_is_invalid` | constant → verified absence (3) | Vérifie l'absence d'effets de bord — le `passwordHash` ne doit pas être modifié quand le token est invalide ; protège la non-régression des tests d'erreur | ✅ GREEN |
 
-### Fichiers à créer
+### Fakes à réutiliser / créer
 
-- `backend/src/test/java/com/nutrition/backend/application/usecase/LoginUserUseCaseTest.java`
-- Réutilise `FakeUserRepository`, `FakePasswordEncoder`
-
----
-
-## Use Case 3 — `UpdateUserProfileUseCase`
-
-### Logique non triviale
-
-1. Si `dailyCalorieGoal` est fourni explicitement, il prend la priorité sur le calcul MBR.
-2. Si `dailyCalorieGoal` est null, la valeur est recalculée par MBR avec les nouvelles métriques corporelles.
-3. L'email n'est mis à jour que s'il est fourni (non null).
-4. Le `dailyStepsGoal` n'est mis à jour que s'il est fourni (non null).
-5. Lève `UserNotFoundException` si l'utilisateur n'existe pas.
-6. `weighInDay` conserve la valeur existante si null est fourni (géré dans `User.withBodyMetrics`).
-
-### Liste de tests ordonnés (TPP + FLFI)
-
-| # | Test Name | TPP | Contradiction | Status |
-|---|-----------|-----|---------------|--------|
-| 1 | should recalculate the daily calorie goal from body metrics when no explicit goal is provided | nil → constant (2) | Baseline — peut être satisfait en renvoyant un User avec une constante dailyCalorieGoal | ✅ GREEN |
-| 2 | should use the explicitly provided daily calorie goal instead of recalculating from MBR when a goal is explicitly set | unconditional → conditional (4) | Le calcul automatique du test 1 écrase l'objectif fourni → force un null-check sur dailyCalorieGoal avant de décider d'utiliser la valeur fournie ou le MBR | ✅ GREEN |
-| 3 | should preserve the existing email when no new email is provided during profile update | unconditional → conditional (4) | La mise à jour inconditionnelle de l'email du test 2 écrase l'email actuel même si null est fourni → force le null-check sur email | ✅ GREEN |
-| 4 | should preserve the existing daily steps goal when no new steps goal is provided during profile update | unconditional → conditional (4) | La mise à jour inconditionnelle du dailyStepsGoal écrase la valeur existante si null → force le null-check sur dailyStepsGoal | ✅ GREEN |
-| 5 | should prevent profile update when the user does not exist in the system | unconditional → conditional (4) | L'update fonctionne pour tout userId → force le findById + exception UserNotFoundException | ✅ GREEN |
-
-### Fichiers à créer
-
-- `backend/src/test/java/com/nutrition/backend/application/usecase/UpdateUserProfileUseCaseTest.java`
-- Réutilise `FakeUserRepository`
+- **`FakeUserRepository`** — déjà dans `src/test/.../fake/FakeUserRepository.java` — réutiliser tel quel
+- **`FakePasswordEncoder`** — déjà dans `src/test/.../fake/FakePasswordEncoder.java` — réutiliser tel quel
+- **`FakePasswordResetTokenRepository`** — même fake que pour le use case 1 (partagé)
 
 ---
 
-## Use Case 4 — `RecordDailyEntryUseCase`
+## Entité domaine à créer
 
-### Logique non triviale
+### `PasswordResetToken` (record)
 
-L'effet de bord : après la sauvegarde de l'entrée, `autoCompleteObjectivesUseCase.execute()` est appelé avec `userId`, `date` et `caloriesBurned`. C'est le seul comportement non trivial — la sauvegarde seule serait un thin wrapper. Le couplage avec l'auto-complétion des objectifs est le cœur du test.
+Suivre le pattern exact de `RefreshToken` : record Java avec méthodes de prédicat.
 
-### Liste de tests ordonnés (TPP + FLFI)
-
-| # | Test Name | TPP | Contradiction | Status |
-|---|-----------|-----|---------------|--------|
-| 1 | should save the daily entry and return it when recording a daily entry | nil → constant (2) | Baseline — retourner l'entrée sauvegardée peut être satisfait par une implémentation triviale | ✅ GREEN |
-| 2 | should trigger objective auto-completion after saving the daily entry when calories burned are recorded | unconditional → constant (2) | Le test 1 ne vérifie pas l'effet de bord — l'auto-complétion n'est jamais appelée → force l'appel à autoCompleteObjectivesUseCase.execute() après la sauvegarde | ✅ GREEN |
-
-**Note de conception :** `AutoCompleteObjectivesUseCase` est une dépendance à fixer. Deux approches : créer un `SpyAutoCompleteObjectivesUseCase` qui enregistre les appels reçus (préférable pour un test unitaire sociable), ou utiliser la vraie implémentation avec ses propres fakes. La première option est recommandée pour isoler ce use case.
-
-### Fichiers à créer
-
-- `backend/src/test/java/com/nutrition/backend/application/usecase/RecordDailyEntryUseCaseTest.java`
-- `FakeDailyEntryRepository` (in-memory)
-- `SpyAutoCompleteObjectivesUseCase` ou fake d'`ObjectiveRepository` + fake de `CompleteObjectiveUseCase`
+```
+PasswordResetToken(Long id, Long userId, String token, Instant expiresAt, boolean used)
+  isExpired()  → Instant.now().isAfter(expiresAt)
+  isValid()    → !used && !isExpired()
+```
 
 ---
 
-## Use Case 5 — `RecordWeightEntryUseCase`
+## Ports à créer
 
-### Logique non triviale
+### `PasswordResetTokenRepository`
+```
+save(PasswordResetToken token)    → PasswordResetToken
+findByToken(String token)         → Optional<PasswordResetToken>
+deleteByUserId(Long userId)       → void
+```
 
-Effet de bord : après la sauvegarde de la pesée, le `currentWeight` de l'User est mis à jour si l'User est trouvé. Si l'User n'existe pas (`findById` retourne empty), la mise à jour est silencieusement ignorée. C'est le comportement non trivial.
-
-### Liste de tests ordonnés (TPP + FLFI)
-
-| # | Test Name | TPP | Contradiction | Status |
-|---|-----------|-----|---------------|--------|
-| 1 | should save the weight entry and return it when recording a new weight measurement | nil → constant (2) | Baseline — retourner l'entrée sauvegardée | ✅ GREEN |
-| 2 | should update the user current weight to match the new weight entry when the user exists in the system | unconditional → constant (2) | Le test 1 ne vérifie pas la mise à jour de l'User → force l'appel à userRepository.findById() + userRepository.save() avec le nouveau poids | ✅ GREEN |
-| 3 | should silently ignore the user weight update when the user associated with the weight entry does not exist | unconditional → conditional (4) | Après test 2, l'implémentation appelle save() inconditionnellement — pour un userId inexistant, elle lèverait une exception → force le `ifPresent` qui ne sauvegarde que si l'User est trouvé | ✅ GREEN |
-
-### Fichiers à créer
-
-- `backend/src/test/java/com/nutrition/backend/application/usecase/RecordWeightEntryUseCaseTest.java`
-- `FakeWeightEntryRepository`, réutilise `FakeUserRepository`
+### `EmailPort`
+```
+sendPasswordResetEmail(String toEmail, String resetLink) → void
+```
 
 ---
 
-## Use Case 6 — `GetDailyRecapUseCase`
+## Exception domaine à créer
 
-### Logique non triviale
-
-C'est le use case avec le plus de logique de calcul :
-
-1. `stepsKcal = StepsCalculator.toKcal(steps, currentWeight)` — plancher de 4 000 pas, proportionnel au poids
-2. `netCalories = caloriesConsumed - caloriesBurned - stepsKcal`
-3. `deficit = tdee - netCalories`
-4. `deficitPercentage = ((tdee - netCalories) / mbr) * 100`
-5. Lève `DailyCaloriesNotFoundException` si pas d'entrée pour la date
-6. Lève `IllegalStateException` si l'User est introuvable pour un userId existant en base
-
-**Note d'architecture :** Ce use case importe `DailyRecapResponse` depuis `infrastructure.web.dto` — violation Clean Architecture (dépendance vers l'extérieur depuis l'application). Le plan de tests ne corrige pas cela mais les tests le documenteront implicitement.
-
-### Liste de tests ordonnés (TPP + FLFI)
-
-| # | Test Name | TPP | Contradiction | Status |
-|---|-----------|-----|---------------|--------|
-| 1 | should compute net calories as consumed minus burned minus steps calories when all values are positive | nil → constant (2) | Baseline — peut être satisfait par une constante netCalories | ✅ GREEN |
-| 2 | should compute zero steps calories when steps are below the threshold of 4000 | unconditional → conditional (4) | Avec des steps = 3000, la constante du test 1 est fausse → force l'appel réel à StepsCalculator qui applique le plancher | ✅ GREEN |
-| 3 | should include the MBR and TDEE values in the recap based on the user body metrics | constant → variable (3) | MBR et TDEE sont des constantes dans l'implémentation minimale → force le calcul réel via MbrCalculator avec le profil de l'User | ✅ GREEN |
-| 4 | should compute the deficit as the difference between TDEE and net calories in the daily recap | constant → variable (3) | Le déficit est une constante → force le calcul `tdee - netCalories` en utilisant les valeurs calculées des tests précédents | ✅ GREEN |
-| 5 | should compute the deficit percentage relative to the MBR value in the daily recap | constant → variable (3) | Le pourcentage est une constante → force le calcul `((tdee - netCalories) / mbr) * 100` | ✅ GREEN |
-| 6 | should prevent recap computation when no daily entry exists for the requested date | unconditional → conditional (4) | L'implémentation ne vérifie pas l'absence d'entrée → force le `orElseThrow` avec `DailyCaloriesNotFoundException` | ✅ GREEN |
-
-### Fichiers à créer
-
-- `backend/src/test/java/com/nutrition/backend/application/usecase/GetDailyRecapUseCaseTest.java`
-- `FakeDailyEntryRepository` (réutilisable depuis RecordDailyEntryUseCase), réutilise `FakeUserRepository`
+- **`InvalidPasswordResetTokenException`** — extends `RuntimeException` ; levée quand le token est absent, expiré, ou déjà utilisé ; suivre le pattern de `InvalidRefreshTokenException`
 
 ---
 
-## Récapitulatif global — Fichiers à créer
+## Files to Create
 
-| Fichier de test | Use case couvert |
-|----------------|-----------------|
-| `RegisterUserUseCaseTest.java` | RegisterUserUseCase |
-| `LoginUserUseCaseTest.java` | LoginUserUseCase |
-| `UpdateUserProfileUseCaseTest.java` | UpdateUserProfileUseCase |
-| `RecordDailyEntryUseCaseTest.java` | RecordDailyEntryUseCase |
-| `RecordWeightEntryUseCaseTest.java` | RecordWeightEntryUseCase |
-| `GetDailyRecapUseCaseTest.java` | GetDailyRecapUseCase |
+### Production
+- `domain/entity/PasswordResetToken.java` — record avec `isExpired()` et `isValid()`
+- `domain/ports/PasswordResetTokenRepository.java` — interface port
+- `domain/ports/EmailPort.java` — interface port
+- `domain/exception/InvalidPasswordResetTokenException.java` — exception domaine
+- `application/usecase/RequestPasswordResetUseCase.java` — use case 1
+- `application/usecase/ResetPasswordUseCase.java` — use case 2
 
-| Fake / Spy à créer | Réutilisé par |
-|--------------------|--------------|
-| `FakeUserRepository` | Register, Login, UpdateProfile, RecordWeight, GetDailyRecap |
-| `FakePasswordEncoder` | Register, Login |
-| `FakeDailyEntryRepository` | RecordDailyEntry, GetDailyRecap |
-| `FakeWeightEntryRepository` | RecordWeight |
-| `SpyAutoCompleteObjectivesUseCase` | RecordDailyEntry |
+### Test (fakes)
+- `src/test/.../fake/FakePasswordResetTokenRepository.java`
+- `src/test/.../fake/SpyEmailPort.java`
+
+### Tests
+- `src/test/.../application/usecase/RequestPasswordResetUseCaseTest.java`
+- `src/test/.../application/usecase/ResetPasswordUseCaseTest.java`
 
 ---
 
 ## Design Notes
 
-- **Convention de nommage** : `[UseCaseName]Test`, méthodes `should_[résultat]_when_[condition]`
-- **Fakes partagés** : regrouper `FakeUserRepository`, `FakePasswordEncoder`, `FakeDailyEntryRepository`, `FakeWeightEntryRepository` dans `src/test/java/com/nutrition/backend/application/usecase/fake/` pour les réutiliser entre les tests
-- **MbrCalculator et StepsCalculator** : utiliser les vraies implémentations (pas de mock) — ce sont des domain services sans dépendances externes, les tests bénéficient de la vraie formule
-- **SpyAutoCompleteObjectivesUseCase** : ne pas mocker, ne pas instancier la vraie implémentation avec ses dépendances — créer un spy léger qui enregistre l'appel et expose les arguments reçus pour assertion
-- **Violation d'architecture dans GetDailyRecapUseCase** : `DailyRecapResponse` vient de `infrastructure.web.dto` — les tests le documenteront implicitement mais ne corrigent pas la dette ; à noter pour migration future vers un résultat de port propre
-- **Ordre d'implémentation recommandé** : commencer par `LoginUserUseCase` (le plus simple, 3 tests), puis `RegisterUserUseCase`, puis `RecordWeightEntryUseCase`, puis `UpdateUserProfileUseCase`, puis `RecordDailyEntryUseCase`, enfin `GetDailyRecapUseCase` (le plus complexe)
+- **Pattern record** : `PasswordResetToken` suit exactement `RefreshToken` — record Java avec prédicats, pas de builder
+- **Opacité sécurité** : `RequestPasswordResetUseCase` ne lève jamais d'exception si l'email est inconnu — le test 1 du use case 1 valide ce comportement en vérifiant que aucun token n'est sauvegardé et aucun email envoyé
+- **Réutilisation fakes** : `FakeUserRepository` et `FakePasswordEncoder` sont déjà dans `src/test/.../fake/` — les importer directement sans recréer
+- **`withPasswordHash()`** : `User` expose déjà cette méthode — `ResetPasswordUseCase` s'appuie dessus sans modifier l'entité
+- **Pas de Mockito** : `IssueRefreshTokenUseCaseTest` utilise Mockito (violation connue) — les deux nouveaux tests doivent suivre le pattern `LoginUserUseCaseTest` avec des fakes manuels uniquement
+- **Exception domaine** : préférer `InvalidPasswordResetTokenException` dans `domain/exception/` pour rester cohérent avec `InvalidRefreshTokenException` existante
+- **`deleteByUserId` avant `save`** : l'ordre est explicite dans le test 4 du use case 1 — le fake doit exposer une méthode `getAll()` permettant de vérifier qu'un seul token existe après l'opération de rotation
