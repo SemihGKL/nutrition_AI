@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { StatusBar } from '../components/dashboard/StatusBar';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { StreakChip } from '../components/ui/StreakChip';
 import { PipStrip } from '../components/ui/PipStrip';
@@ -74,7 +73,6 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
 
   return (
     <PageShell>
-      <StatusBar />
 
       <div style={{ padding: '12px 20px 4px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>

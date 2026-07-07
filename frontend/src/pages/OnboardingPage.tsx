@@ -139,12 +139,6 @@ export function OnboardingPage({ onDone, onBack }: Props) {
       flexDirection: 'column',
       overflow: 'hidden',
     }}>
-      {/* Status bar mock */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 24px 6px', fontSize: 14, fontWeight: 600 }}>
-        <span className="tabular">{new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-        <span style={{ opacity: 0.6, fontSize: 12 }}>•••</span>
-      </div>
-
       {/* Header */}
       <div style={{ padding: '12px 24px 0' }}>
         <StepBar step={step} />
