@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { StatusBar } from '../components/dashboard/StatusBar';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { Check } from '../components/ui/icons';
 import { Stepper } from '../components/ui/Stepper';
@@ -124,7 +123,6 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
 
   return (
     <PageShell>
-      <StatusBar />
 
       <div style={{ padding: '12px 20px 4px' }}>
         <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.4 }}>récap · semaine {weekNum}</div>

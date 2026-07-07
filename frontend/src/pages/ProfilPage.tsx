@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { StatusBar } from '../components/dashboard/StatusBar';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { StreakChip } from '../components/ui/StreakChip';
 import { useAuth } from '../hooks/useAuth';
@@ -78,7 +77,6 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
 
   return (
     <PageShell>
-      <StatusBar />
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 20px' }}>
         {/* Avatar header */}
@@ -278,7 +276,6 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
 
   return (
     <PageShell>
-      <StatusBar />
 
       {/* Step bar */}
       <div style={{ padding: '8px 24px 0' }}>

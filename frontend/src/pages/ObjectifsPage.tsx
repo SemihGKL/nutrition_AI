@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { StatusBar } from '../components/dashboard/StatusBar';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { Check, Plus } from '../components/ui/icons';
 import { isoToday, weekStart, addDays } from '../utils/format';
@@ -170,7 +169,6 @@ export function ObjectifsPage({ onTabChange }: Props) {
   if (loadError) {
     return (
       <PageShell>
-        <StatusBar />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '0 24px' }}>
           <div style={{ fontSize: 13, color: 'var(--ink-3)', textAlign: 'center' }}>
             Impossible de charger les objectifs
@@ -190,7 +188,6 @@ export function ObjectifsPage({ onTabChange }: Props) {
 
   return (
     <PageShell>
-      <StatusBar />
 
       <div style={{ padding: '12px 20px 6px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div>

@@ -3,7 +3,6 @@ import { ProgressRing } from '../components/ui/ProgressRing';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { PrimaryCTA } from '../components/ui/PrimaryCTA';
 import { Check } from '../components/ui/icons';
-import { StatusBar } from '../components/dashboard/StatusBar';
 import { DayHeader } from '../components/dashboard/DayHeader';
 import { ContextMessage } from '../components/dashboard/ContextMessage';
 import { EntrySection } from '../components/dashboard/EntrySection';
@@ -66,7 +65,6 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
   if (entry?.confirmed && recap && !isEditing) {
     return (
       <PageShell>
-        <StatusBar />
         <ConfirmationView
           date={viewedDate}
           recap={recap}
@@ -83,7 +81,6 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
   if (isPast && !isEditing) {
     return (
       <PageShell>
-        <StatusBar />
         <DayHeader
           date={viewedDate}
           streakCount={streak.current}
@@ -112,7 +109,6 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
 
   return (
     <PageShell>
-      <StatusBar />
       <DayHeader
         date={viewedDate}
         streakCount={streak.current}

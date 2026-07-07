@@ -139,12 +139,6 @@ export function OnboardingPage({ onDone, onBack }: Props) {
       flexDirection: 'column',
       overflow: 'hidden',
     }}>
-      {/* Status bar mock */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 24px 6px', fontSize: 14, fontWeight: 600 }}>
-        <span className="tabular">{new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-        <span style={{ opacity: 0.6, fontSize: 12 }}>•••</span>
-      </div>
-
       {/* Header */}
       <div style={{ padding: '12px 24px 0' }}>
         <StepBar step={step} />
@@ -160,17 +154,20 @@ export function OnboardingPage({ onDone, onBack }: Props) {
       {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '24px' }}>
         {step === 1 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <form
+            onSubmit={e => { e.preventDefault(); handleNext(); }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 18 }}
+          >
             <SectionLabel>ton compte</SectionLabel>
-            <Field label="Prénom / pseudo" value={form.username} onChange={v => set('username', v)} error={errors.username} />
-            <Field label="Email" type="email" value={form.email} onChange={v => set('email', v)} error={errors.email} />
-            <Field label="Mot de passe" type="password" value={form.password} onChange={v => set('password', v)} hint="8 car. minimum" error={errors.password} />
+            <Field label="Prénom / pseudo" value={form.username} onChange={v => set('username', v)} error={errors.username} name="name" id="register-name" autoComplete="name" autoCapitalize="words" />
+            <Field label="Email" type="email" value={form.email} onChange={v => set('email', v)} error={errors.email} name="email" id="register-email" autoComplete="email" />
+            <Field label="Mot de passe" type="password" value={form.password} onChange={v => set('password', v)} hint="8 car. minimum" error={errors.password} name="new-password" id="register-password" autoComplete="new-password" />
 
             <SectionLabel style={{ marginTop: 4 }}>physique</SectionLabel>
-            <Field label="Âge" type="number" value={form.age} onChange={v => set('age', v)} hint="en années" error={errors.age} />
-            <Field label="Taille (cm)" type="number" value={form.height} onChange={v => set('height', v)} error={errors.height} />
-            <Field label="Poids actuel (kg)" type="number" value={form.weight} onChange={v => set('weight', v)} error={errors.weight} />
-            <Field label="Poids objectif (kg)" type="number" value={form.weightGoal} onChange={v => set('weightGoal', v)} error={errors.weightGoal} />
+            <Field label="Âge" type="number" value={form.age} onChange={v => set('age', v)} hint="en années" error={errors.age} inputMode="numeric" />
+            <Field label="Taille (cm)" type="number" value={form.height} onChange={v => set('height', v)} error={errors.height} inputMode="numeric" />
+            <Field label="Poids actuel (kg)" type="number" value={form.weight} onChange={v => set('weight', v)} error={errors.weight} inputMode="decimal" />
+            <Field label="Poids objectif (kg)" type="number" value={form.weightGoal} onChange={v => set('weightGoal', v)} error={errors.weightGoal} inputMode="decimal" />
 
             <div>
               <div style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, marginBottom: 6 }}>Genre</div>
@@ -187,6 +184,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
                 {DAYS.map(d => (
                   <button
                     key={d.value}
+                    type="button"
                     onClick={() => set('weighInDay', d.value)}
                     style={{
                       flex: 1, height: 36, border: 'none', borderRadius: 8,
@@ -202,7 +200,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
                 ))}
               </div>
             </div>
-          </div>
+          </form>
         )}
 
         {step === 2 && (
@@ -341,6 +339,7 @@ function SegmentedToggle({
         return (
           <button
             key={opt.value}
+            type="button"
             onClick={() => onChange(opt.value)}
             style={{
               flex: 1,
