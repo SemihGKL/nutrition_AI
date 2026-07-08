@@ -10,6 +10,7 @@ import { OnboardingPage } from './pages/OnboardingPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { TutorialOverlay } from './components/ui/TutorialOverlay';
+import { UpdatePrompt } from './components/ui/UpdatePrompt';
 import { computeStreak } from './hooks/useStreak';
 import { dailyApi } from './api/daily';
 import { useEffect } from 'react';
@@ -128,6 +129,7 @@ export function App() {
   return (
     <AuthProvider>
       <AppRoutes />
+      <UpdatePrompt />
     </AuthProvider>
   );
 }
