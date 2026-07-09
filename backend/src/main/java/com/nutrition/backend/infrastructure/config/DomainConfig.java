@@ -2,6 +2,7 @@ package com.nutrition.backend.infrastructure.config;
 
 import com.nutrition.backend.application.usecase.RequestPasswordResetUseCase;
 import com.nutrition.backend.application.usecase.ResetPasswordUseCase;
+import com.nutrition.backend.application.usecase.SendSupportMessageUseCase;
 import com.nutrition.backend.domain.ports.EmailPort;
 import com.nutrition.backend.domain.ports.PasswordEncoderPort;
 import com.nutrition.backend.domain.ports.PasswordResetTokenRepository;
@@ -30,5 +31,10 @@ public class DomainConfig {
                                                      PasswordResetTokenRepository tokenRepository,
                                                      PasswordEncoderPort passwordEncoder) {
         return new ResetPasswordUseCase(userRepository, tokenRepository, passwordEncoder);
+    }
+
+    @Bean
+    public SendSupportMessageUseCase sendSupportMessageUseCase(EmailPort emailPort) {
+        return new SendSupportMessageUseCase(emailPort);
     }
 }

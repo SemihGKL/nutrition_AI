@@ -125,6 +125,7 @@ DELETE /api/objectives/{id}            ✅
 POST /api/objectives/{id}/completions/{date}   ✅
 DELETE /api/objectives/{id}/completions/{date} ✅
 GET  /api/objectives/completions       ✅
+POST /api/support                      ✅
 ```
 
 ---

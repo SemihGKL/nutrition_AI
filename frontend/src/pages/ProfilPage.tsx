@@ -10,6 +10,7 @@ import { isoToday } from '../utils/format';
 import { computeMbr } from '../utils/mbr';
 import { CalorieTargetStep } from '../components/onboarding/CalorieTargetStep';
 import { Chevron } from '../components/ui/icons';
+import { SupportPage } from './SupportPage';
 
 interface Props {
   onTabChange: (tab: NavTab) => void;
@@ -37,6 +38,7 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
   const { needsBadge, refresh } = useWeighInContext();
   const initials = user?.username?.slice(0, 2).toUpperCase() ?? '?';
   const [editing, setEditing] = useState(false);
+  const [contacting, setContacting] = useState(false);
   const [weighInWeight, setWeighInWeight] = useState(user?.currentWeight ?? 70);
   const [savingWeighIn, setSavingWeighIn] = useState(false);
   const [weighInError, setWeighInError] = useState<string | null>(null);
@@ -56,6 +58,10 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
       setSavingWeighIn(false);
     }
   };
+
+  if (contacting) {
+    return <SupportPage onBack={() => setContacting(false)} onTabChange={onTabChange} />;
+  }
 
   if (editing && user) {
     return (
@@ -173,6 +179,17 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
             }}
           >
             Modifier mon profil
+          </button>
+          <button
+            onClick={() => setContacting(true)}
+            style={{
+              width: '100%', height: 48, borderRadius: 'var(--radius)',
+              background: 'transparent', border: '1px solid var(--hairline)',
+              color: 'var(--ink-2)', fontSize: 15, fontWeight: 500,
+              cursor: 'pointer', fontFamily: 'var(--font-body)',
+            }}
+          >
+            Contactez le support
           </button>
           <button
             onClick={logout}
