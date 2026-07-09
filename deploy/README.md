@@ -16,7 +16,7 @@ Internet ──HTTPS──▶ nginx ─┬─ /            → /var/www/nutritio
 | Fichier | Destination sur le VPS | Rôle |
 |---|---|---|
 | `nutritionIA.service` | `/etc/systemd/system/` | Lance le JAR avec le profil `prod` + secrets + heap borné |
-| `nutritionIA.env.example` | `/etc/nutritionIA/nutritionIA.env` (rempli, `chmod 600`) | Profil `prod`, DB, `JWT_SECRET` |
+| `nutritionIA.env.example` | `/etc/nutritionIA/nutritionIA.env` (rempli, `chmod 600`) | Profil `prod`, DB, `JWT_SECRET`, SMTP (`MAIL_*`), `APP_BASE_URL` |
 | `nginx-nutritionIA.conf` | `/etc/nginx/sites-available/` | Front statique + proxy `/api` même origine |
 
 ## Étapes

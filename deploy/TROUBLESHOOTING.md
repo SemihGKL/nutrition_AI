@@ -140,7 +140,7 @@ sudo nginx -t && sudo systemctl reload nginx
 # 5. Démarrer + vérifier
 sudo systemctl restart nutritionIA
 sleep 15
-sudo journalctl -u nutritionIA -n 40 --no-pager     # attendu : profil "prod", Flyway V1→V14, "Started"
+sudo journalctl -u nutritionIA -n 40 --no-pager     # attendu : profil "prod", Flyway V1→V15, "Started"
 curl -sS -o /dev/null -w "health = %{http_code}\n" http://127.0.0.1:8080/actuator/health   # attendu : 200
 ```
 
