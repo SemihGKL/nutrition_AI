@@ -16,6 +16,7 @@ export interface RegisterPayload {
   startWeight: number;
   weightGoal: number;
   weighInDay: string;
+  dailyStepsGoal?: number | null;
 }
 
 export const authApi = {

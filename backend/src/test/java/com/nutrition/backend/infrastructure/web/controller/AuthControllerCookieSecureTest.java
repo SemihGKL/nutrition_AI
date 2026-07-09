@@ -74,14 +74,14 @@ class AuthControllerCookieSecureTest {
         when(registerUserUseCase.execute(
                 anyString(), anyString(), anyString(),
                 anyInt(), any(Gender.class), anyInt(),
-                anyDouble(), anyDouble(), anyString()
+                anyDouble(), anyDouble(), anyString(), nullable(Integer.class)
         )).thenReturn(testUser);
         when(tokenService.generateToken("test@example.com")).thenReturn("mocked-jwt-token");
         when(issueRefreshTokenUseCase.execute(1L)).thenReturn("mocked-refresh-token");
 
         String body = objectMapper.writeValueAsString(
                 new CreateUserRequest("Test", "test@example.com", "password123",
-                        "MALE", 28, 178.0, 85.0, 75, "MONDAY")
+                        "MALE", 28, 178.0, 85.0, 75, "MONDAY", null)
         );
 
         mockMvc.perform(post("/api/auth/register")

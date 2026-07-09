@@ -72,7 +72,8 @@ public class AuthController {
         User user = registerUserUseCase.execute(
                 request.username(), request.email(), request.password(),
                 request.weightGoal(), gender, request.age(),
-                request.height(), request.startWeight(), request.weighInDay()
+                request.height(), request.startWeight(), request.weighInDay(),
+                request.dailyStepsGoal()
         );
         String accessToken = tokenService.generateToken(user.getEmail());
         String rawRefreshToken = issueRefreshTokenUseCase.execute(user.getId());

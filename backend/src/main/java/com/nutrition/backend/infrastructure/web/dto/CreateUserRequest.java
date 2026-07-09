@@ -9,5 +9,6 @@ public record CreateUserRequest(
         double height,
         double startWeight,
         int weightGoal,
-        String weighInDay
+        String weighInDay,
+        Integer dailyStepsGoal
 ) {}

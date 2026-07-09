@@ -37,7 +37,7 @@ class RegisterUserUseCaseTest {
         // When
         User result = registerUserUseCase.execute(
                 "alice", "alice@example.com", "password",
-                65, Gender.MALE, 30, 175.0, 70.0, "MONDAY");
+                65, Gender.MALE, 30, 175.0, 70.0, "MONDAY", null);
 
         // Then
         assertThat(result.getDailyCalorieGoal()).isEqualTo(expectedCalorieGoal);
@@ -53,7 +53,7 @@ class RegisterUserUseCaseTest {
         // When
         User result = registerUserUseCase.execute(
                 "alice", "alice@example.com", "password",
-                55, Gender.FEMALE, 30, 175.0, 70.0, "MONDAY");
+                55, Gender.FEMALE, 30, 175.0, 70.0, "MONDAY", null);
 
         // Then
         assertThat(result.getDailyCalorieGoal()).isEqualTo(expectedCalorieGoal);
@@ -67,7 +67,7 @@ class RegisterUserUseCaseTest {
         // When
         User result = registerUserUseCase.execute(
                 "bob", "bob@example.com", "password",
-                75, Gender.MALE, 25, 180.0, startWeight, "FRIDAY");
+                75, Gender.MALE, 25, 180.0, startWeight, "FRIDAY", null);
 
         // Then
         assertThat(result.getCurrentWeight()).isEqualTo(startWeight);
@@ -82,7 +82,7 @@ class RegisterUserUseCaseTest {
         // When
         User result = registerUserUseCase.execute(
                 "charlie", "charlie@example.com", rawPassword,
-                70, Gender.MALE, 28, 178.0, 75.0, "WEDNESDAY");
+                70, Gender.MALE, 28, 178.0, 75.0, "WEDNESDAY", null);
 
         // Then
         assertThat(result.getPasswordHash()).isNotEqualTo(rawPassword);
@@ -90,16 +90,41 @@ class RegisterUserUseCaseTest {
     }
 
     @Test
+    void should_store_provided_daily_steps_goal_when_registering() {
+        // Given — l'utilisateur renseigne un objectif de pas à l'inscription
+        int stepsGoal = 8000;
+
+        // When
+        User result = registerUserUseCase.execute(
+                "alice", "alice@example.com", "password",
+                65, Gender.MALE, 30, 175.0, 70.0, "MONDAY", stepsGoal);
+
+        // Then
+        assertThat(result.getDailyStepsGoal()).isEqualTo(stepsGoal);
+    }
+
+    @Test
+    void should_leave_daily_steps_goal_null_when_not_provided_at_registration() {
+        // When — aucun objectif de pas fourni
+        User result = registerUserUseCase.execute(
+                "bob", "bob@example.com", "password",
+                70, Gender.MALE, 25, 180.0, 75.0, "FRIDAY", null);
+
+        // Then
+        assertThat(result.getDailyStepsGoal()).isNull();
+    }
+
+    @Test
     void should_throw_email_already_used_when_email_is_already_registered() {
         // Given — un compte existe déjà avec cet email
         registerUserUseCase.execute(
                 "alice", "dup@example.com", "password",
-                65, Gender.MALE, 30, 175.0, 70.0, "MONDAY");
+                65, Gender.MALE, 30, 175.0, 70.0, "MONDAY", null);
 
         // When / Then — une seconde inscription avec le même email est rejetée (409)
         assertThatThrownBy(() -> registerUserUseCase.execute(
                 "alice2", "dup@example.com", "password2",
-                70, Gender.FEMALE, 28, 168.0, 62.0, "TUESDAY"))
+                70, Gender.FEMALE, 28, 168.0, 62.0, "TUESDAY", null))
                 .isInstanceOf(EmailAlreadyUsedException.class);
     }
 
@@ -111,7 +136,7 @@ class RegisterUserUseCaseTest {
         // When / Then
         assertThatThrownBy(() -> registerUserUseCase.execute(
                 "alice", "alice@example.com", "password",
-                65, Gender.MALE, 30, height, 70.0, "MONDAY"))
+                65, Gender.MALE, 30, height, 70.0, "MONDAY", null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -123,7 +148,7 @@ class RegisterUserUseCaseTest {
         // When / Then
         assertThatThrownBy(() -> registerUserUseCase.execute(
                 "alice", "alice@example.com", "password",
-                65, Gender.MALE, 30, height, 70.0, "MONDAY"))
+                65, Gender.MALE, 30, height, 70.0, "MONDAY", null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -135,7 +160,7 @@ class RegisterUserUseCaseTest {
         // When / Then
         assertThatThrownBy(() -> registerUserUseCase.execute(
                 "alice", "alice@example.com", "password",
-                65, Gender.MALE, 30, 175.0, startWeight, "MONDAY"))
+                65, Gender.MALE, 30, 175.0, startWeight, "MONDAY", null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -147,7 +172,7 @@ class RegisterUserUseCaseTest {
         // When / Then
         assertThatThrownBy(() -> registerUserUseCase.execute(
                 "alice", "alice@example.com", "password",
-                65, Gender.MALE, 30, 175.0, startWeight, "MONDAY"))
+                65, Gender.MALE, 30, 175.0, startWeight, "MONDAY", null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -18,6 +18,7 @@ import com.nutrition.backend.infrastructure.config.SecurityConfig;
 import com.nutrition.backend.infrastructure.web.dto.CreateUserRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -28,7 +29,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import jakarta.servlet.http.Cookie;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -85,14 +88,14 @@ class AuthControllerTest {
         when(registerUserUseCase.execute(
                 anyString(), anyString(), anyString(),
                 anyInt(), any(Gender.class), anyInt(),
-                anyDouble(), anyDouble(), anyString()
+                anyDouble(), anyDouble(), anyString(), nullable(Integer.class)
         )).thenReturn(testUser);
         when(tokenService.generateToken("test@example.com")).thenReturn("mocked-jwt-token");
         when(issueRefreshTokenUseCase.execute(1L)).thenReturn("mocked-refresh-token");
 
         String body = objectMapper.writeValueAsString(
                 new CreateUserRequest("Test", "test@example.com", "password123",
-                        "MALE", 28, 178.0, 85.0, 75, "MONDAY")
+                        "MALE", 28, 178.0, 85.0, 75, "MONDAY", null)
         );
 
         mockMvc.perform(post("/api/auth/register")
@@ -107,16 +110,49 @@ class AuthControllerTest {
     }
 
     @Test
+    void should_forward_daily_steps_goal_from_request_to_use_case_and_expose_it_in_response() throws Exception {
+        User userWithStepsGoal = new User(1L, "Test", "test@example.com", "hashed",
+                Gender.MALE, 28, 178.0, 85.0, 85.0, 1950, 75, "MONDAY", 8000);
+        when(registerUserUseCase.execute(
+                anyString(), anyString(), anyString(),
+                anyInt(), any(Gender.class), anyInt(),
+                anyDouble(), anyDouble(), anyString(), nullable(Integer.class)
+        )).thenReturn(userWithStepsGoal);
+        when(tokenService.generateToken("test@example.com")).thenReturn("mocked-jwt-token");
+        when(issueRefreshTokenUseCase.execute(1L)).thenReturn("mocked-refresh-token");
+
+        String body = objectMapper.writeValueAsString(
+                new CreateUserRequest("Test", "test@example.com", "password123",
+                        "MALE", 28, 178.0, 85.0, 75, "MONDAY", 8000)
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.dailyStepsGoal").value(8000));
+
+        // Le contrôleur transmet bien l'objectif de pas reçu au use case.
+        ArgumentCaptor<Integer> stepsGoalCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(registerUserUseCase).execute(
+                anyString(), anyString(), anyString(),
+                anyInt(), any(Gender.class), anyInt(),
+                anyDouble(), anyDouble(), anyString(), stepsGoalCaptor.capture());
+        assertThat(stepsGoalCaptor.getValue()).isEqualTo(8000);
+    }
+
+    @Test
     void should_return_409_when_registering_with_an_already_used_email() throws Exception {
         when(registerUserUseCase.execute(
                 anyString(), anyString(), anyString(),
                 anyInt(), any(Gender.class), anyInt(),
-                anyDouble(), anyDouble(), anyString()
+                anyDouble(), anyDouble(), anyString(), nullable(Integer.class)
         )).thenThrow(new EmailAlreadyUsedException());
 
         String body = objectMapper.writeValueAsString(
                 new CreateUserRequest("Test", "dup@example.com", "password123",
-                        "MALE", 28, 178.0, 85.0, 75, "MONDAY")
+                        "MALE", 28, 178.0, 85.0, 75, "MONDAY", null)
         );
 
         mockMvc.perform(post("/api/auth/register")
@@ -132,12 +168,12 @@ class AuthControllerTest {
         when(registerUserUseCase.execute(
                 anyString(), anyString(), anyString(),
                 anyInt(), any(Gender.class), anyInt(),
-                anyDouble(), anyDouble(), anyString()
+                anyDouble(), anyDouble(), anyString(), nullable(Integer.class)
         )).thenThrow(new DataIntegrityViolationException("uq_users_email"));
 
         String body = objectMapper.writeValueAsString(
                 new CreateUserRequest("Test", "race@example.com", "password123",
-                        "MALE", 28, 178.0, 85.0, 75, "MONDAY")
+                        "MALE", 28, 178.0, 85.0, 75, "MONDAY", null)
         );
 
         mockMvc.perform(post("/api/auth/register")

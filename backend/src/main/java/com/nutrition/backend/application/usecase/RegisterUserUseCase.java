@@ -26,7 +26,8 @@ public class RegisterUserUseCase {
 
     public User execute(String username, String email, String rawPassword,
                         int weightGoal, Gender gender, int age,
-                        double height, double startWeight, String weighInDay) {
+                        double height, double startWeight, String weighInDay,
+                        Integer dailyStepsGoal) {
         if (height <= 0) {
             throw new IllegalArgumentException("La taille doit être supérieure à 0");
         }
@@ -42,7 +43,7 @@ public class RegisterUserUseCase {
 
         User user = new User(null, username, email, passwordHash,
                 gender, age, height, startWeight, startWeight,
-                calculatedGoal, weightGoal, weighInDay, null);
+                calculatedGoal, weightGoal, weighInDay, dailyStepsGoal);
         return userRepository.save(user);
     }
 }
