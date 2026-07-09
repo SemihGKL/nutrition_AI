@@ -36,14 +36,26 @@ public class SpringMailEmailAdapter implements EmailPort {
 
     @Override
     public void sendSupportEmail(String reporterEmail, SupportCategory category, String message) {
+        String safeReporter = sanitizeHeader(reporterEmail);
         SimpleMailMessage mail = new SimpleMailMessage();
         mail.setFrom(fromEmail);
         mail.setTo(supportEmail);
-        mail.setReplyTo(reporterEmail);
-        mail.setSubject("[Support Kaloriim] " + category.label() + " — " + reporterEmail);
+        mail.setReplyTo(safeReporter);
+        mail.setSubject("[Support Kaloriim] " + category.label() + " — " + safeReporter);
         mail.setText("Catégorie : " + category.label() + "\n"
-                + "Utilisateur : " + reporterEmail + "\n\n"
+                + "Utilisateur : " + safeReporter + "\n\n"
                 + "Message :\n" + message);
         mailSender.send(mail);
+    }
+
+    /**
+     * Neutralise l'injection d'en-têtes : un champ destiné à un en-tête (sujet,
+     * reply-to) ne doit jamais contenir de saut de ligne.
+     */
+    private String sanitizeHeader(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replaceAll("[\\r\\n]", " ").trim();
     }
 }

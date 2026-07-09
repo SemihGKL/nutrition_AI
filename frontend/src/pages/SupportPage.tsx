@@ -13,6 +13,9 @@ const CATEGORIES: { value: SupportCategory; label: string }[] = [
   { value: 'IMPROVEMENT', label: 'Proposer une amélioration' },
 ];
 
+// Miroir de la contrainte serveur @Size(max = 2000) sur SupportRequest.message.
+const MESSAGE_MAX_LENGTH = 2000;
+
 export function SupportPage({ onBack, onTabChange }: Props) {
   const [category, setCategory] = useState<SupportCategory>('PROBLEM');
   const [message, setMessage] = useState('');
@@ -138,6 +141,7 @@ export function SupportPage({ onBack, onTabChange }: Props) {
                       : 'Décris ton idée : quelle fonctionnalité aimerais-tu voir, et pourquoi ?'
                   }
                   rows={7}
+                  maxLength={MESSAGE_MAX_LENGTH}
                   style={{
                     width: '100%', resize: 'vertical', minHeight: 140,
                     border: '1px solid var(--hairline)', borderRadius: 'var(--radius-sm)',
@@ -155,6 +159,9 @@ export function SupportPage({ onBack, onTabChange }: Props) {
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                 />
+                <div style={{ textAlign: 'right', fontSize: 11, color: 'var(--ink-3)', marginTop: 6 }}>
+                  {message.length}/{MESSAGE_MAX_LENGTH}
+                </div>
               </div>
             </Section>
 

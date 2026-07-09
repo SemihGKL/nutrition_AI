@@ -4,7 +4,7 @@
 
 PWA de suivi calorique. L'utilisateur saisit ses calories quotidiennes, son poids hebdomadaire, et suit sa progression via un dashboard et des récapitulatifs hebdomadaires.
 
-**État actuel** : backend Spring Boot et frontend React + Vite complets. Prochaine étape : déploiement.
+**État actuel** : backend Spring Boot et frontend React + Vite complets, déployés sur un VPS OVHcloud (nginx en reverse-proxy TLS + PostgreSQL).
 
 ---
 
@@ -135,7 +135,7 @@ POST /api/support                      ✅
 1. ~~Phase 1 — Backend~~ ✅
 2. ~~Phase 2 — Intégration IA~~ — abandonnée
 3. ~~Phase 3 — Frontend React + Vite~~ ✅
-4. **Phase 4** — Déploiement (Railway backend + Vercel frontend)
+4. ~~Phase 4 — Déploiement~~ ✅ — VPS OVHcloud (nginx reverse-proxy TLS, backend + frontend servis depuis le VPS, PostgreSQL)
 
 ---
 

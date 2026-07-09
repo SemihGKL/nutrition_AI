@@ -184,6 +184,20 @@ class AuthControllerTest {
     }
 
     @Test
+    void should_return_400_when_registering_with_a_malformed_email() throws Exception {
+        String body = objectMapper.writeValueAsString(
+                new CreateUserRequest("Test", "not-an-email", "password123",
+                        "MALE", 28, 178.0, 85.0, 75, "MONDAY", null)
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void should_return_200_with_token_when_login_is_successful() throws Exception {
         when(loginUserUseCase.execute("test@example.com", "password123")).thenReturn(testUser);
         when(tokenService.generateToken("test@example.com")).thenReturn("mocked-jwt-token");

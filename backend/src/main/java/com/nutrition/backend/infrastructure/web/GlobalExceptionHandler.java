@@ -5,6 +5,7 @@ import com.nutrition.backend.domain.exception.EmailAlreadyUsedException;
 import com.nutrition.backend.domain.exception.ObjectiveAccessDeniedException;
 import com.nutrition.backend.domain.exception.ObjectiveNotFoundException;
 import com.nutrition.backend.domain.exception.UserNotFoundException;
+import com.nutrition.backend.domain.exception.WeakPasswordException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -57,6 +58,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
         // Deux modifications concurrentes du même utilisateur (ex. pesée vs édition de profil).
         return error(HttpStatus.CONFLICT, "Modification concurrente détectée — recharge puis réessaie.");
+    }
+
+    @ExceptionHandler(WeakPasswordException.class)
+    public ResponseEntity<Map<String, Object>> handleWeakPassword(WeakPasswordException ex) {
+        return error(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

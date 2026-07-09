@@ -8,6 +8,7 @@ import com.nutrition.backend.domain.ports.PasswordEncoderPort;
 import com.nutrition.backend.domain.ports.PasswordResetTokenRepository;
 import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.service.MbrCalculator;
+import com.nutrition.backend.domain.service.PasswordPolicy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -20,6 +21,11 @@ public class DomainConfig {
     }
 
     @Bean
+    public PasswordPolicy passwordPolicy() {
+        return new PasswordPolicy();
+    }
+
+    @Bean
     public RequestPasswordResetUseCase requestPasswordResetUseCase(UserRepository userRepository,
                                                                     PasswordResetTokenRepository tokenRepository,
                                                                     EmailPort emailPort) {
@@ -29,8 +35,9 @@ public class DomainConfig {
     @Bean
     public ResetPasswordUseCase resetPasswordUseCase(UserRepository userRepository,
                                                      PasswordResetTokenRepository tokenRepository,
-                                                     PasswordEncoderPort passwordEncoder) {
-        return new ResetPasswordUseCase(userRepository, tokenRepository, passwordEncoder);
+                                                     PasswordEncoderPort passwordEncoder,
+                                                     PasswordPolicy passwordPolicy) {
+        return new ResetPasswordUseCase(userRepository, tokenRepository, passwordEncoder, passwordPolicy);
     }
 
     @Bean

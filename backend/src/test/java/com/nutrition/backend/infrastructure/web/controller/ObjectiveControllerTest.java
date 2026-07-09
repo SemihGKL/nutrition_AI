@@ -134,6 +134,18 @@ class ObjectiveControllerTest {
 
     @Test
     @WithMockUser(username = "user")
+    void should_return_400_when_creating_an_objective_with_a_blank_label() throws Exception {
+        String body = objectMapper.writeValueAsString(new CreateObjectiveRequest(2, "   ", null, null));
+
+        mockMvc.perform(post("/api/objectives")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
     void should_return_204_when_authenticated_user_deletes_their_own_objective() throws Exception {
         doNothing().when(deleteObjectiveUseCase).execute(5L, 1L);
 

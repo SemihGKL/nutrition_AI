@@ -1,3 +1,8 @@
 package com.nutrition.backend.infrastructure.web.dto;
 
-public record ResetPasswordRequest(String token, String newPassword) {}
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record ResetPasswordRequest(
+        @NotBlank String token,
+        @NotBlank @Size(max = 72) String newPassword) {}

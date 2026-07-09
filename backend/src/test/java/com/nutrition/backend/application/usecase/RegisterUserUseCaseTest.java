@@ -4,8 +4,10 @@ import com.nutrition.backend.application.usecase.fake.FakePasswordEncoder;
 import com.nutrition.backend.application.usecase.fake.FakeUserRepository;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.exception.EmailAlreadyUsedException;
+import com.nutrition.backend.domain.exception.WeakPasswordException;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.service.MbrCalculator;
+import com.nutrition.backend.domain.service.PasswordPolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +19,7 @@ class RegisterUserUseCaseTest {
     private FakeUserRepository userRepository;
     private FakePasswordEncoder passwordEncoder;
     private MbrCalculator mbrCalculator;
+    private PasswordPolicy passwordPolicy;
     private RegisterUserUseCase registerUserUseCase;
 
     @BeforeEach
@@ -24,7 +27,8 @@ class RegisterUserUseCaseTest {
         userRepository = new FakeUserRepository();
         passwordEncoder = new FakePasswordEncoder();
         mbrCalculator = new MbrCalculator();
-        registerUserUseCase = new RegisterUserUseCase(userRepository, passwordEncoder, mbrCalculator);
+        passwordPolicy = new PasswordPolicy();
+        registerUserUseCase = new RegisterUserUseCase(userRepository, passwordEncoder, mbrCalculator, passwordPolicy);
     }
 
     @Test
@@ -126,6 +130,17 @@ class RegisterUserUseCaseTest {
                 "alice2", "dup@example.com", "password2",
                 70, Gender.FEMALE, 28, 168.0, 62.0, "TUESDAY", null))
                 .isInstanceOf(EmailAlreadyUsedException.class);
+    }
+
+    @Test
+    void should_reject_registration_when_password_is_too_weak() {
+        // Given — un mot de passe trop court (moins de 8 caractères)
+
+        // When / Then — l'inscription est rejetée par la politique de mot de passe
+        assertThatThrownBy(() -> registerUserUseCase.execute(
+                "alice", "alice@example.com", "short",
+                65, Gender.MALE, 30, 175.0, 70.0, "MONDAY", null))
+                .isInstanceOf(WeakPasswordException.class);
     }
 
     @Test

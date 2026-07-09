@@ -54,7 +54,16 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         List<String> origins = Arrays.stream(allowedOriginsRaw.split(","))
                 .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
                 .collect(Collectors.toList());
+        // Fail-closed : un « * » global combiné à allowCredentials(true) ouvrirait
+        // l'API à n'importe quelle origine avec les cookies. Les motifs ciblés
+        // (ex. 192.168.1.* en dév, le domaine de prod) restent autorisés.
+        if (origins.contains("*")) {
+            throw new IllegalStateException(
+                    "allowed.origins ne peut pas contenir « * » lorsque les credentials sont activés — "
+                            + "spécifier des origines explicites.");
+        }
         config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

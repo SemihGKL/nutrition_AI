@@ -65,4 +65,14 @@ class SpringMailEmailAdapterTest {
                 .contains("alice@example.com")
                 .contains("Ajoutez un mode sombre");
     }
+
+    @Test
+    void should_strip_line_breaks_from_header_fields_to_prevent_email_header_injection() {
+        adapter.sendSupportEmail("alice@example.com\r\nBcc: victim@example.com",
+                SupportCategory.PROBLEM, "Une page plante");
+
+        SimpleMailMessage sent = captureSentMessage();
+        assertThat(sent.getSubject()).doesNotContain("\r").doesNotContain("\n");
+        assertThat(sent.getReplyTo()).doesNotContain("\r").doesNotContain("\n");
+    }
 }

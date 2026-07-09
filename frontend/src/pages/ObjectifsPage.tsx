@@ -9,6 +9,9 @@ import { useAuth } from '../hooks/useAuth';
 const DAYS      = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const DAYS_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
+// Miroir de la contrainte serveur @Size(max = 100) sur CreateObjectiveRequest.label.
+const LABEL_MAX_LENGTH = 100;
+
 interface Suggestion { icon: string; label: string; }
 
 function buildSuggestions(weight?: number | null): Suggestion[] {
@@ -475,6 +478,7 @@ function DayCard({
                 if (e.key === 'Escape') onCancelAdd();
               }}
               placeholder="Ou tape une habitude personnalisée…"
+              maxLength={LABEL_MAX_LENGTH}
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
                 fontSize: 14, color: 'var(--ink)', fontFamily: 'var(--font-body)',

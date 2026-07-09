@@ -17,6 +17,8 @@ import com.nutrition.backend.infrastructure.web.dto.AuthResponse;
 import com.nutrition.backend.infrastructure.web.dto.CreateUserRequest;
 import com.nutrition.backend.infrastructure.web.dto.ForgotPasswordRequest;
 import com.nutrition.backend.infrastructure.web.dto.ResetPasswordRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -67,7 +69,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody CreateUserRequest request) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody CreateUserRequest request) {
         Gender gender = Gender.valueOf(request.gender().toUpperCase());
         User user = registerUserUseCase.execute(
                 request.username(), request.email(), request.password(),
@@ -84,7 +86,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         try {
             User user = loginUserUseCase.execute(request.email(), request.password());
             String accessToken = tokenService.generateToken(user.getEmail());
@@ -128,13 +130,13 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         requestPasswordResetUseCase.execute(request.email(), baseUrl);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         try {
             resetPasswordUseCase.execute(request.token(), request.newPassword());
             return ResponseEntity.ok().build();
@@ -153,5 +155,5 @@ public class AuthController {
                 .build();
     }
 
-    public record LoginRequest(String email, String password) {}
+    public record LoginRequest(@NotBlank String email, @NotBlank String password) {}
 }

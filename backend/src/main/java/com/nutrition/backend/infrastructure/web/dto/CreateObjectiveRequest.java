@@ -1,4 +1,11 @@
 package com.nutrition.backend.infrastructure.web.dto;
 
-public record CreateObjectiveRequest(int dayOfWeek, String label, String type, Integer targetValue) {
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record CreateObjectiveRequest(
+        int dayOfWeek,
+        @NotBlank @Size(max = 100) String label,
+        @Size(max = 20) String type,
+        Integer targetValue) {
 }

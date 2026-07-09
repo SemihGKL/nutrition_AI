@@ -7,6 +7,7 @@ import com.nutrition.backend.domain.model.UserProfile;
 import com.nutrition.backend.domain.ports.PasswordEncoderPort;
 import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.service.MbrCalculator;
+import com.nutrition.backend.domain.service.PasswordPolicy;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,13 +16,16 @@ public class RegisterUserUseCase {
     private final UserRepository userRepository;
     private final PasswordEncoderPort passwordEncoder;
     private final MbrCalculator mbrCalculator;
+    private final PasswordPolicy passwordPolicy;
 
     public RegisterUserUseCase(UserRepository userRepository,
                                 PasswordEncoderPort passwordEncoder,
-                                MbrCalculator mbrCalculator) {
+                                MbrCalculator mbrCalculator,
+                                PasswordPolicy passwordPolicy) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.mbrCalculator = mbrCalculator;
+        this.passwordPolicy = passwordPolicy;
     }
 
     public User execute(String username, String email, String rawPassword,
@@ -34,6 +38,7 @@ public class RegisterUserUseCase {
         if (startWeight <= 0) {
             throw new IllegalArgumentException("Le poids de départ doit être supérieur à 0");
         }
+        passwordPolicy.validate(rawPassword);
         if (userRepository.findByEmail(email).isPresent()) {
             throw new EmailAlreadyUsedException();
         }

@@ -3,6 +3,7 @@ package com.nutrition.backend.infrastructure.web.controller;
 import com.nutrition.backend.application.usecase.SendSupportMessageUseCase;
 import com.nutrition.backend.domain.model.SupportCategory;
 import com.nutrition.backend.infrastructure.web.dto.SupportRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +22,7 @@ public class SupportController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> sendSupportMessage(@RequestBody SupportRequest request, Authentication auth) {
+    public ResponseEntity<Void> sendSupportMessage(@Valid @RequestBody SupportRequest request, Authentication auth) {
         try {
             SupportCategory category = SupportCategory.valueOf(String.valueOf(request.category()).toUpperCase());
             sendSupportMessageUseCase.execute(auth.getName(), category, request.message());

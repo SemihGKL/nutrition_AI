@@ -6,7 +6,9 @@ import com.nutrition.backend.application.usecase.fake.FakeUserRepository;
 import com.nutrition.backend.domain.entity.PasswordResetToken;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.exception.InvalidPasswordResetTokenException;
+import com.nutrition.backend.domain.exception.WeakPasswordException;
 import com.nutrition.backend.domain.model.Gender;
+import com.nutrition.backend.domain.service.PasswordPolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +23,7 @@ class ResetPasswordUseCaseTest {
     private FakeUserRepository userRepository;
     private FakePasswordResetTokenRepository tokenRepository;
     private FakePasswordEncoder passwordEncoder;
+    private PasswordPolicy passwordPolicy;
     private ResetPasswordUseCase useCase;
 
     @BeforeEach
@@ -28,7 +31,8 @@ class ResetPasswordUseCaseTest {
         userRepository = new FakeUserRepository();
         tokenRepository = new FakePasswordResetTokenRepository();
         passwordEncoder = new FakePasswordEncoder();
-        useCase = new ResetPasswordUseCase(userRepository, tokenRepository, passwordEncoder);
+        passwordPolicy = new PasswordPolicy();
+        useCase = new ResetPasswordUseCase(userRepository, tokenRepository, passwordEncoder, passwordPolicy);
     }
 
     private User buildUser(String email) {
@@ -76,6 +80,35 @@ class ResetPasswordUseCaseTest {
         // Then — le token est marqué comme utilisé
         PasswordResetToken token = tokenRepository.findByToken("valid-token-uuid").orElseThrow();
         assertThat(token.used()).isTrue();
+    }
+
+    @Test
+    void should_reject_password_reset_when_new_password_is_too_weak() {
+        // Given — un token valide mais un nouveau mot de passe trop court
+        User user = userRepository.save(buildUser("alice@example.com"));
+        tokenRepository.save(validToken(user.getId()));
+
+        // When / Then — la politique de mot de passe rejette la réinitialisation
+        assertThatThrownBy(() -> useCase.execute("valid-token-uuid", "short"))
+                .isInstanceOf(WeakPasswordException.class);
+    }
+
+    @Test
+    void should_not_update_password_when_new_password_is_too_weak() {
+        // Given
+        User user = userRepository.save(buildUser("alice@example.com"));
+        String originalPasswordHash = user.getPasswordHash();
+        tokenRepository.save(validToken(user.getId()));
+
+        // When — la réinitialisation échoue car le mot de passe est trop faible
+        try {
+            useCase.execute("valid-token-uuid", "short");
+        } catch (WeakPasswordException ignored) {
+        }
+
+        // Then — le mot de passe de l'utilisateur n'a pas été modifié
+        User userAfter = userRepository.findById(user.getId()).orElseThrow();
+        assertThat(userAfter.getPasswordHash()).isEqualTo(originalPasswordHash);
     }
 
     @Test

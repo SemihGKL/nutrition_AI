@@ -90,6 +90,20 @@ class SupportControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "user@example.com")
+    void should_return_400_when_message_exceeds_max_length() throws Exception {
+        String tooLong = "a".repeat(2001);
+        String body = objectMapper.writeValueAsString(
+                new SupportRequest("PROBLEM", tooLong));
+
+        mockMvc.perform(post("/api/support")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void should_return_401_when_not_authenticated() throws Exception {
         String body = objectMapper.writeValueAsString(
                 new SupportRequest("PROBLEM", "Un bug à signaler"));
