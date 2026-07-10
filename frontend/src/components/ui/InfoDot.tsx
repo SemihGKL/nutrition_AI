@@ -92,6 +92,7 @@ export function InfoDot({ title, children, ariaLabel = 'en savoir plus' }: Props
               padding: '22px 24px 32px',
               transform: shown ? 'translateY(0)' : 'translateY(40px)',
               transition: 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)',
+              whiteSpace: 'normal',
             }}
           >
             <div style={{

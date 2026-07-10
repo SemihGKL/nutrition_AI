@@ -170,7 +170,21 @@ export function ProgressRing({
                 </InfoDot>
               }
             />
-            <LegendChip color={MBR_COLOR}  label="métabolisme de base" />
+            <LegendChip
+              color={MBR_COLOR}
+              label="tes dépenses naturelles"
+              info={
+                <InfoDot title="Tes dépenses naturelles">
+                  <p style={{ margin: '0 0 10px' }}>
+                    Même sans bouger, ton corps brûle des calories pour respirer, digérer
+                    et fonctionner. C'est ton <strong>métabolisme de base</strong>.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    Dépasser ce seuil, c'est commencer à puiser dans tes réserves.
+                  </p>
+                </InfoDot>
+              }
+            />
           </div>
         )}
       </div>
