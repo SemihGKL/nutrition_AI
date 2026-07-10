@@ -112,7 +112,28 @@ export function LoginPage({ onRegister, onForgotPassword }: Props) {
           autoComplete="current-password"
         />
 
-        <div style={{ marginTop: 4 }}>
+        <button
+          type="button"
+          onClick={onForgotPassword}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--orange)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--ink-2)'; }}
+          style={{
+            alignSelf: 'flex-end',
+            marginTop: -4,
+            background: 'none',
+            border: 'none',
+            color: 'var(--ink-2)',
+            fontSize: 13,
+            cursor: 'pointer',
+            padding: 0,
+            fontFamily: 'var(--font-body)',
+            transition: 'color 120ms linear',
+          }}
+        >
+          Mot de passe oublié ?
+        </button>
+
+        <div style={{ marginTop: 8 }}>
           <button
             type="submit"
             disabled={isLoading}
@@ -137,39 +158,48 @@ export function LoginPage({ onRegister, onForgotPassword }: Props) {
         </div>
       </form>
 
-      <button
-        onClick={onForgotPassword}
-        style={{
-          marginTop: 16,
-          background: 'none',
-          border: 'none',
-          color: 'var(--ink-2)',
-          fontSize: 14,
-          cursor: 'pointer',
-          textDecoration: 'underline',
-          textUnderlineOffset: 3,
-          fontFamily: 'var(--font-body)',
-        }}
-      >
-        mot de passe oublié ?
-      </button>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        width: '100%',
+        margin: '28px 0 20px',
+        color: 'var(--ink-2)',
+      }}>
+        <span style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
+        <span style={{ fontSize: 12 }}>ou</span>
+        <span style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
+      </div>
 
-      <button
-        onClick={onRegister}
-        style={{
-          marginTop: 8,
-          background: 'none',
-          border: 'none',
-          color: 'var(--ink-2)',
-          fontSize: 14,
-          cursor: 'pointer',
-          textDecoration: 'underline',
-          textUnderlineOffset: 3,
-          fontFamily: 'var(--font-body)',
-        }}
-      >
-        pas de compte ? créer
-      </button>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 14,
+        color: 'var(--ink-2)',
+        fontFamily: 'var(--font-body)',
+      }}>
+        <span>Pas encore de compte ?</span>
+        <button
+          type="button"
+          onClick={onRegister}
+          onMouseEnter={e => { e.currentTarget.style.textDecoration = 'underline'; }}
+          onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--orange)',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: 0,
+            textUnderlineOffset: 3,
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          Créer un compte
+        </button>
+      </div>
     </div>
   );
 }
