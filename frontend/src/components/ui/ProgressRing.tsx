@@ -180,7 +180,7 @@ export function ProgressRing({
                     et fonctionner. C'est ton <strong>métabolisme de base</strong>.
                   </p>
                   <p style={{ margin: 0 }}>
-                    Dépasser ce seuil, c'est commencer à puiser dans tes réserves.
+                    Dès que tu manges moins que ça, ton corps brûle ses réserves de graisse — <strong>donc tu perds du poids</strong>.
                   </p>
                 </InfoDot>
               }
