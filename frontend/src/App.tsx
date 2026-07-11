@@ -104,13 +104,16 @@ function AppRoutes() {
   const { token, isLoading } = useAuth();
 
   // Lien email de réinitialisation : ?token=xxx dans l'URL.
-  const resetToken = new URLSearchParams(window.location.search).get('token');
+  const [resetToken, setResetToken] = useState<string | null>(
+    () => new URLSearchParams(window.location.search).get('token')
+  );
   if (resetToken) {
     return (
       <ResetPasswordPage
         token={resetToken}
         onDone={() => {
           window.history.replaceState({}, '', window.location.pathname);
+          setResetToken(null);
         }}
       />
     );
