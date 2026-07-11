@@ -20,7 +20,7 @@ Application web (PWA) de suivi calorique avec assistance IA permettant à l'util
 | Frontend | React + Vite (Web App / PWA) — **à créer** |
 | IA | Claude API (Anthropic) — **à intégrer** |
 | Auth | JWT (Spring Security) — **à implémenter** |
-| Hébergement | Vercel (frontend) + Railway/Render (backend) |
+| Hébergement | VPS OVHcloud (nginx reverse-proxy TLS + PostgreSQL) |
 
 ---
 
@@ -188,11 +188,12 @@ Généré automatiquement chaque fin de semaine :
 3. Configuration PWA (installable sur mobile)
 
 ### Phase 4 — Déploiement
-1. Backend sur Railway ou Render (gratuit pour démarrer)
-2. Frontend sur Vercel
-3. Base de données PostgreSQL sur Railway
+1. VPS OVHcloud — nginx en reverse-proxy (terminaison TLS, proxy `/api`)
+2. Backend Spring Boot + frontend statique servis depuis le VPS
+3. Base de données PostgreSQL sur le VPS
 
 ---
+
 
 ## Ce qui est déjà fait (backend)
 

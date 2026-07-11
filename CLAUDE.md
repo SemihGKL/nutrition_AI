@@ -4,7 +4,7 @@
 
 PWA de suivi calorique. L'utilisateur saisit ses calories quotidiennes, son poids hebdomadaire, et suit sa progression via un dashboard et des récapitulatifs hebdomadaires.
 
-**État actuel** : backend Spring Boot et frontend React + Vite complets. Prochaine étape : déploiement.
+**État actuel** : backend Spring Boot et frontend React + Vite complets, déployés sur un VPS OVHcloud (nginx en reverse-proxy TLS + PostgreSQL).
 
 ---
 
@@ -13,7 +13,7 @@ PWA de suivi calorique. L'utilisateur saisit ses calories quotidiennes, son poid
 | Couche | Technologie |
 |---|---|
 | Backend | Java 17 + Spring Boot 3.3.5 (Maven) |
-| Base de données | PostgreSQL + Liquibase (migrations) |
+| Base de données | PostgreSQL + Flyway (migrations) |
 | Frontend | React + Vite |
 | Auth | Spring Security + JWT |
 | Tests | JUnit 5 + Mockito |
@@ -39,7 +39,7 @@ PWA de suivi calorique. L'utilisateur saisit ses calories quotidiennes, son poid
 Les règles d'architecture sont dans `.claude/rules/ARCHITECTURE.md`. Respecter **strictement** la règle de dépendance : les dépendances pointent vers l'intérieur.
 
 ```
-infrastructure/  (Spring, JPA, REST, Liquibase)
+infrastructure/  (Spring, JPA, REST, Flyway)
     ↓
 adapters/        (Controllers, JPA Repositories)
     ↓
@@ -73,13 +73,13 @@ Le TDEE utilise le coefficient sédentaire (1.2). Les calories brûlées par l'a
 
 ---
 
-## Migrations Liquibase
+## Migrations Flyway
 
-Les fichiers sont dans `backend/src/main/resources/db/changelog/versions/`.
-- `changeset-v1.0.xml` — tables `users` et `daily_calories`
-- `changeset-v1.1.xml` — colonnes `start_weight`, `current_weight`
+Les fichiers sont dans `backend/src/main/resources/db/migration/`.
+- `V1__create_tables.sql` — tables `users` et `daily_calories`
+- `V2` → `V14` — colonnes supplémentaires, contraintes, refresh tokens, etc.
 
-**Règle** : toute modification de schéma = nouveau fichier `changeset-vX.Y.xml`, jamais de modification d'un changeset existant.
+**Règle** : toute modification de schéma = nouveau fichier `V{N+1}__description.sql`, jamais de modification d'un fichier existant. Prochaine migration : `V15`.
 
 ---
 
@@ -125,6 +125,7 @@ DELETE /api/objectives/{id}            ✅
 POST /api/objectives/{id}/completions/{date}   ✅
 DELETE /api/objectives/{id}/completions/{date} ✅
 GET  /api/objectives/completions       ✅
+POST /api/support                      ✅
 ```
 
 ---
@@ -134,7 +135,7 @@ GET  /api/objectives/completions       ✅
 1. ~~Phase 1 — Backend~~ ✅
 2. ~~Phase 2 — Intégration IA~~ — abandonnée
 3. ~~Phase 3 — Frontend React + Vite~~ ✅
-4. **Phase 4** — Déploiement (Railway backend + Vercel frontend)
+4. ~~Phase 4 — Déploiement~~ ✅ — VPS OVHcloud (nginx reverse-proxy TLS, backend + frontend servis depuis le VPS, PostgreSQL)
 
 ---
 

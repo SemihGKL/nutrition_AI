@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { formatNumber } from '../../utils/format';
+import { InfoDot } from './InfoDot';
 
 type RingStatus = 'good' | 'warn' | 'over';
 
@@ -153,8 +154,37 @@ export function ProgressRing({
         </span>
         {mbr && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 10, alignItems: 'center' }}>
-            <LegendChip color={GOAL_COLOR} label="objectif alim." />
-            <LegendChip color={MBR_COLOR}  label="métabolisme de base" />
+            <LegendChip
+              color={GOAL_COLOR}
+              label="objectif choisi"
+              info={
+                <InfoDot title="Ton objectif calorique">
+                  <p style={{ margin: '0 0 10px' }}>
+                    C'est le nombre de calories à ne pas dépasser dans la journée. On le
+                    fixe volontairement <strong>sous ton métabolisme de base</strong> pour
+                    créer un déficit et t'aider à perdre du poids en douceur.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    Tu peux le modifier quand tu veux depuis l'onglet <strong>Profil</strong>.
+                  </p>
+                </InfoDot>
+              }
+            />
+            <LegendChip
+              color={MBR_COLOR}
+              label="tes dépenses naturelles"
+              info={
+                <InfoDot title="Tes dépenses naturelles">
+                  <p style={{ margin: '0 0 10px' }}>
+                    Même sans bouger, ton corps brûle des calories pour respirer, digérer
+                    et fonctionner. C'est ton <strong>métabolisme de base</strong>.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    Dès que tu manges moins que ça, ton corps brûle ses réserves de graisse — <strong>donc tu perds du poids</strong>.
+                  </p>
+                </InfoDot>
+              }
+            />
           </div>
         )}
       </div>
@@ -162,11 +192,11 @@ export function ProgressRing({
   );
 }
 
-function LegendChip({ color, label }: { color: string; label: string }) {
+function LegendChip({ color, label, info }: { color: string; label: string; info?: ReactNode }) {
   return (
     <span style={{
       display: 'flex', alignItems: 'center', gap: 5,
-      fontSize: 11, color: 'var(--ink-3)',
+      fontSize: 11, color: 'var(--ink-3)', whiteSpace: 'nowrap',
     }}>
       <span style={{
         width: 8, height: 8, borderRadius: 999,
@@ -174,6 +204,7 @@ function LegendChip({ color, label }: { color: string; label: string }) {
         display: 'inline-block',
       }} />
       {label}
+      {info}
     </span>
   );
 }

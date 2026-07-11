@@ -34,6 +34,7 @@ interface FormState {
   weightGoal: string;
   gender: 'MALE' | 'FEMALE';
   weighInDay: string;
+  stepsGoal: string;
   target: number;
 }
 
@@ -57,6 +58,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
     weightGoal: '',
     gender: 'MALE',
     weighInDay: 'MONDAY',
+    stepsGoal: '',
     target: 1800,
   });
 
@@ -82,6 +84,11 @@ export function OnboardingPage({ onDone, onBack }: Props) {
     if (!form.weight || w < 30 || w > 300) errs.weight = '30–300 kg';
     const wg = parseFloat(form.weightGoal);
     if (!form.weightGoal || wg < 30 || wg > 300) errs.weightGoal = '30–300 kg';
+    const sg = form.stepsGoal.trim();
+    if (sg) {
+      const sgNum = parseInt(sg, 10);
+      if (isNaN(sgNum) || sgNum <= 0 || sgNum > 100000) errs.stepsGoal = 'ex. 8000';
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -109,6 +116,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
         startWeight: parseFloat(form.weight),
         weightGoal: parseFloat(form.weightGoal),
         weighInDay: form.weighInDay,
+        dailyStepsGoal: form.stepsGoal.trim() ? parseInt(form.stepsGoal, 10) : null,
       });
       login(token, user);
       onDone();
@@ -177,6 +185,8 @@ export function OnboardingPage({ onDone, onBack }: Props) {
                 options={[{ value: 'MALE', label: 'Homme' }, { value: 'FEMALE', label: 'Femme' }]}
               />
             </div>
+
+            <Field label="Objectif de pas / jour" type="number" value={form.stepsGoal} onChange={v => set('stepsGoal', v)} hint="optionnel — ex. 8000" error={errors.stepsGoal} inputMode="numeric" id="register-steps-goal" />
 
             <div>
               <div style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, marginBottom: 6 }}>Jour de pesée hebdomadaire</div>

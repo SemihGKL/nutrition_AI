@@ -4,14 +4,21 @@ import com.nutrition.backend.application.usecase.IssueRefreshTokenUseCase;
 import com.nutrition.backend.application.usecase.LoginUserUseCase;
 import com.nutrition.backend.application.usecase.RefreshAccessTokenUseCase;
 import com.nutrition.backend.application.usecase.RegisterUserUseCase;
+import com.nutrition.backend.application.usecase.RequestPasswordResetUseCase;
+import com.nutrition.backend.application.usecase.ResetPasswordUseCase;
 import com.nutrition.backend.application.usecase.RevokeRefreshTokenUseCase;
 import com.nutrition.backend.domain.entity.User;
+import com.nutrition.backend.domain.exception.InvalidPasswordResetTokenException;
 import com.nutrition.backend.domain.exception.InvalidRefreshTokenException;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.ports.TokenService;
 import com.nutrition.backend.infrastructure.web.UserMapper;
 import com.nutrition.backend.infrastructure.web.dto.AuthResponse;
 import com.nutrition.backend.infrastructure.web.dto.CreateUserRequest;
+import com.nutrition.backend.infrastructure.web.dto.ForgotPasswordRequest;
+import com.nutrition.backend.infrastructure.web.dto.ResetPasswordRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -32,9 +39,12 @@ public class AuthController {
     private final IssueRefreshTokenUseCase issueRefreshTokenUseCase;
     private final RefreshAccessTokenUseCase refreshAccessTokenUseCase;
     private final RevokeRefreshTokenUseCase revokeRefreshTokenUseCase;
+    private final RequestPasswordResetUseCase requestPasswordResetUseCase;
+    private final ResetPasswordUseCase resetPasswordUseCase;
 
     /** true en prod (HTTPS) : le cookie refresh_token n'est alors envoyé que sur des connexions sécurisées. */
     private final boolean cookieSecure;
+    private final String baseUrl;
 
     public AuthController(RegisterUserUseCase registerUserUseCase,
                           LoginUserUseCase loginUserUseCase,
@@ -42,23 +52,30 @@ public class AuthController {
                           IssueRefreshTokenUseCase issueRefreshTokenUseCase,
                           RefreshAccessTokenUseCase refreshAccessTokenUseCase,
                           RevokeRefreshTokenUseCase revokeRefreshTokenUseCase,
-                          @Value("${app.cookie.secure:false}") boolean cookieSecure) {
+                          RequestPasswordResetUseCase requestPasswordResetUseCase,
+                          ResetPasswordUseCase resetPasswordUseCase,
+                          @Value("${app.cookie.secure:false}") boolean cookieSecure,
+                          @Value("${app.base-url:http://localhost:5173}") String baseUrl) {
         this.registerUserUseCase = registerUserUseCase;
         this.loginUserUseCase = loginUserUseCase;
         this.tokenService = tokenService;
         this.issueRefreshTokenUseCase = issueRefreshTokenUseCase;
         this.refreshAccessTokenUseCase = refreshAccessTokenUseCase;
         this.revokeRefreshTokenUseCase = revokeRefreshTokenUseCase;
+        this.requestPasswordResetUseCase = requestPasswordResetUseCase;
+        this.resetPasswordUseCase = resetPasswordUseCase;
         this.cookieSecure = cookieSecure;
+        this.baseUrl = baseUrl;
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody CreateUserRequest request) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody CreateUserRequest request) {
         Gender gender = Gender.valueOf(request.gender().toUpperCase());
         User user = registerUserUseCase.execute(
                 request.username(), request.email(), request.password(),
                 request.weightGoal(), gender, request.age(),
-                request.height(), request.startWeight(), request.weighInDay()
+                request.height(), request.startWeight(), request.weighInDay(),
+                request.dailyStepsGoal()
         );
         String accessToken = tokenService.generateToken(user.getEmail());
         String rawRefreshToken = issueRefreshTokenUseCase.execute(user.getId());
@@ -69,7 +86,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         try {
             User user = loginUserUseCase.execute(request.email(), request.password());
             String accessToken = tokenService.generateToken(user.getEmail());
@@ -112,6 +129,22 @@ public class AuthController {
                 .build();
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        requestPasswordResetUseCase.execute(request.email(), baseUrl);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            resetPasswordUseCase.execute(request.token(), request.newPassword());
+            return ResponseEntity.ok().build();
+        } catch (InvalidPasswordResetTokenException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     private ResponseCookie buildRefreshCookie(String value, Duration maxAge) {
         return ResponseCookie.from("refresh_token", value)
                 .httpOnly(true)
@@ -122,5 +155,5 @@ public class AuthController {
                 .build();
     }
 
-    public record LoginRequest(String email, String password) {}
+    public record LoginRequest(@NotBlank String email, @NotBlank String password) {}
 }

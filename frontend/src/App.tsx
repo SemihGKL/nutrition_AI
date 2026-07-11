@@ -7,7 +7,10 @@ import { ObjectifsPage } from './pages/ObjectifsPage';
 import { ProfilPage } from './pages/ProfilPage';
 import { LoginPage } from './pages/LoginPage';
 import { OnboardingPage } from './pages/OnboardingPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { TutorialOverlay } from './components/ui/TutorialOverlay';
+import { UpdatePrompt } from './components/ui/UpdatePrompt';
 import { computeStreak } from './hooks/useStreak';
 import { dailyApi } from './api/daily';
 import { useEffect } from 'react';
@@ -17,7 +20,7 @@ import { isoToday } from './utils/format';
 import { WeighInProvider } from './hooks/useWeighIn';
 import { TUTORIAL_STORAGE_KEY } from './auth/session';
 
-type AuthPage = 'login' | 'register';
+type AuthPage = 'login' | 'register' | 'forgot-password';
 
 function AuthRoutes() {
   const [page, setPage] = useState<AuthPage>('login');
@@ -25,7 +28,15 @@ function AuthRoutes() {
   if (page === 'register') {
     return <OnboardingPage onDone={() => {}} onBack={() => setPage('login')} />;
   }
-  return <LoginPage onRegister={() => setPage('register')} />;
+  if (page === 'forgot-password') {
+    return <ForgotPasswordPage onBack={() => setPage('login')} />;
+  }
+  return (
+    <LoginPage
+      onRegister={() => setPage('register')}
+      onForgotPassword={() => setPage('forgot-password')}
+    />
+  );
 }
 
 function AppTabs() {
@@ -91,6 +102,20 @@ function AppSplash() {
 
 function AppRoutes() {
   const { token, isLoading } = useAuth();
+
+  // Lien email de réinitialisation : ?token=xxx dans l'URL.
+  const resetToken = new URLSearchParams(window.location.search).get('token');
+  if (resetToken) {
+    return (
+      <ResetPasswordPage
+        token={resetToken}
+        onDone={() => {
+          window.history.replaceState({}, '', window.location.pathname);
+        }}
+      />
+    );
+  }
+
   if (isLoading) return <AppSplash />;
   if (!token) return <AuthRoutes />;
   return (
@@ -104,6 +129,7 @@ export function App() {
   return (
     <AuthProvider>
       <AppRoutes />
+      <UpdatePrompt />
     </AuthProvider>
   );
 }

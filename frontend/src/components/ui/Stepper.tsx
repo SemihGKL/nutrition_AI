@@ -85,7 +85,15 @@ export function Stepper({
           <Minus size={16} color="var(--ink-2)" sw={1.8} />
         </button>
 
-        <div style={{ flex: 1, display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          {/* Miroir invisible du suffixe : réserve la même largeur à gauche pour
+              que le nombre reste centré dans le champ, avec ou sans suffixe.
+              Sans lui, le "0" glisse à gauche quand un suffixe est affiché. */}
+          {suffix && (
+            <span aria-hidden className="tabular" style={{ fontSize: 12, flexShrink: 0, visibility: 'hidden' }}>
+              {suffix}
+            </span>
+          )}
           <input
             inputMode="numeric"
             value={raw}

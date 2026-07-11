@@ -9,14 +9,46 @@ de cette checklist.
 
 Variables utilisées ci-dessous :
 - `DEPLOY_USER` = l'utilisateur SSH de déploiement (celui des secrets GitHub)
-- `DOMAIN` = ton domaine pointant vers le VPS (ex. `kaloriim.fr`)
+- `DOMAIN` = ton domaine (ou sous-domaine) pointant vers le VPS. Domaine payant
+  (ex. `kaloriim.fr`) **ou** sous-domaine DuckDNS gratuit (ex. `kaloriim.duckdns.org`).
 
 ---
 
 ## 0. Prérequis
 - [ ] VPS Ubuntu (OVH) avec accès `sudo`.
-- [ ] Un **domaine** dont l'enregistrement A pointe vers l'IP du VPS (nécessaire pour le TLS + le cookie `Secure`).
+- [ ] Un **nom de domaine** (ou sous-domaine) qui pointe vers l'IP du VPS. **Obligatoire** :
+      sans lui, pas de HTTPS → le **service worker de la PWA** ne s'enregistre pas et le
+      **cookie `refresh_token` (`Secure`)** n'est jamais renvoyé → app cassée. Let's Encrypt
+      ne délivre pas de certificat pour une IP nue. Pas de domaine payant ? → **option DuckDNS gratuite ci-dessous (0 bis)**.
 - [ ] Accès SSH par clé pour `DEPLOY_USER`.
+- [ ] Un **compte Gmail** avec 2FA activée + un **mot de passe d'application** généré
+      (https://myaccount.google.com/apppasswords) pour l'envoi des mails de reset de mot de passe.
+
+## 0 bis. (Sans domaine payant) Sous-domaine gratuit via DuckDNS
+DuckDNS fournit un sous-domaine `*.duckdns.org` gratuit, pointant vers l'IP de ton choix,
+et **compatible Let's Encrypt/certbot** (validation HTTP-01 classique). Suffisant pour un HTTPS réel.
+
+1. Aller sur https://www.duckdns.org, se connecter (GitHub/Google), créer un sous-domaine
+   (ex. `kaloriim`) → tu obtiens `kaloriim.duckdns.org`. Note le **token** affiché.
+2. Renseigner l'IP publique du VPS. Soit dans l'UI DuckDNS (champ *current ip*), soit
+   depuis le VPS en une ligne (remplace `SOUSDOMAINE` et `TOKEN`) :
+   ```bash
+   curl -s "https://www.duckdns.org/update?domains=SOUSDOMAINE&token=TOKEN&ip="
+   # réponse attendue : OK
+   ```
+3. (IP fixe → optionnel) Si l'IP du VPS est statique, une seule mise à jour suffit. Sinon,
+   rafraîchir périodiquement via cron :
+   ```bash
+   ( crontab -l 2>/dev/null; echo '*/5 * * * * curl -s "https://www.duckdns.org/update?domains=SOUSDOMAINE&token=TOKEN&ip=" >/dev/null' ) | crontab -
+   ```
+4. Vérifier la résolution avant de continuer (peut prendre quelques minutes) :
+   ```bash
+   dig +short kaloriim.duckdns.org   # doit renvoyer l'IP du VPS
+   ```
+- [ ] `DOMAIN=kaloriim.duckdns.org` résout bien vers l'IP du VPS. → utilise cette valeur partout où la checklist dit `DOMAIN`.
+
+> Le reste de la checklist (étapes 5, 7…) est **identique** : DuckDNS est un domaine comme un autre.
+> `certbot --nginx -d kaloriim.duckdns.org` fonctionne tel quel.
 
 ## 1. Secrets GitHub (repo → Settings → Secrets and variables → Actions)
 - [ ] `VPS_HOST` = IP ou hostname du VPS
@@ -77,10 +109,17 @@ DB_USERNAME=gkl
 DB_PASSWORD=<le_MÊME_que_le_.env_docker>
 JWT_SECRET=<≥ 32 caractères — openssl rand -base64 48>
 ALLOWED_ORIGINS=https://DOMAIN
+MAIL_USERNAME=<compte-gmail@gmail.com>
+MAIL_PASSWORD=<mot de passe d'application Gmail — 16 car., 2FA requise>
+APP_BASE_URL=https://DOMAIN
 ```
 - [ ] `SPRING_PROFILES_ACTIVE=prod` (sinon retombée sur `dev` → seed de test en prod !)
 - [ ] `DB_USERNAME`/`DB_PASSWORD` **identiques** au `.env` de docker-compose (étape 4)
 - [ ] `JWT_SECRET` ≥ 32 caractères (sinon l'app refuse de démarrer)
+- [ ] `MAIL_USERNAME`/`MAIL_PASSWORD` renseignés → **mot de passe d'application** Gmail
+      (2FA activée sur le compte, généré sur https://myaccount.google.com/apppasswords),
+      **jamais** le mot de passe du compte. Sinon le mail de reset échoue.
+- [ ] `APP_BASE_URL=https://DOMAIN` (sans `/` final) → sert à bâtir le lien du mail de reset
 
 ## 6. Service systemd
 ```bash
@@ -106,9 +145,12 @@ sudo cp /opt/nutritionIA/src/deploy/nginx-nutritionIA.conf /etc/nginx/sites-avai
 sudo nano /etc/nginx/sites-available/nutritionIA        # remplacer votre-domaine.fr par DOMAIN
 sudo ln -s /etc/nginx/sites-available/nutritionIA /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
-sudo certbot --nginx -d DOMAIN
+sudo certbot --nginx -d DOMAIN     # DOMAIN = ton domaine OU ton sous-domaine DuckDNS
 sudo nginx -t && sudo systemctl reload nginx
 ```
+> DuckDNS : `certbot --nginx -d kaloriim.duckdns.org` marche à l'identique (validation HTTP-01,
+> ports 80/443 ouverts à l'étape 8). Aucune config DNS-01 ni plugin spécifique nécessaire.
+
 - [ ] `https://DOMAIN` répond, certificat valide.
 - [ ] `X-Forwarded-Proto` bien transmis (déjà dans le conf) → cookie `Secure` OK.
 
@@ -126,14 +168,15 @@ sudo ufw enable
 - [ ] Étapes 1→8 terminées.
 - [ ] Merger la **PR #1** (`develop → main`) — ou `git push origin develop:main` — déclenche `deploy.yml`.
 - [ ] Suivre l'Action GitHub : job `test` (dont les 6 tests Testcontainers) → puis `deploy` (scp + restart + `is-active`).
-- [ ] Sur le VPS : `sudo journalctl -u nutritionIA -f` pendant le redémarrage (voir Flyway migrer V1→V14 puis le démarrage Spring).
+- [ ] Sur le VPS : `sudo journalctl -u nutritionIA -f` pendant le redémarrage (voir Flyway migrer V1→V15 puis le démarrage Spring).
 
 ## 10. Vérifications post-déploiement (smoke test)
 - [ ] `sudo systemctl is-active nutritionIA` → `active`
 - [ ] `curl -sS https://DOMAIN/ | head` → l'index du front
 - [ ] Inscription via l'UI, connexion, saisie d'un jour, pesée → fonctionne
-- [ ] En base : `docker exec -it nutritionIA-db psql -U gkl -d nutritionAI -c "\dt"` → tables présentes ; `flyway_schema_history` va jusqu'à **V14**
+- [ ] En base : `docker exec -it nutritionIA-db psql -U gkl -d nutritionAI -c "\dt"` → tables présentes (dont `password_reset_tokens`) ; `flyway_schema_history` va jusqu'à **V15**
 - [ ] Le seed de test (`testuser@example.com`) **n'existe PAS** (confirme le profil `prod`)
+- [ ] **Reset de mot de passe** : depuis l'écran de connexion → « mot de passe oublié ? », saisir un email existant → le mail arrive (vérifier les spams) → le lien ouvre `/reset-password?token=...` → changement de mot de passe OK
 
 ## 11. Sauvegardes (V2) — à ne pas oublier
 ```bash

@@ -91,6 +91,18 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupAuth();
+    // save n'est pas explicitement mocké dans chaque test : on lui donne un
+    // retour par défaut résolu. Sans ça, le flush du save en attente déclenché
+    // au démontage (useDailyEntry) appellerait `.catch` sur `undefined`.
+    vi.mocked(dailyApi.save).mockResolvedValue({
+      id: 1,
+      date: TODAY,
+      caloriesConsumed: 0,
+      caloriesBurned: 0,
+      steps: 0,
+      confirmed: false,
+      userId: 1,
+    });
   });
 
   afterEach(() => {

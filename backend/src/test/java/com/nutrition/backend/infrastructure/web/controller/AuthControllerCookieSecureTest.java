@@ -5,6 +5,8 @@ import com.nutrition.backend.application.usecase.IssueRefreshTokenUseCase;
 import com.nutrition.backend.application.usecase.LoginUserUseCase;
 import com.nutrition.backend.application.usecase.RefreshAccessTokenUseCase;
 import com.nutrition.backend.application.usecase.RegisterUserUseCase;
+import com.nutrition.backend.application.usecase.RequestPasswordResetUseCase;
+import com.nutrition.backend.application.usecase.ResetPasswordUseCase;
 import com.nutrition.backend.application.usecase.RevokeRefreshTokenUseCase;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
@@ -59,6 +61,12 @@ class AuthControllerCookieSecureTest {
     @MockBean
     RevokeRefreshTokenUseCase revokeRefreshTokenUseCase;
 
+    @MockBean
+    RequestPasswordResetUseCase requestPasswordResetUseCase;
+
+    @MockBean
+    ResetPasswordUseCase resetPasswordUseCase;
+
     @Test
     void should_mark_refresh_cookie_secure_when_secure_flag_is_enabled() throws Exception {
         User testUser = new User(1L, "Test", "test@example.com", "hashed",
@@ -66,14 +74,14 @@ class AuthControllerCookieSecureTest {
         when(registerUserUseCase.execute(
                 anyString(), anyString(), anyString(),
                 anyInt(), any(Gender.class), anyInt(),
-                anyDouble(), anyDouble(), anyString()
+                anyDouble(), anyDouble(), anyString(), nullable(Integer.class)
         )).thenReturn(testUser);
         when(tokenService.generateToken("test@example.com")).thenReturn("mocked-jwt-token");
         when(issueRefreshTokenUseCase.execute(1L)).thenReturn("mocked-refresh-token");
 
         String body = objectMapper.writeValueAsString(
                 new CreateUserRequest("Test", "test@example.com", "password123",
-                        "MALE", 28, 178.0, 85.0, 75, "MONDAY")
+                        "MALE", 28, 178.0, 85.0, 75, "MONDAY", null)
         );
 
         mockMvc.perform(post("/api/auth/register")

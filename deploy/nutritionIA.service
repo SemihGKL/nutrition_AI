@@ -19,6 +19,8 @@ WorkingDirectory=/opt/nutritionIA
 # ── Profil + secrets ────────────────────────────────────────────────
 # SANS ceci, spring.profiles.active retombe sur "dev" (cf. application.properties) :
 # on chargerait alors le seed de test et DataInitializer EN PRODUCTION.
+# Ce fichier fournit AUSSI les identifiants SMTP (MAIL_USERNAME/MAIL_PASSWORD) et
+# APP_BASE_URL nécessaires à l'envoi des mails de reset de mot de passe.
 EnvironmentFile=/etc/nutritionIA/nutritionIA.env
 
 # ── Mémoire ─────────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import com.nutrition.backend.domain.entity.Objective;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.infrastructure.web.dto.CreateObjectiveRequest;
 import com.nutrition.backend.infrastructure.web.dto.ObjectiveDto;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -58,7 +59,7 @@ public class ObjectiveController {
     }
 
     @PostMapping
-    public ResponseEntity<ObjectiveDto> createObjective(@RequestBody CreateObjectiveRequest request, Authentication auth) {
+    public ResponseEntity<ObjectiveDto> createObjective(@Valid @RequestBody CreateObjectiveRequest request, Authentication auth) {
         User user = getUserProfileUseCase.byEmail(auth.getName());
         Objective objective = new Objective(null, user.getId(), request.dayOfWeek(),
                 request.label(), 0, request.type() != null ? request.type() : "CUSTOM", request.targetValue());
