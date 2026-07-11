@@ -2,6 +2,8 @@ package com.nutrition.backend.infrastructure.email;
 
 import com.nutrition.backend.domain.model.SupportCategory;
 import com.nutrition.backend.domain.ports.EmailPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -9,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class SpringMailEmailAdapter implements EmailPort {
+
+    private static final Logger log = LoggerFactory.getLogger(SpringMailEmailAdapter.class);
 
     private final JavaMailSender mailSender;
     private final String fromEmail;
@@ -31,7 +35,14 @@ public class SpringMailEmailAdapter implements EmailPort {
         message.setText("Bonjour,\n\nCliquez sur le lien suivant pour réinitialiser votre mot de passe :\n\n"
                 + resetLink
                 + "\n\nCe lien expire dans 1 heure.\n\nSi vous n'avez pas fait cette demande, ignorez cet email.");
-        mailSender.send(message);
+        log.info("[MAIL] Envoi reset password → {}", toEmail);
+        try {
+            mailSender.send(message);
+            log.info("[MAIL] Reset password envoyé → {}", toEmail);
+        } catch (Exception e) {
+            log.error("[MAIL] Échec envoi reset password → {} : {}", toEmail, e.getMessage());
+            throw e;
+        }
     }
 
     @Override
@@ -45,7 +56,14 @@ public class SpringMailEmailAdapter implements EmailPort {
         mail.setText("Catégorie : " + category.label() + "\n"
                 + "Utilisateur : " + safeReporter + "\n\n"
                 + "Message :\n" + message);
-        mailSender.send(mail);
+        log.info("[MAIL] Envoi support ({}) de {}", category.label(), safeReporter);
+        try {
+            mailSender.send(mail);
+            log.info("[MAIL] Support envoyé ({}) de {}", category.label(), safeReporter);
+        } catch (Exception e) {
+            log.error("[MAIL] Échec envoi support ({}) de {} : {}", category.label(), safeReporter, e.getMessage());
+            throw e;
+        }
     }
 
     /**

@@ -7,6 +7,7 @@ import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.infrastructure.web.UserMapper;
 import com.nutrition.backend.infrastructure.web.dto.UpdateUserRequest;
 import com.nutrition.backend.infrastructure.web.dto.UserDto;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +32,7 @@ public class UserController {
     }
 
     @PutMapping("/me")
-    public ResponseEntity<UserDto> updateMyProfile(@RequestBody UpdateUserRequest request, Authentication auth) {
+    public ResponseEntity<UserDto> updateMyProfile(@Valid @RequestBody UpdateUserRequest request, Authentication auth) {
         User current = getUserProfileUseCase.byEmail(auth.getName());
         Gender gender = Gender.valueOf(request.gender().toUpperCase());
 
