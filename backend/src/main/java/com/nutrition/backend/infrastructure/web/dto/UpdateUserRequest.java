@@ -1,13 +1,18 @@
 package com.nutrition.backend.infrastructure.web.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
+
 public record UpdateUserRequest(
-        String username,
-        String gender,
-        int age,
-        double height,
-        double currentWeight,
-        String weighInDay,
-        Integer dailyCalorieGoal,
-        Integer dailyStepsGoal,
-        Integer weightGoal
+        @NotBlank @Size(max = 100) String username,
+        @NotBlank String gender,
+        @Positive int age,
+        @Positive double height,
+        @Positive double currentWeight,
+        @NotBlank @Size(max = 10) String weighInDay,
+        @Positive Integer dailyCalorieGoal,
+        @PositiveOrZero Integer dailyStepsGoal,
+        @Positive Integer weightGoal
 ) {}
