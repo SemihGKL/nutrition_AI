@@ -24,8 +24,8 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
   };
   const zoneHint: Record<Zone, string> = {
     light:       "l'activité crée l'essentiel du déficit",
-    recommended: "100 – 250 kcal / j depuis l'assiette",
-    intensive:   '250 – 400 kcal / j depuis l\'assiette',
+    recommended: "100 – 250 kcal / jour depuis l'assiette",
+    intensive:   '250 – 400 kcal / jour depuis l\'assiette',
   };
   const zoneColor: Record<Zone, string> = {
     light:       'var(--ink-2)',
@@ -74,7 +74,7 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
         />
         <ResultStat
           label="déficit alim. / j"
-          description="ce qu'on retire de l'assiette pour créer le déficit"
+          description="ce que tu retires chaque jour de l'assiette — ta perte quotidienne via l'alimentation"
           uppercase={false}
           tooltip="Déficit créé uniquement par ton alimentation (MBR − objectif)."
           value={foodDeficit > 0 ? `−${formatNumber(Math.round(foodDeficit))}` : `+${formatNumber(Math.round(-foodDeficit))}`}
@@ -100,14 +100,14 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
             <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 5 }}>kcal / jour</div>
           </div>
           <div style={{ textAlign: 'right', paddingBottom: 2 }}>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 5 }}>perte min. alim.</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 5 }}>perte minimale</div>
             <div className="display tabular" style={{
               fontSize: 26, fontWeight: 500, lineHeight: 1,
               color: minWeeklyLossKg > 0.02 ? 'var(--green)' : 'var(--ink-2)',
             }}>
               −{Math.abs(minWeeklyLossKg).toFixed(2).replace('.', ',')}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}>kg / sem. (alim.)</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}>kg / semaine</div>
           </div>
         </div>
 
