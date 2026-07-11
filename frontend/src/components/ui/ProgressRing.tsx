@@ -76,20 +76,12 @@ export function ProgressRing({
     };
   }
 
-  // Colored dot centered on the ring stroke
-  function dotPos(tickRatio: number) {
-    const angle = 2 * Math.PI * tickRatio;
-    return { cx: cx + r * Math.cos(angle), cy: cy + r * Math.sin(angle) };
-  }
-
-  const goalNotch = mbr ? notchCoords(goalRatio) : null;
-  const mbrNotch  = mbr ? notchCoords(0) : null;
-  const goalDot   = mbr ? dotPos(goalRatio) : null;
-  const mbrDot    = mbr ? dotPos(0) : null;
+  const goalBar = mbr ? notchCoords(goalRatio) : null;
+  const mbrBar  = mbr ? notchCoords(0) : null;
 
   return (
     <div style={{ position: 'relative', width: size, height: size }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
         <circle
           cx={cx} cy={cy} r={r}
           fill="none"
@@ -119,16 +111,19 @@ export function ProgressRing({
             style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(.2,.7,.2,1) 0.15s' }}
           />
         )}
-        {/* White notches — always visible regardless of ring fill color */}
-        {goalNotch && (
-          <line {...goalNotch} stroke="var(--paper)" strokeWidth={3} strokeLinecap="round" />
+        {/* Colored bars as markers — white backing ensures visibility against any arc color */}
+        {goalBar && (
+          <>
+            <line {...goalBar} stroke="var(--paper)" strokeWidth={6} strokeLinecap="butt" />
+            <line {...goalBar} stroke={GOAL_COLOR} strokeWidth={3} strokeLinecap="butt" />
+          </>
         )}
-        {mbrNotch && (
-          <line {...mbrNotch} stroke="var(--paper)" strokeWidth={3} strokeLinecap="round" />
+        {mbrBar && (
+          <>
+            <line {...mbrBar} stroke="var(--paper)" strokeWidth={6} strokeLinecap="butt" />
+            <line {...mbrBar} stroke={MBR_COLOR} strokeWidth={3} strokeLinecap="butt" />
+          </>
         )}
-        {/* Colored dots on top of notches for color distinction */}
-        {goalDot && <circle {...goalDot} r={4} fill={GOAL_COLOR} />}
-        {mbrDot  && <circle {...mbrDot}  r={4} fill={MBR_COLOR} />}
       </svg>
 
       <div style={{
