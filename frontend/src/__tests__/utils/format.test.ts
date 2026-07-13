@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatNumber, weekStart, addDays } from '../../utils/format';
+import { formatNumber, weekStart, addDays, frenchDayLetter } from '../../utils/format';
 
 describe('formatNumber — séparateur de milliers français', () => {
   it('should format number with french locale thousand separator', () => {
@@ -31,5 +31,22 @@ describe('addDays — ajout de jours avec débordement de mois', () => {
 
   it('should add days correctly when crossing a year boundary', () => {
     expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
+  });
+});
+
+describe('frenchDayLetter — initiale du jour de la semaine', () => {
+  it('should return L for a monday', () => {
+    // 2026-07-13 est un lundi
+    expect(frenchDayLetter('2026-07-13')).toBe('L');
+  });
+
+  it('should return D for a sunday', () => {
+    // 2026-07-12 est un dimanche
+    expect(frenchDayLetter('2026-07-12')).toBe('D');
+  });
+
+  it('should return S for a saturday', () => {
+    // 2026-07-11 est un samedi
+    expect(frenchDayLetter('2026-07-11')).toBe('S');
   });
 });

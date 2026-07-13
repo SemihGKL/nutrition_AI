@@ -6,8 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import type { DailyCalories } from '../types/api';
 import type { StreakInfo } from '../hooks/useStreak';
 import {
-  isoToday, addDays, weekStart, weekEnd, weekNumber,
-  frenchDateShort, formatNumber, stepsToKcal,
+  isoToday, addDays, frenchDateShort, frenchDayLetter, formatNumber, stepsToKcal,
 } from '../utils/format';
 
 interface Props {
@@ -18,7 +17,6 @@ interface Props {
 }
 
 const MILESTONES = [7, 14, 21, 30, 50, 75, 100, 150, 200, 365];
-const DAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 interface BarDay {
   label: string;
@@ -33,7 +31,10 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
   const { user } = useAuth();
   const today = isoToday();
   const target = user?.dailyCalorieGoal ?? 1800;
-  const monday = weekStart(today);
+  // Fenêtre glissante : les 7 derniers jours en terminant aujourd'hui (inclus),
+  // et non la semaine calendaire — sinon le récap se vide chaque lundi alors que
+  // le streak, lui, reste à cheval sur les semaines.
+  const windowStart = addDays(today, -6);
 
   const entryMap = useMemo(() => {
     const m = new Map<string, DailyCalories>();
@@ -43,7 +44,7 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
 
   const bars: BarDay[] = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
-      const date = addDays(monday, i);
+      const date = addDays(windowStart, i);
       const entry = entryMap.get(date);
       const isFuture = date > today;
       const isToday = date === today;
@@ -52,9 +53,9 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
       const net = entry ? entry.caloriesConsumed - (entry.caloriesBurned ?? 0) - steps : 0;
       const met = net > 0 && net <= target;
       const partial = isToday && !!entry && !entry.confirmed;
-      return { label: DAY_LABELS[i], date, net, met, future: isFuture, partial };
+      return { label: frenchDayLetter(date), date, net, met, future: isFuture, partial };
     });
-  }, [monday, entryMap, target, today]);
+  }, [windowStart, entryMap, target, today]);
 
   const confirmedBars = bars.filter(b => !b.future && !b.partial && b.net > 0);
   const avgKcal = confirmedBars.length > 0
@@ -68,15 +69,14 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
   const milestoneProgress = Math.min(1, streakCount / nextMilestone);
   const daysToMilestone = nextMilestone - streakCount;
 
-  const weekNum = weekNumber(today);
-  const weekRange = `${frenchDateShort(monday)} → ${frenchDateShort(weekEnd(today))}`;
+  const weekRange = `${frenchDateShort(windowStart)} → ${frenchDateShort(today)}`;
 
   return (
     <PageShell>
 
       <div style={{ padding: '12px 20px 4px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.4 }}>semaine {weekNum}</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.4 }}>7 derniers jours</div>
           <div className="display" style={{ fontSize: 24, fontWeight: 500, marginTop: 2, letterSpacing: '-0.02em' }}>
             {weekRange}
           </div>

@@ -7,7 +7,7 @@ import { weighInApi, type WeighIn } from '../api/weighIn';
 import { useWeighInContext } from '../hooks/useWeighIn';
 import type { DailyCalories } from '../types/api';
 import {
-  isoToday, addDays, weekStart, weekNumber, frenchDateShort, weekEnd,
+  isoToday, addDays, frenchDateShort,
   formatNumber, formatDecimal, frenchDayShort, stepsToKcal,
 } from '../utils/format';
 import { computeMbr } from '../utils/mbr';
@@ -25,8 +25,9 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const mbr = user
     ? Math.round(computeMbr(user.currentWeight, user.height, user.age, user.gender as 'MALE' | 'FEMALE'))
     : 1800;
-  const monday = weekStart(today);
-  const weekNum = weekNumber(today);
+  // Fenêtre glissante : les 7 derniers jours en terminant aujourd'hui (inclus),
+  // alignée sur le streak — le récap ne se vide plus au changement de semaine.
+  const windowStart = addDays(today, -6);
 
   const [weighIns, setWeighIns] = useState<WeighIn[]>([]);
   const [weighInWeight, setWeighInWeight] = useState(user?.currentWeight ?? 70);
@@ -63,7 +64,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
 
   const weekDays = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => {
-      const date = addDays(monday, i);
+      const date = addDays(windowStart, i);
       const entry = entryMap.get(date);
       const isFuture = date > today;
       const weightKg = user?.currentWeight ?? 70;
@@ -80,7 +81,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
         confirmed: entry?.confirmed ?? false,
       };
     }),
-  [monday, entryMap, target, today]);
+  [windowStart, entryMap, target, today]);
 
   const confirmedDays = weekDays.filter(d => !d.future && d.net !== null && d.confirmed);
   const totalRealDeficit = confirmedDays.reduce((s, d) => s + (mbr - (d.net ?? 0)), 0);
@@ -97,7 +98,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const expectedLoss = totalRealDeficit / 7700;
   const actualLoss = weightDiff !== null ? -weightDiff : null;
 
-  const weekRange = `${frenchDateShort(monday)} → ${frenchDateShort(weekEnd(today))}`;
+  const weekRange = `${frenchDateShort(windowStart)} → ${frenchDateShort(today)}`;
 
   const avgDailyCaloriesBurned = useMemo(() => {
     const thirtyDaysAgo = addDays(today, -30);
@@ -125,7 +126,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
     <PageShell>
 
       <div style={{ padding: '12px 20px 4px' }}>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.4 }}>récap · semaine {weekNum}</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.4 }}>récap · 7 derniers jours</div>
         <div className="display" style={{ fontSize: 24, fontWeight: 500, marginTop: 2, letterSpacing: '-0.02em' }}>
           {weekRange}
         </div>
