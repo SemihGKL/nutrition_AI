@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       includeAssets: [
@@ -39,11 +42,8 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
-        clientsClaim: true,
-        skipWaiting: true,
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/],
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },
     }),
   ],

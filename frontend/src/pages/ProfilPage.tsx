@@ -11,6 +11,7 @@ import { computeMbr } from '../utils/mbr';
 import { CalorieTargetStep } from '../components/onboarding/CalorieTargetStep';
 import { Chevron } from '../components/ui/icons';
 import { SupportPage } from './SupportPage';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 interface Props {
   onTabChange: (tab: NavTab) => void;
@@ -36,6 +37,7 @@ const DAY_LABELS: Record<string, string> = {
 export function ProfilPage({ onTabChange, streakCount }: Props) {
   const { user, logout, updateUser } = useAuth();
   const { needsBadge, refresh } = useWeighInContext();
+  const { isSupported: pushSupported, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const initials = user?.username?.slice(0, 2).toUpperCase() ?? '?';
   const [editing, setEditing] = useState(false);
   const [contacting, setContacting] = useState(false);
@@ -166,6 +168,39 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
           <InfoRow label="Objectif calorique" value={user?.dailyCalorieGoal ? `${user.dailyCalorieGoal} kcal/j` : '—'} />
           <InfoRow label="Objectif de pas" value={user?.dailyStepsGoal ? `${user.dailyStepsGoal.toLocaleString('fr-FR')} pas/j` : '—'} last />
         </Section>
+
+        {/* Notifications */}
+        {pushSupported && (
+          <Section label="notifications">
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '13px 16px',
+            }}>
+              <div>
+                <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>Rappel de pesée</div>
+                <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
+                  {isSubscribed ? 'Notification activée' : 'Reçois un rappel le jour de ta pesée'}
+                </div>
+              </div>
+              <button
+                onClick={isSubscribed ? unsubscribe : subscribe}
+                disabled={pushLoading}
+                style={{
+                  padding: '7px 16px', borderRadius: 999, border: 'none',
+                  background: isSubscribed ? 'var(--orange)' : 'var(--paper-3)',
+                  color: isSubscribed ? '#fff' : 'var(--ink-2)',
+                  fontSize: 13, fontWeight: 600,
+                  cursor: pushLoading ? 'default' : 'pointer',
+                  opacity: pushLoading ? 0.6 : 1,
+                  fontFamily: 'var(--font-body)',
+                  transition: 'all 150ms',
+                }}
+              >
+                {pushLoading ? '…' : isSubscribed ? 'Activé' : 'Activer'}
+              </button>
+            </div>
+          </Section>
+        )}
 
         {/* Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
