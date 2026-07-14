@@ -1,13 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { Check } from '../components/ui/icons';
-import { Stepper } from '../components/ui/Stepper';
 import { useAuth } from '../hooks/useAuth';
 import { weighInApi, type WeighIn } from '../api/weighIn';
-import { useWeighInContext } from '../hooks/useWeighIn';
 import type { DailyCalories } from '../types/api';
 import {
-  isoToday, addDays, weekStart, weekNumber, frenchDateShort, weekEnd,
+  isoToday, addDays, frenchDateShort,
   formatNumber, formatDecimal, frenchDayShort, stepsToKcal,
 } from '../utils/format';
 import { computeMbr } from '../utils/mbr';
@@ -25,35 +23,16 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const mbr = user
     ? Math.round(computeMbr(user.currentWeight, user.height, user.age, user.gender as 'MALE' | 'FEMALE'))
     : 1800;
-  const monday = weekStart(today);
-  const weekNum = weekNumber(today);
+  // Fenêtre glissante : les 7 derniers jours en terminant aujourd'hui (inclus),
+  // alignée sur le streak — le récap ne se vide plus au changement de semaine.
+  const windowStart = addDays(today, -6);
 
   const [weighIns, setWeighIns] = useState<WeighIn[]>([]);
-  const [weighInWeight, setWeighInWeight] = useState(user?.currentWeight ?? 70);
-  const [savingWeighIn, setSavingWeighIn] = useState(false);
-  const [weighInError, setWeighInError] = useState<string | null>(null);
-  const { refresh: refreshBadge } = useWeighInContext();
 
   useEffect(() => {
     if (!user) return;
     weighInApi.getAll().then(setWeighIns).catch(() => {});
   }, [user]);
-
-  const handleWeighIn = async () => {
-    if (!user) return;
-    setSavingWeighIn(true);
-    setWeighInError(null);
-    try {
-      await weighInApi.save({ date: isoToday(), weight: weighInWeight });
-      const updated = await weighInApi.getAll();
-      setWeighIns(updated);
-      await refreshBadge();
-    } catch {
-      setWeighInError("Échec de l'enregistrement — réessaie.");
-    } finally {
-      setSavingWeighIn(false);
-    }
-  };
 
   const entryMap = useMemo(() => {
     const m = new Map<string, DailyCalories>();
@@ -63,7 +42,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
 
   const weekDays = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => {
-      const date = addDays(monday, i);
+      const date = addDays(windowStart, i);
       const entry = entryMap.get(date);
       const isFuture = date > today;
       const weightKg = user?.currentWeight ?? 70;
@@ -80,7 +59,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
         confirmed: entry?.confirmed ?? false,
       };
     }),
-  [monday, entryMap, target, today]);
+  [windowStart, entryMap, target, today]);
 
   const confirmedDays = weekDays.filter(d => !d.future && d.net !== null && d.confirmed);
   const totalRealDeficit = confirmedDays.reduce((s, d) => s + (mbr - (d.net ?? 0)), 0);
@@ -97,7 +76,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const expectedLoss = totalRealDeficit / 7700;
   const actualLoss = weightDiff !== null ? -weightDiff : null;
 
-  const weekRange = `${frenchDateShort(monday)} → ${frenchDateShort(weekEnd(today))}`;
+  const weekRange = `${frenchDateShort(windowStart)} → ${frenchDateShort(today)}`;
 
   const avgDailyCaloriesBurned = useMemo(() => {
     const thirtyDaysAgo = addDays(today, -30);
@@ -125,7 +104,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
     <PageShell>
 
       <div style={{ padding: '12px 20px 4px' }}>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.4 }}>récap · semaine {weekNum}</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.4 }}>récap · 7 derniers jours</div>
         <div className="display" style={{ fontSize: 24, fontWeight: 500, marginTop: 2, letterSpacing: '-0.02em' }}>
           {weekRange}
         </div>
@@ -169,42 +148,25 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
 
         {!latestWeighIn && (
           <div style={{
-            background: 'var(--orange-tint)', border: '1px solid var(--orange-soft)',
+            background: 'var(--paper-2)', border: '1px solid var(--hairline-2)',
             borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 14,
           }}>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.3, marginBottom: 2 }}>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.3, marginBottom: 6 }}>
               pesée hebdomadaire
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>
-              aucune pesée cette semaine
+            <div style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 12 }}>
+              Aucune pesée enregistrée — rends-toi dans Profil pour saisir ton poids.
             </div>
-            <Stepper
-              label="Poids"
-              suffix="kg"
-              value={weighInWeight}
-              onChange={setWeighInWeight}
-              min={30} step={0.1}
-            />
             <button
-              onClick={handleWeighIn}
-              disabled={savingWeighIn}
+              onClick={() => onTabChange('profil')}
               style={{
-                marginTop: 12, width: '100%',
-                padding: '12px 0', borderRadius: 'var(--radius)',
-                background: 'var(--orange)', color: '#fff',
-                border: 'none', fontSize: 15, fontWeight: 700,
-                cursor: savingWeighIn ? 'default' : 'pointer',
-                opacity: savingWeighIn ? 0.7 : 1,
-                fontFamily: 'var(--font-body)',
+                width: '100%', padding: '10px 0', borderRadius: 'var(--radius)',
+                background: 'var(--paper-3)', color: 'var(--ink)', border: '1px solid var(--hairline)',
+                fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)',
               }}
             >
-              {savingWeighIn ? 'Enregistrement…' : 'Enregistrer ma pesée'}
+              Aller dans Profil
             </button>
-            {weighInError && (
-              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--red)' }}>
-                {weighInError}
-              </div>
-            )}
           </div>
         )}
 

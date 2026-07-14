@@ -54,6 +54,12 @@ export function frenchDayShort(dateStr: string): string {
   return names[d.getDay()];
 }
 
+export function frenchDayLetter(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  const letters = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  return letters[d.getDay()];
+}
+
 export function weekStart(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
   const day = d.getDay();
