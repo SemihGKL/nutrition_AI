@@ -170,4 +170,69 @@ describe('useDailyEntry', () => {
     vi.useRealTimers();
     await waitFor(() => expect(vi.mocked(dailyApi.save)).toHaveBeenCalledTimes(1));
   });
+
+  const DAY_A = '2026-06-20';
+  const DAY_B = '2026-06-21';
+
+  it('flush la sauvegarde en attente du jour precedent quand la date change avant la fin du debounce', async () => {
+    vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
+    vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+    vi.mocked(dailyApi.save).mockImplementation(async (entry: DailyCalories) => entry);
+
+    const { result, rerender } = renderHook(
+      ({ date }) => useDailyEntry(USER_ID, date),
+      { initialProps: { date: DAY_A } },
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    vi.useFakeTimers();
+
+    // Modifie le jour A, mais ne laisse pas les 800ms s'ecouler.
+    act(() => { result.current.setCalories(1200); });
+    vi.advanceTimersByTime(300);
+
+    // Navigue vers le jour B avant l'echeance du debounce de A.
+    rerender({ date: DAY_B });
+
+    // Attendre le rechargement du jour B avec les vrais timers,
+    // car fetchEntry utilise des Promises non liees aux fake timers.
+    vi.useRealTimers();
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    vi.useFakeTimers();
+
+    // Modifie le jour B.
+    act(() => { result.current.setSteps(5000); });
+    vi.advanceTimersByTime(800);
+
+    vi.useRealTimers();
+
+    // Le jour A doit avoir ete envoye (flush au changement de date),
+    // et le jour B doit avoir ete envoye apres son propre debounce.
+    await waitFor(() => {
+      expect(vi.mocked(dailyApi.save)).toHaveBeenCalledWith(
+        expect.objectContaining({ date: DAY_A, caloriesConsumed: 1200 }),
+      );
+    });
+    await waitFor(() => {
+      expect(vi.mocked(dailyApi.save)).toHaveBeenCalledWith(
+        expect.objectContaining({ date: DAY_B, steps: 5000 }),
+      );
+    });
+  });
+
+  it("ne declenche aucun appel save superflu quand la date change sans modification en attente", async () => {
+    vi.mocked(dailyApi.getByDate).mockResolvedValue(mockEntry);
+    vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+
+    const { result, rerender } = renderHook(
+      ({ date }) => useDailyEntry(USER_ID, date),
+      { initialProps: { date: DAY_A } },
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    rerender({ date: DAY_B });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(vi.mocked(dailyApi.save)).not.toHaveBeenCalled();
+  });
 });

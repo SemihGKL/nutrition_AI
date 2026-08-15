@@ -64,6 +64,12 @@ export function useDailyEntry(
 
   // Flush any pending debounced save when navigating away within the SPA,
   // so auto-completions (e.g. SPORT objectives) are recorded before ObjectifsPage loads.
+  // Also flush when `date` changes: saveTimerRef/pendingEntryRef are shared across
+  // dates, so without this the pending save of the previous day would be silently
+  // cancelled/overwritten by scheduleSave for the new day. React guarantees this
+  // cleanup runs before the effect re-runs on a `date` change, in addition to
+  // running on unmount, so depending on [date] flushes the outgoing day's pending
+  // save before anything can overwrite it.
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) {
@@ -76,8 +82,7 @@ export function useDailyEntry(
         pendingEntryRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [date]);
 
   const fetchEntry = useCallback(async () => {
     if (!userId) return;

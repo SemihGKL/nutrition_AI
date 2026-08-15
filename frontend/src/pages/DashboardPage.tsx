@@ -9,6 +9,7 @@ import { EntrySection } from '../components/dashboard/EntrySection';
 import { NetBalanceRow } from '../components/dashboard/NetBalanceRow';
 import { DeficitBanner } from '../components/dashboard/DeficitBanner';
 import { ConfirmationView } from '../components/dashboard/ConfirmationView';
+import { CalendarModal } from '../components/dashboard/CalendarModal';
 import { useAuth } from '../hooks/useAuth';
 import { useDailyEntry } from '../hooks/useDailyEntry';
 import { computeStreak } from '../hooks/useStreak';
@@ -28,9 +29,8 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
   const { user } = useAuth();
   const [viewedDate, setViewedDate] = useState(isoToday);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const today = isoToday();
-  const isToday = viewedDate === today;
-  const isPast  = viewedDate < today;
 
   useEffect(() => { setIsEditing(false); }, [viewedDate]);
 
@@ -51,12 +51,23 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
     ? Math.round((10 * (user.currentWeight ?? 70)) + (6.25 * (user.height ?? 170)) - (5 * (user.age ?? 30)) + (user.gender === 'MALE' ? 5 : -161))
     : undefined);
 
+  const openCalendar = () => setIsCalendarOpen(true);
+  const closeCalendar = () => setIsCalendarOpen(false);
 
   const handleConfirm = async () => {
     await confirm();
     onEntriesRefresh();
     setIsEditing(false);
   };
+
+  const calendarModal = isCalendarOpen && (
+    <CalendarModal
+      selectedDate={viewedDate}
+      todayDate={today}
+      onSelect={setViewedDate}
+      onClose={closeCalendar}
+    />
+  );
 
   if (isLoading) {
     return <PageShell><LoadingState /></PageShell>;
@@ -69,40 +80,12 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
           date={viewedDate}
           recap={recap}
           streak={streak}
-          canEdit={isToday}
           onEdit={() => setIsEditing(true)}
+          onOpenCalendar={openCalendar}
         />
         <BottomNav active="jour" onChange={onTabChange} />
         <HomeIndicator />
-      </PageShell>
-    );
-  }
-
-  if (isPast && !isEditing) {
-    return (
-      <PageShell>
-        <DayHeader
-          date={viewedDate}
-          streakCount={streak.current}
-          canGoForward
-          onPrev={() => setViewedDate(d => addDays(d, -1))}
-          onNext={() => setViewedDate(d => addDays(d, 1))}
-        />
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          gap: 8, padding: '0 24px',
-        }}>
-          <div style={{ fontSize: 32 }}>📋</div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
-            Journée non confirmée
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--ink-3)', textAlign: 'center', lineHeight: 1.5 }}>
-            Les jours passés ne peuvent plus être modifiés.
-          </div>
-        </div>
-        <BottomNav active="jour" onChange={onTabChange} />
-        <HomeIndicator />
+        {calendarModal}
       </PageShell>
     );
   }
@@ -115,6 +98,7 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
         canGoForward={viewedDate < today}
         onPrev={() => setViewedDate(d => addDays(d, -1))}
         onNext={() => setViewedDate(d => addDays(d, 1))}
+        onOpenCalendar={openCalendar}
       />
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 20px' }}>
@@ -166,6 +150,7 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
 
       <BottomNav active="jour" onChange={onTabChange} />
       <HomeIndicator />
+      {calendarModal}
     </PageShell>
   );
 }

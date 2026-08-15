@@ -170,7 +170,7 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     expect(screen.getByRole('button', { name: /Modifier/i })).toBeInTheDocument();
   });
 
-  it('affiche "Journee non confirmee" apres navigation vers un jour passe', async () => {
+  it('affiche le formulaire de saisie normal apres navigation vers un jour passe non rempli', async () => {
     vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
     vi.mocked(dailyApi.getAll).mockResolvedValue([]);
 
@@ -181,8 +181,50 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     // Navigue vers le jour precedent (hier, qui n'a pas de donnees)
     await userEvent.click(screen.getByRole('button', { name: 'jour précédent' }));
 
-    await waitFor(() =>
-      expect(screen.getByText('Journée non confirmée')).toBeInTheDocument(),
+    await waitFor(() => expect(screen.getByText('saisie du jour')).toBeInTheDocument());
+    expect(screen.queryByText('Journée non confirmée')).not.toBeInTheDocument();
+  });
+
+  it('affiche le bouton Modifier pour un jour passe deja confirme', async () => {
+    const YESTERDAY = '2026-06-21';
+    const confirmedEntry: DailyCalories = {
+      id: 1,
+      date: YESTERDAY,
+      caloriesConsumed: 1800,
+      caloriesBurned: 0,
+      steps: 0,
+      confirmed: true,
+      userId: 1,
+    };
+    vi.mocked(dailyApi.getByDate).mockImplementation(date =>
+      Promise.resolve(date === YESTERDAY ? confirmedEntry : null),
     );
+    vi.mocked(dailyApi.getRecap).mockResolvedValue({ ...mockRecap, date: YESTERDAY, confirmed: true });
+    vi.mocked(dailyApi.getAll).mockResolvedValue([confirmedEntry]);
+
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[confirmedEntry]} onEntriesRefresh={vi.fn()} />);
+    await waitFor(() => screen.getByText('saisie du jour'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'jour précédent' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Modifier/i })).toBeInTheDocument());
+  });
+
+  it('ouvre le calendrier via la vignette de date et change de jour au clic sur un jour anterieur', async () => {
+    vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
+    vi.mocked(dailyApi.getAll).mockResolvedValue([]);
+
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
+    await waitFor(() => screen.getByText('saisie du jour'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Changer de jour' }));
+
+    // Juin 2026 : le calendrier s'ouvre sur le mois de TODAY (22 juin 2026)
+    await waitFor(() => expect(screen.getByText('Juin 2026')).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole('button', { name: '2026-06-15' }));
+
+    await waitFor(() => expect(dailyApi.getByDate).toHaveBeenCalledWith('2026-06-15'));
+    expect(screen.queryByText('Juin 2026')).not.toBeInTheDocument();
   });
 });
