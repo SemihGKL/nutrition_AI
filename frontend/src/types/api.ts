@@ -20,10 +20,20 @@ export interface WeighIn {
   note?: string;
 }
 
+export interface Meals {
+  breakfast: number;
+  lunch: number;
+  snack: number;
+  dinner: number;
+}
+
+export type MealKey = keyof Meals;
+
 export interface DailyCalories {
   id?: number;
   date: string;
   caloriesConsumed: number;
+  meals?: Meals;
   caloriesBurned: number;
   steps: number;
   confirmed: boolean;

@@ -123,7 +123,8 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
 
     render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
     await waitFor(() => expect(screen.getByText('saisie du jour')).toBeInTheDocument());
-    expect(screen.getByText('Calories consommées')).toBeInTheDocument();
+    expect(screen.getByText('Petit-déjeuner')).toBeInTheDocument();
+    expect(screen.getByText('Dîner')).toBeInTheDocument();
   });
 
   it('le bouton Confirmer est desactive quand les calories valent 0', async () => {
@@ -143,7 +144,8 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
     await waitFor(() => screen.getByText('Confirmer ma journée'));
 
-    // Premier bouton "augmenter" = stepper Calories consommees
+    await userEvent.click(screen.getByText('Déjeuner'));
+    // Premier bouton "augmenter" = stepper du déjeuner, seul repas coché
     await userEvent.click(screen.getAllByRole('button', { name: 'augmenter' })[0]);
 
     expect(screen.getByRole('button', { name: /Confirmer ma journée/ })).not.toBeDisabled();

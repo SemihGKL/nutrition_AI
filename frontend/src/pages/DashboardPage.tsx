@@ -6,6 +6,7 @@ import { Check } from '../components/ui/icons';
 import { DayHeader } from '../components/dashboard/DayHeader';
 import { ContextMessage } from '../components/dashboard/ContextMessage';
 import { EntrySection } from '../components/dashboard/EntrySection';
+import { NO_MEALS } from '../utils/meals';
 import { NetBalanceRow } from '../components/dashboard/NetBalanceRow';
 import { DeficitBanner } from '../components/dashboard/DeficitBanner';
 import { ConfirmationView } from '../components/dashboard/ConfirmationView';
@@ -34,7 +35,7 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
 
   useEffect(() => { setIsEditing(false); }, [viewedDate]);
 
-  const { entry, recap, isLoading, isSaving, setCalories, setSteps, setBurned, confirm } =
+  const { entry, recap, isLoading, isSaving, setMeal, setSteps, setBurned, confirm } =
     useDailyEntry(user?.id, viewedDate);
 
   const streak = user ? computeStreak(allEntries, viewedDate) : EMPTY_STREAK;
@@ -117,13 +118,14 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
 
         <EntrySection
           key={viewedDate}
+          meals={entry?.meals ?? NO_MEALS}
           calories={calories}
           steps={steps}
           burned={burned}
           weightKg={user?.currentWeight ?? 70}
           stepsGoal={user?.dailyStepsGoal}
           isSaving={isSaving}
-          onCalories={setCalories}
+          onMeal={setMeal}
           onSteps={setSteps}
           onBurned={setBurned}
         />

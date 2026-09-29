@@ -1,5 +1,7 @@
 package com.nutrition.backend.domain.entity;
 
+import com.nutrition.backend.domain.model.Meals;
+
 import java.time.LocalDate;
 
 public final class DailyEntry {
@@ -8,43 +10,65 @@ public final class DailyEntry {
     private final Long userId;
     private final LocalDate date;
     private final int caloriesConsumed;
+    private final Meals meals;
     private final int steps;
     private final int caloriesBurned;
     private final boolean confirmed;
 
-    public DailyEntry(Long id, Long userId, LocalDate date,
-                      int caloriesConsumed, int steps, int caloriesBurned, boolean confirmed) {
+    private DailyEntry(Long id, Long userId, LocalDate date, int caloriesConsumed, Meals meals,
+                       int steps, int caloriesBurned, boolean confirmed) {
         this.id = id;
         this.userId = userId;
         this.date = date;
         this.caloriesConsumed = caloriesConsumed;
+        this.meals = meals;
         this.steps = steps;
         this.caloriesBurned = caloriesBurned;
         this.confirmed = confirmed;
+    }
+
+    /** Saisie historique : un total direct, sans détail par repas. */
+    public DailyEntry(Long id, Long userId, LocalDate date,
+                      int caloriesConsumed, int steps, int caloriesBurned, boolean confirmed) {
+        this(id, userId, date, caloriesConsumed, Meals.none(), steps, caloriesBurned, confirmed);
+    }
+
+    /** Saisie par repas : le total consommé est la somme des repas. */
+    public DailyEntry(Long id, Long userId, LocalDate date,
+                      Meals meals, int steps, int caloriesBurned, boolean confirmed) {
+        this(id, userId, date, meals.total(), meals, steps, caloriesBurned, confirmed);
+    }
+
+    /**
+     * Reconstitution depuis la persistance : les entrées antérieures à la saisie
+     * par repas n'ont aucun repas renseigné et conservent leur total stocké.
+     */
+    public static DailyEntry reconstitute(Long id, Long userId, LocalDate date, int storedCaloriesConsumed,
+                                          Meals meals, int steps, int caloriesBurned, boolean confirmed) {
+        return meals.isEmpty()
+                ? new DailyEntry(id, userId, date, storedCaloriesConsumed, steps, caloriesBurned, confirmed)
+                : new DailyEntry(id, userId, date, meals, steps, caloriesBurned, confirmed);
     }
 
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public LocalDate getDate() { return date; }
     public int getCaloriesConsumed() { return caloriesConsumed; }
+    public Meals getMeals() { return meals; }
     public int getSteps() { return steps; }
     public int getCaloriesBurned() { return caloriesBurned; }
     public boolean isConfirmed() { return confirmed; }
 
-    public DailyEntry withCaloriesConsumed(int caloriesConsumed) {
-        return new DailyEntry(id, userId, date, caloriesConsumed, steps, caloriesBurned, confirmed);
-    }
-
     public DailyEntry withSteps(int steps) {
-        return new DailyEntry(id, userId, date, caloriesConsumed, steps, caloriesBurned, confirmed);
+        return new DailyEntry(id, userId, date, caloriesConsumed, meals, steps, caloriesBurned, confirmed);
     }
 
     public DailyEntry withCaloriesBurned(int caloriesBurned) {
-        return new DailyEntry(id, userId, date, caloriesConsumed, steps, caloriesBurned, confirmed);
+        return new DailyEntry(id, userId, date, caloriesConsumed, meals, steps, caloriesBurned, confirmed);
     }
 
     public DailyEntry withConfirmed(boolean confirmed) {
-        return new DailyEntry(id, userId, date, caloriesConsumed, steps, caloriesBurned, confirmed);
+        return new DailyEntry(id, userId, date, caloriesConsumed, meals, steps, caloriesBurned, confirmed);
     }
 
     public static DailyEntry merge(DailyEntry existing, DailyEntry incoming) {
@@ -53,6 +77,7 @@ public final class DailyEntry {
                 existing.userId,
                 existing.date,
                 incoming.caloriesConsumed,
+                incoming.meals,
                 incoming.steps,
                 incoming.caloriesBurned,
                 incoming.confirmed

@@ -19,8 +19,8 @@ public class FakeDailyEntryRepository implements DailyEntryRepository {
     @Override
     public DailyEntry save(DailyEntry entry) {
         Long id = entry.getId() != null ? entry.getId() : idSequence.getAndIncrement();
-        DailyEntry stored = new DailyEntry(id, entry.getUserId(), entry.getDate(),
-                entry.getCaloriesConsumed(), entry.getSteps(),
+        DailyEntry stored = DailyEntry.reconstitute(id, entry.getUserId(), entry.getDate(),
+                entry.getCaloriesConsumed(), entry.getMeals(), entry.getSteps(),
                 entry.getCaloriesBurned(), entry.isConfirmed());
         store.put(id, stored);
         return stored;

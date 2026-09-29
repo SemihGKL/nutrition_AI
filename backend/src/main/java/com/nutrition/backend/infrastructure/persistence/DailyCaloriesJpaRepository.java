@@ -23,10 +23,18 @@ public interface DailyCaloriesJpaRepository extends JpaRepository<DailyCaloriesJ
      */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
-            INSERT INTO daily_calories (user_id, date, calories_consumed, steps, calories_burned, is_confirmed)
-            VALUES (:userId, :date, :caloriesConsumed, :steps, :caloriesBurned, :confirmed)
+            INSERT INTO daily_calories (user_id, date, calories_consumed,
+                                        breakfast_kcal, lunch_kcal, snack_kcal, dinner_kcal,
+                                        steps, calories_burned, is_confirmed)
+            VALUES (:userId, :date, :caloriesConsumed,
+                    :breakfastKcal, :lunchKcal, :snackKcal, :dinnerKcal,
+                    :steps, :caloriesBurned, :confirmed)
             ON CONFLICT (user_id, date) DO UPDATE SET
                 calories_consumed = EXCLUDED.calories_consumed,
+                breakfast_kcal    = EXCLUDED.breakfast_kcal,
+                lunch_kcal        = EXCLUDED.lunch_kcal,
+                snack_kcal        = EXCLUDED.snack_kcal,
+                dinner_kcal       = EXCLUDED.dinner_kcal,
                 steps             = EXCLUDED.steps,
                 calories_burned   = EXCLUDED.calories_burned,
                 is_confirmed      = EXCLUDED.is_confirmed
@@ -34,6 +42,10 @@ public interface DailyCaloriesJpaRepository extends JpaRepository<DailyCaloriesJ
     void upsert(@Param("userId") Long userId,
                 @Param("date") LocalDate date,
                 @Param("caloriesConsumed") int caloriesConsumed,
+                @Param("breakfastKcal") int breakfastKcal,
+                @Param("lunchKcal") int lunchKcal,
+                @Param("snackKcal") int snackKcal,
+                @Param("dinnerKcal") int dinnerKcal,
                 @Param("steps") int steps,
                 @Param("caloriesBurned") int caloriesBurned,
                 @Param("confirmed") boolean confirmed);

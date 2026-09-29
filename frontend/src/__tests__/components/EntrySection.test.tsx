@@ -2,8 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EntrySection } from '../../components/dashboard/EntrySection';
+import type { Meals } from '../../types/api';
+
+const NO_MEALS: Meals = { breakfast: 0, lunch: 0, snack: 0, dinner: 0 };
 
 interface SetupOpts {
+  meals?: Meals;
   calories?: number;
   steps?: number;
   burned?: number;
@@ -12,30 +16,74 @@ interface SetupOpts {
 }
 
 function setup(opts: SetupOpts = {}) {
-  const onCalories = vi.fn();
+  const onMeal = vi.fn();
   const onSteps = vi.fn();
   const onBurned = vi.fn();
   render(
     <EntrySection
+      meals={opts.meals ?? NO_MEALS}
       calories={opts.calories ?? 0}
       steps={opts.steps ?? 0}
       burned={opts.burned ?? 0}
       weightKg={opts.weightKg ?? 70}
       stepsGoal={opts.stepsGoal}
       isSaving={false}
-      onCalories={onCalories}
+      onMeal={onMeal}
       onSteps={onSteps}
       onBurned={onBurned}
     />,
   );
-  return { onCalories, onSteps, onBurned };
+  return { onMeal, onSteps, onBurned };
 }
 
 describe('EntrySection — saisie du jour', () => {
-  it('affiche les steppers Calories et Pas', () => {
+  it('affiche les quatre repas a cocher et le stepper Pas', () => {
     setup();
-    expect(screen.getByText('Calories consommées')).toBeInTheDocument();
+    expect(screen.getByText('Petit-déjeuner')).toBeInTheDocument();
+    expect(screen.getByText('Déjeuner')).toBeInTheDocument();
+    expect(screen.getByText('Collation')).toBeInTheDocument();
+    expect(screen.getByText('Dîner')).toBeInTheDocument();
     expect(screen.getByText('Pas')).toBeInTheDocument();
+  });
+
+  it('n\'affiche aucun stepper de repas par defaut', () => {
+    setup();
+    expect(screen.queryByText('Calories petit-déjeuner')).not.toBeInTheDocument();
+  });
+
+  it('affiche le stepper du repas apres avoir coche sa case', async () => {
+    setup();
+    await userEvent.click(screen.getByText('Déjeuner'));
+    expect(screen.getByText('Calories déjeuner')).toBeInTheDocument();
+  });
+
+  it('coche d\'office les repas deja renseignes', () => {
+    setup({ meals: { ...NO_MEALS, dinner: 600 }, calories: 600 });
+    expect(screen.getByText('Calories dîner')).toBeInTheDocument();
+  });
+
+  it('appelle onMeal avec 0 quand un repas est decoche', async () => {
+    const { onMeal } = setup({ meals: { ...NO_MEALS, snack: 150 }, calories: 150 });
+    await userEvent.click(screen.getByText('Collation'));
+    expect(onMeal).toHaveBeenCalledWith('snack', 0);
+  });
+
+  it('augmente le repas de 50 par clic sur le bouton +', async () => {
+    const { onMeal } = setup({ meals: { ...NO_MEALS, breakfast: 400 }, calories: 400 });
+    const increments = screen.getAllByRole('button', { name: 'augmenter' });
+    await userEvent.click(increments[0]); // premier stepper = petit-déjeuner
+    expect(onMeal).toHaveBeenCalledWith('breakfast', 450);
+  });
+
+  it('affiche le total consomme', () => {
+    setup({ meals: { breakfast: 400, lunch: 700, snack: 150, dinner: 600 }, calories: 1850 });
+    expect(screen.getByText('Total consommé')).toBeInTheDocument();
+    expect(screen.getByText(/1\s?850 kcal/)).toBeInTheDocument();
+  });
+
+  it('signale une ancienne saisie sans detail par repas', () => {
+    setup({ calories: 1800 });
+    expect(screen.getByText(/sans détail par repas/)).toBeInTheDocument();
   });
 
   it('n\'affiche pas le stepper sport par defaut', () => {
@@ -66,20 +114,6 @@ describe('EntrySection — saisie du jour', () => {
     expect(screen.queryByText(/kcal \(est\. basse\)/)).not.toBeInTheDocument();
   });
 
-  it('augmente les calories de 50 par clic sur le bouton +', async () => {
-    const { onCalories } = setup({ calories: 1500 });
-    const increments = screen.getAllByRole('button', { name: 'augmenter' });
-    await userEvent.click(increments[0]); // premier stepper = calories
-    expect(onCalories).toHaveBeenCalledWith(1550);
-  });
-
-  it('diminue les calories de 50 par clic sur le bouton -', async () => {
-    const { onCalories } = setup({ calories: 1500 });
-    const decrements = screen.getAllByRole('button', { name: 'diminuer' });
-    await userEvent.click(decrements[0]);
-    expect(onCalories).toHaveBeenCalledWith(1450);
-  });
-
   it('affiche l\'indicateur objectif de pas quand stepsGoal est defini', () => {
     setup({ steps: 5000, stepsGoal: 10000 });
     expect(screen.getByText(/objectif de pas/i)).toBeInTheDocument();
@@ -98,7 +132,7 @@ describe('EntrySection — saisie du jour', () => {
   it('calls onSteps when the steps stepper increment button is clicked', async () => {
     const { onSteps } = setup({ steps: 5000 });
     const increments = screen.getAllByRole('button', { name: 'augmenter' });
-    await userEvent.click(increments[1]); // second stepper = pas
+    await userEvent.click(increments[0]); // aucun repas coche : premier stepper = pas
     expect(onSteps).toHaveBeenCalledWith(5500);
   });
 });

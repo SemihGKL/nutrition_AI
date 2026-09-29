@@ -1,17 +1,20 @@
 package com.nutrition.backend.infrastructure.persistence;
 
 import com.nutrition.backend.domain.entity.DailyEntry;
+import com.nutrition.backend.domain.model.Meals;
 
 public final class DailyCaloriesEntityMapper {
 
     private DailyCaloriesEntityMapper() {}
 
     public static DailyEntry toDomain(DailyCaloriesJpaEntity entity) {
-        return new DailyEntry(
+        return DailyEntry.reconstitute(
                 entity.getId(),
                 entity.getUser().getId(),
                 entity.getDate(),
                 entity.getCaloriesConsumed(),
+                new Meals(entity.getBreakfastKcal(), entity.getLunchKcal(),
+                        entity.getSnackKcal(), entity.getDinnerKcal()),
                 entity.getSteps(),
                 entity.getCaloriesBurned(),
                 entity.isConfirmed()
@@ -23,6 +26,10 @@ public final class DailyCaloriesEntityMapper {
         entity.setId(entry.getId());
         entity.setDate(entry.getDate());
         entity.setCaloriesConsumed(entry.getCaloriesConsumed());
+        entity.setBreakfastKcal(entry.getMeals().breakfast());
+        entity.setLunchKcal(entry.getMeals().lunch());
+        entity.setSnackKcal(entry.getMeals().snack());
+        entity.setDinnerKcal(entry.getMeals().dinner());
         entity.setSteps(entry.getSteps());
         entity.setCaloriesBurned(entry.getCaloriesBurned());
         entity.setConfirmed(entry.isConfirmed());

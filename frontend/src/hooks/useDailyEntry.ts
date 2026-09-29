@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { dailyApi } from '../api/daily';
 import { ApiError } from '../api/client';
 import { readPersistedToken } from '../auth/session';
-import type { DailyCalories, DailyRecap } from '../types/api';
+import { NO_MEALS, mealsTotal } from '../utils/meals';
+import type { DailyCalories, DailyRecap, MealKey } from '../types/api';
 
 interface EntryState {
   entry: DailyCalories | null;
@@ -13,7 +14,7 @@ interface EntryState {
 }
 
 interface EntryActions {
-  setCalories: (v: number) => void;
+  setMeal: (meal: MealKey, v: number) => void;
   setSteps: (v: number) => void;
   setBurned: (v: number) => void;
   confirm: () => Promise<void>;
@@ -52,6 +53,7 @@ export function useDailyEntry(
           id: toSave.id ?? null,
           date: toSave.date,
           caloriesConsumed: toSave.caloriesConsumed,
+          meals: toSave.meals ?? null,
           steps: toSave.steps,
           caloriesBurned: toSave.caloriesBurned,
           confirmed: toSave.confirmed,
@@ -154,9 +156,12 @@ export function useDailyEntry(
     return { ...base, ...patch };
   }
 
-  const setCalories = useCallback(
-    (v: number) => {
-      const updated = buildEntry({ caloriesConsumed: Math.max(0, v) });
+  const setMeal = useCallback(
+    (meal: MealKey, v: number) => {
+      // Une ancienne saisie sans détail n'a aucun repas : le total direct est
+      // remplacé par la somme des repas dès le premier repas renseigné.
+      const meals = { ...(state.entry?.meals ?? NO_MEALS), [meal]: Math.max(0, v) };
+      const updated = buildEntry({ meals, caloriesConsumed: mealsTotal(meals) });
       setState(s => ({ ...s, entry: updated }));
       scheduleSave(updated);
     },
@@ -213,7 +218,7 @@ export function useDailyEntry(
 
   return {
     ...state,
-    setCalories,
+    setMeal,
     setSteps,
     setBurned,
     confirm,

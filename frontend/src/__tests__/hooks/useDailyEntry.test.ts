@@ -96,7 +96,7 @@ describe('useDailyEntry', () => {
     expect(vi.mocked(dailyApi.save).mock.calls[0][0].confirmed).toBe(true);
   });
 
-  it('setCalories met a jour immediatement et declenche save apres 800ms', async () => {
+  it('setMeal met a jour immediatement et declenche save apres 800ms', async () => {
     vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
     vi.mocked(dailyApi.save).mockResolvedValue({ ...mockEntry, caloriesConsumed: 1800 });
     vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
@@ -108,7 +108,7 @@ describe('useDailyEntry', () => {
     // Active les fake timers uniquement pour tester le debounce
     vi.useFakeTimers();
 
-    act(() => { result.current.setCalories(1800); });
+    act(() => { result.current.setMeal('lunch', 1800); });
     expect(result.current.entry?.caloriesConsumed).toBe(1800);
     expect(vi.mocked(dailyApi.save)).not.toHaveBeenCalled();
 
@@ -118,6 +118,39 @@ describe('useDailyEntry', () => {
     vi.useRealTimers();
     await waitFor(() => expect(vi.mocked(dailyApi.save)).toHaveBeenCalledTimes(1));
     expect(vi.mocked(dailyApi.save).mock.calls[0][0].caloriesConsumed).toBe(1800);
+  });
+
+  it('setMeal additionne les repas dans caloriesConsumed et envoie le detail au save', async () => {
+    vi.mocked(dailyApi.getByDate).mockResolvedValue({
+      ...mockEntry,
+      caloriesConsumed: 400,
+      meals: { breakfast: 400, lunch: 0, snack: 0, dinner: 0 },
+    });
+    vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+    vi.mocked(dailyApi.save).mockImplementation(async e => e);
+
+    const { result } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => { result.current.setMeal('dinner', 600); });
+
+    expect(result.current.entry?.caloriesConsumed).toBe(1000);
+    expect(result.current.entry?.meals).toEqual({ breakfast: 400, lunch: 0, snack: 0, dinner: 600 });
+    await waitFor(() => expect(vi.mocked(dailyApi.save)).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(dailyApi.save).mock.calls[0][0].meals).toEqual({ breakfast: 400, lunch: 0, snack: 0, dinner: 600 });
+  });
+
+  it('setMeal remplace le total d\'une ancienne saisie sans detail par repas', async () => {
+    vi.mocked(dailyApi.getByDate).mockResolvedValue({ ...mockEntry, caloriesConsumed: 1500 });
+    vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+    vi.mocked(dailyApi.save).mockImplementation(async e => e);
+
+    const { result } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => { result.current.setMeal('breakfast', 300); });
+
+    expect(result.current.entry?.caloriesConsumed).toBe(300);
   });
 
   it('should expose error state when getByDate fails with a network error', async () => {
@@ -145,7 +178,7 @@ describe('useDailyEntry', () => {
   it('should not trigger any save when userId is undefined', async () => {
     const { result } = renderHook(() => useDailyEntry(undefined, TODAY));
 
-    act(() => { result.current.setCalories(1800); });
+    act(() => { result.current.setMeal('lunch', 1800); });
     await act(async () => { await result.current.confirm(); });
 
     expect(vi.mocked(dailyApi.save)).not.toHaveBeenCalled();
@@ -162,7 +195,7 @@ describe('useDailyEntry', () => {
 
     vi.useFakeTimers();
 
-    act(() => { result.current.setCalories(1800); }); // planifie debounce
+    act(() => { result.current.setMeal('lunch', 1800); }); // planifie debounce
     await act(async () => { await result.current.confirm(); }); // doit annuler le debounce
 
     vi.advanceTimersByTime(1000); // le timer annule ne doit pas se declencher
@@ -188,7 +221,7 @@ describe('useDailyEntry', () => {
     vi.useFakeTimers();
 
     // Modifie le jour A, mais ne laisse pas les 800ms s'ecouler.
-    act(() => { result.current.setCalories(1200); });
+    act(() => { result.current.setMeal('lunch', 1200); });
     vi.advanceTimersByTime(300);
 
     // Navigue vers le jour B avant l'echeance du debounce de A.

@@ -16,6 +16,7 @@ export const dailyApi = {
       id: entry.id ?? null,
       date: entry.date,
       caloriesConsumed: entry.caloriesConsumed,
+      meals: entry.meals ?? null,
       steps: entry.steps,
       caloriesBurned: entry.caloriesBurned,
       confirmed: entry.confirmed,

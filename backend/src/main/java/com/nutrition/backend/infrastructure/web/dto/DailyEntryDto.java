@@ -7,6 +7,7 @@ public record DailyEntryDto(
         Long userId,
         LocalDate date,
         int caloriesConsumed,
+        MealsDto meals,
         int steps,
         int caloriesBurned,
         boolean confirmed
