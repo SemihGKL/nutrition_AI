@@ -100,6 +100,17 @@ describe('dailyApi', () => {
     expect(calledBody).toHaveProperty('meals', { breakfast: 400, lunch: 700, snack: 150, dinner: 600 });
   });
 
+  it('save utilise keepalive pour survivre a la fermeture de la page', async () => {
+    const entry: DailyCalories = {
+      date: '2026-09-29', caloriesConsumed: 0, steps: 0, caloriesBurned: 0, confirmed: false, userId: 1,
+    };
+    vi.mocked(api.post).mockResolvedValue(entry);
+
+    await dailyApi.save(entry);
+
+    expect(vi.mocked(api.post).mock.calls[0][2]).toEqual({ keepalive: true });
+  });
+
   it('getRecap calls GET /api/daily-kcal/{date}/recap with the exact date string', async () => {
     const date = '2026-06-11';
     vi.mocked(api.get).mockResolvedValue({ totalCalories: 1800 });

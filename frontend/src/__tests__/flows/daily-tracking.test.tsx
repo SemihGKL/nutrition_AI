@@ -127,6 +127,20 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     expect(screen.getByText('Dîner')).toBeInTheDocument();
   });
 
+  it('bloque la saisie et propose de reessayer quand le chargement echoue', async () => {
+    vi.mocked(dailyApi.getByDate)
+      .mockRejectedValueOnce(new Error('net'))
+      .mockResolvedValue(null);
+    vi.mocked(dailyApi.getAll).mockResolvedValue([]);
+
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
+    await waitFor(() => screen.getByRole('button', { name: 'Réessayer' }));
+    expect(screen.queryByText('Petit-déjeuner')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+    await waitFor(() => expect(screen.getByText('Petit-déjeuner')).toBeInTheDocument());
+  });
+
   it('le bouton Confirmer est desactive quand les calories valent 0', async () => {
     vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
     vi.mocked(dailyApi.getAll).mockResolvedValue([]);

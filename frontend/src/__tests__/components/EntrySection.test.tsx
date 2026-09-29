@@ -13,12 +13,14 @@ interface SetupOpts {
   burned?: number;
   weightKg?: number;
   stepsGoal?: number | null;
+  saveFailed?: boolean;
 }
 
 function setup(opts: SetupOpts = {}) {
   const onMeal = vi.fn();
   const onSteps = vi.fn();
   const onBurned = vi.fn();
+  const onRetry = vi.fn();
   render(
     <EntrySection
       meals={opts.meals ?? NO_MEALS}
@@ -28,12 +30,14 @@ function setup(opts: SetupOpts = {}) {
       weightKg={opts.weightKg ?? 70}
       stepsGoal={opts.stepsGoal}
       isSaving={false}
+      saveFailed={opts.saveFailed ?? false}
+      onRetry={onRetry}
       onMeal={onMeal}
       onSteps={onSteps}
       onBurned={onBurned}
     />,
   );
-  return { onMeal, onSteps, onBurned };
+  return { onMeal, onSteps, onBurned, onRetry };
 }
 
 describe('EntrySection — saisie du jour', () => {
@@ -134,5 +138,11 @@ describe('EntrySection — saisie du jour', () => {
     const increments = screen.getAllByRole('button', { name: 'augmenter' });
     await userEvent.click(increments[0]); // aucun repas coche : premier stepper = pas
     expect(onSteps).toHaveBeenCalledWith(5500);
+  });
+
+  it('signale un echec d\'enregistrement et relance au clic', async () => {
+    const { onRetry } = setup({ saveFailed: true });
+    await userEvent.click(screen.getByRole('button', { name: /non enregistré/ }));
+    expect(onRetry).toHaveBeenCalled();
   });
 });

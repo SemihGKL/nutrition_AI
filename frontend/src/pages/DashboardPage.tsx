@@ -35,8 +35,10 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
 
   useEffect(() => { setIsEditing(false); }, [viewedDate]);
 
-  const { entry, recap, isLoading, isSaving, setMeal, setSteps, setBurned, confirm } =
-    useDailyEntry(user?.id, viewedDate);
+  const {
+    entry, recap, isLoading, isSaving, saveFailed, error,
+    setMeal, setSteps, setBurned, confirm, retrySave, reload,
+  } = useDailyEntry(user?.id, viewedDate);
 
   const streak = user ? computeStreak(allEntries, viewedDate) : EMPTY_STREAK;
 
@@ -56,7 +58,11 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
   const closeCalendar = () => setIsCalendarOpen(false);
 
   const handleConfirm = async () => {
-    await confirm();
+    try {
+      await confirm();
+    } catch {
+      return; // échec signalé par EntrySection (« non enregistré · réessayer »)
+    }
     onEntriesRefresh();
     setIsEditing(false);
   };
@@ -72,6 +78,11 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
 
   if (isLoading) {
     return <PageShell><LoadingState /></PageShell>;
+  }
+
+  // Sans les données du jour, une saisie écraserait la journée existante : on bloque.
+  if (error) {
+    return <PageShell><ErrorState message={error} onRetry={reload} /></PageShell>;
   }
 
   if (entry?.confirmed && recap && !isEditing) {
@@ -125,6 +136,8 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
           weightKg={user?.currentWeight ?? 70}
           stepsGoal={user?.dailyStepsGoal}
           isSaving={isSaving}
+          saveFailed={saveFailed}
+          onRetry={() => { retrySave(); }}
           onMeal={setMeal}
           onSteps={setSteps}
           onBurned={setBurned}
@@ -207,6 +220,38 @@ function LoadingState() {
       fontSize: 14,
     }}>
       chargement…
+    </div>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div style={{
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      color: 'var(--ink-3)',
+      fontSize: 14,
+    }}>
+      {message}
+      <button
+        onClick={onRetry}
+        style={{
+          fontSize: 14,
+          fontWeight: 500,
+          color: 'var(--orange)',
+          background: 'none',
+          border: '1px solid var(--orange)',
+          borderRadius: 8,
+          padding: '8px 16px',
+          cursor: 'pointer',
+        }}
+      >
+        Réessayer
+      </button>
     </div>
   );
 }

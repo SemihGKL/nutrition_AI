@@ -12,6 +12,8 @@ interface Props {
   weightKg: number;
   stepsGoal?: number | null;
   isSaving: boolean;
+  saveFailed: boolean;
+  onRetry: () => void;
   onMeal: (meal: MealKey, v: number) => void;
   onSteps: (v: number) => void;
   onBurned: (v: number) => void;
@@ -25,6 +27,8 @@ export function EntrySection({
   weightKg,
   stepsGoal,
   isSaving,
+  saveFailed,
+  onRetry,
   onMeal,
   onSteps,
   onBurned,
@@ -62,15 +66,33 @@ export function EntrySection({
         <span className="display" style={{ fontSize: 17, fontWeight: 500 }}>
           saisie du jour
         </span>
-        <span style={{
-          fontSize: 11,
-          color: 'var(--ink-3)',
-          letterSpacing: 0.4,
-          transition: 'opacity 200ms',
-          opacity: isSaving ? 1 : 0.6,
-        }}>
-          {isSaving ? 'enregistrement…' : 'auto-enregistré'}
-        </span>
+        {saveFailed ? (
+          <button
+            onClick={onRetry}
+            style={{
+              fontSize: 11,
+              color: 'var(--red)',
+              letterSpacing: 0.4,
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            non enregistré · réessayer
+          </button>
+        ) : (
+          <span style={{
+            fontSize: 11,
+            color: 'var(--ink-3)',
+            letterSpacing: 0.4,
+            transition: 'opacity 200ms',
+            opacity: isSaving ? 1 : 0.6,
+          }}>
+            {isSaving ? 'enregistrement…' : 'auto-enregistré'}
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>

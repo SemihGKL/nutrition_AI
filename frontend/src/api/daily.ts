@@ -20,7 +20,7 @@ export const dailyApi = {
       steps: entry.steps,
       caloriesBurned: entry.caloriesBurned,
       confirmed: entry.confirmed,
-    }),
+    }, { keepalive: true }), // la requête doit survivre au passage en arrière-plan / à la fermeture
 
   getRecap: (date: string): Promise<DailyRecap> =>
     api.get<DailyRecap>(`/api/daily-kcal/${date}/recap`),
