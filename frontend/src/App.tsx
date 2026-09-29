@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { DashboardPage } from './pages/DashboardPage';
 import { SemainePage } from './pages/SemainePage';
@@ -12,10 +12,8 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { TutorialOverlay } from './components/ui/TutorialOverlay';
 import { UpdatePrompt } from './components/ui/UpdatePrompt';
 import { computeStreak } from './hooks/useStreak';
-import { dailyApi } from './api/daily';
-import { useEffect } from 'react';
+import { useAllEntries } from './hooks/useAllEntries';
 import type { NavTab } from './components/ui/BottomNav';
-import type { DailyCalories } from './types/api';
 import { isoToday } from './utils/format';
 import { WeighInProvider } from './hooks/useWeighIn';
 import { TUTORIAL_STORAGE_KEY } from './auth/session';
@@ -42,18 +40,11 @@ function AuthRoutes() {
 function AppTabs() {
   const { user } = useAuth();
   const [tab, setTab] = useState<NavTab>('jour');
-  const [allEntries, setAllEntries] = useState<DailyCalories[]>([]);
+  const { entries: allEntries, refresh: refreshEntries } = useAllEntries(!!user, tab);
   const tutorialKey = user ? `${TUTORIAL_STORAGE_KEY}_${user.id}` : null;
   const [showTutorial, setShowTutorial] = useState(
     () => !!tutorialKey && !localStorage.getItem(tutorialKey)
   );
-
-  const refreshEntries = useCallback(() => {
-    if (!user) return;
-    dailyApi.getAll().then(setAllEntries).catch(() => {});
-  }, [user]);
-
-  useEffect(() => { refreshEntries(); }, [refreshEntries, tab]);
 
   const streak = user ? computeStreak(allEntries, isoToday()) : { current: 0, best: 0, last14: [] };
 

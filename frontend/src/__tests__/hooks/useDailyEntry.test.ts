@@ -19,7 +19,7 @@ vi.mock('../../auth/session', () => ({
 }));
 
 import { dailyApi } from '../../api/daily';
-import { useDailyEntry } from '../../hooks/useDailyEntry';
+import { useDailyEntry, waitForPendingDailySaves } from '../../hooks/useDailyEntry';
 import type { DailyCalories, DailyRecap } from '../../types/api';
 
 const TODAY = '2026-06-22';
@@ -460,6 +460,49 @@ describe('useDailyEntry', () => {
 
       expect(vi.mocked(dailyApi.save)).toHaveBeenCalledTimes(1);
       expect(vi.mocked(dailyApi.save).mock.calls[0][0].meals?.dinner).toBe(600);
+    });
+  });
+
+  describe('waitForPendingDailySaves', () => {
+    it('attend la sauvegarde envoyee en quittant le dashboard', async () => {
+      const save = deferred<DailyCalories>();
+      vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
+      vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+      vi.mocked(dailyApi.save).mockReturnValueOnce(save.promise);
+
+      const { result, unmount } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => { result.current.setBurned(400); });
+      unmount(); // changement d'onglet : flush de la saisie en attente
+
+      let settled = false;
+      const waiting = waitForPendingDailySaves().then(() => { settled = true; });
+      await act(async () => { await Promise.resolve(); });
+      expect(settled).toBe(false);
+
+      await act(async () => {
+        save.resolve(vi.mocked(dailyApi.save).mock.calls[0][0]);
+        await waiting;
+      });
+      expect(settled).toBe(true);
+    });
+
+    it('se resout aussi quand la sauvegarde echoue', async () => {
+      vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
+      vi.mocked(dailyApi.save).mockRejectedValueOnce(new Error('offline'));
+
+      const { result, unmount } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => { result.current.setBurned(400); });
+      unmount();
+
+      await expect(waitForPendingDailySaves()).resolves.toBeUndefined();
+    });
+
+    it('se resout immediatement sans sauvegarde en cours', async () => {
+      await expect(waitForPendingDailySaves()).resolves.toBeUndefined();
     });
   });
 

@@ -24,6 +24,19 @@ interface EntryActions {
 
 const SAVE_DEBOUNCE_MS = 800;
 
+// Sauvegardes lancées par n'importe quelle instance du hook, y compris celle envoyée
+// au démontage du dashboard (changement d'onglet), qui survit à son instance.
+const inFlightSaves = new Set<Promise<void>>();
+
+/**
+ * Résout quand toutes les sauvegardes de saisie en cours sont terminées (réussies ou
+ * non). Les pages qui lisent des données dérivées de la saisie (liste des jours,
+ * complétions SPORT auto-cochées) l'attendent pour ne pas afficher l'état d'avant.
+ */
+export async function waitForPendingDailySaves(): Promise<void> {
+  await Promise.allSettled([...inFlightSaves]);
+}
+
 function emptyEntry(date: string, userId: number | undefined): DailyCalories {
   return {
     date,
@@ -106,7 +119,10 @@ export function useDailyEntry(
     };
 
     const result = saveChainRef.current.then(run);
-    saveChainRef.current = result.catch(() => {});
+    const settled = result.catch(() => {});
+    saveChainRef.current = settled;
+    inFlightSaves.add(settled);
+    settled.then(() => inFlightSaves.delete(settled));
     return result;
   }, []);
 
