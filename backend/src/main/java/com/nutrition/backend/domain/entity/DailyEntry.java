@@ -58,29 +58,4 @@ public final class DailyEntry {
     public int getSteps() { return steps; }
     public int getCaloriesBurned() { return caloriesBurned; }
     public boolean isConfirmed() { return confirmed; }
-
-    public DailyEntry withSteps(int steps) {
-        return new DailyEntry(id, userId, date, caloriesConsumed, meals, steps, caloriesBurned, confirmed);
-    }
-
-    public DailyEntry withCaloriesBurned(int caloriesBurned) {
-        return new DailyEntry(id, userId, date, caloriesConsumed, meals, steps, caloriesBurned, confirmed);
-    }
-
-    public DailyEntry withConfirmed(boolean confirmed) {
-        return new DailyEntry(id, userId, date, caloriesConsumed, meals, steps, caloriesBurned, confirmed);
-    }
-
-    public static DailyEntry merge(DailyEntry existing, DailyEntry incoming) {
-        return new DailyEntry(
-                existing.id,
-                existing.userId,
-                existing.date,
-                incoming.caloriesConsumed,
-                incoming.meals,
-                incoming.steps,
-                incoming.caloriesBurned,
-                incoming.confirmed
-        );
-    }
 }

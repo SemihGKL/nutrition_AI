@@ -48,16 +48,4 @@ class DailyEntryTest {
 
         assertThat(entry.getCaloriesConsumed()).isEqualTo(800);
     }
-
-    @Test
-    void should_keep_incoming_meals_when_merging() {
-        DailyEntry existing = new DailyEntry(5L, 1L, DATE, new Meals(100, 0, 0, 0), 0, 0, false);
-        DailyEntry incoming = new DailyEntry(null, 1L, DATE, new Meals(100, 600, 0, 0), 0, 0, false);
-
-        DailyEntry merged = DailyEntry.merge(existing, incoming);
-
-        assertThat(merged.getMeals()).isEqualTo(new Meals(100, 600, 0, 0));
-        assertThat(merged.getCaloriesConsumed()).isEqualTo(700);
-        assertThat(merged.getId()).isEqualTo(5L);
-    }
 }
