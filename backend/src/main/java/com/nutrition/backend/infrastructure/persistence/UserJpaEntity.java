@@ -31,7 +31,7 @@ public class UserJpaEntity {
     private int dailyCalorieGoal;
 
     @Column(name = "weight_goal")
-    private int weightGoal;
+    private double weightGoal;
 
     @NotNull(message = "Le genre est obligatoire")
     @Column(name = "gender", nullable = false)

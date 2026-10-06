@@ -14,5 +14,5 @@ public record UpdateUserRequest(
         @NotBlank @Size(max = 10) String weighInDay,
         @Positive Integer dailyCalorieGoal,
         @PositiveOrZero Integer dailyStepsGoal,
-        @Positive Integer weightGoal
+        @Positive Double weightGoal
 ) {}

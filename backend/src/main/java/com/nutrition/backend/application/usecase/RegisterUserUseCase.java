@@ -10,6 +10,8 @@ import com.nutrition.backend.domain.service.MbrCalculator;
 import com.nutrition.backend.domain.service.PasswordPolicy;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 public class RegisterUserUseCase {
 
@@ -29,9 +31,21 @@ public class RegisterUserUseCase {
     }
 
     public User execute(String username, String email, String rawPassword,
-                        int weightGoal, Gender gender, int age,
+                        double weightGoal, Gender gender, int age,
                         double height, double startWeight, String weighInDay,
                         Integer dailyStepsGoal) {
+        return execute(username, email, rawPassword, weightGoal, gender, age,
+                height, startWeight, weighInDay, dailyStepsGoal, null);
+    }
+
+    /**
+     * @param chosenCalorieGoal objectif réglé à l'inscription ; absent → objectif calculé
+     *                          (TDEE − 400, arrondi à 50).
+     */
+    public User execute(String username, String email, String rawPassword,
+                        double weightGoal, Gender gender, int age,
+                        double height, double startWeight, String weighInDay,
+                        Integer dailyStepsGoal, Integer chosenCalorieGoal) {
         if (height <= 0) {
             throw new IllegalArgumentException("La taille doit être supérieure à 0");
         }
@@ -43,12 +57,13 @@ public class RegisterUserUseCase {
             throw new EmailAlreadyUsedException();
         }
         UserProfile profile = new UserProfile(startWeight, height, age, gender);
-        int calculatedGoal = (int) mbrCalculator.calculate(profile).dailyCalorieGoal();
+        int calorieGoal = Optional.ofNullable(chosenCalorieGoal)
+                .orElseGet(() -> (int) mbrCalculator.calculate(profile).dailyCalorieGoal());
         String passwordHash = passwordEncoder.encode(rawPassword);
 
         User user = new User(null, username, email, passwordHash,
                 gender, age, height, startWeight, startWeight,
-                calculatedGoal, weightGoal, weighInDay, dailyStepsGoal);
+                calorieGoal, weightGoal, weighInDay, dailyStepsGoal);
         return userRepository.save(user);
     }
 }

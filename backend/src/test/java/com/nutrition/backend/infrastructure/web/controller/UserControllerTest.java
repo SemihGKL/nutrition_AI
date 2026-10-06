@@ -77,11 +77,11 @@ class UserControllerTest {
 
         // Email non modifiable via l'update : le contrôleur passe null (email conservé).
         when(updateUserProfileUseCase.execute(eq(1L), eq("UpdatedTest"), isNull(),
-                eq(Gender.MALE), eq(29), eq(178.0), eq(79.0), eq("MONDAY"), eq(2000), isNull(), eq(75)))
+                eq(Gender.MALE), eq(29), eq(178.0), eq(79.0), eq("MONDAY"), eq(2000), isNull(), eq(75.0)))
                 .thenReturn(updatedUser);
 
         String body = objectMapper.writeValueAsString(
-                new UpdateUserRequest("UpdatedTest", "MALE", 29, 178.0, 79.0, "MONDAY", 2000, null, 75)
+                new UpdateUserRequest("UpdatedTest", "MALE", 29, 178.0, 79.0, "MONDAY", 2000, null, 75.0)
         );
 
         mockMvc.perform(put("/api/users/me")

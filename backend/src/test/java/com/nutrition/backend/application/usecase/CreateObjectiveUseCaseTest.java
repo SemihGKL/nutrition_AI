@@ -10,7 +10,10 @@ import com.nutrition.backend.domain.model.CompletionSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,10 +31,15 @@ class CreateObjectiveUseCaseTest {
         objectiveRepository = new FakeObjectiveRepository();
         completionRepository = new FakeObjectiveCompletionRepository();
         dailyEntryRepository = new FakeDailyEntryRepository();
-        useCase = new CreateObjectiveUseCase(
+        useCase = useCaseAt(Clock.systemDefaultZone());
+    }
+
+    private CreateObjectiveUseCase useCaseAt(Clock clock) {
+        return new CreateObjectiveUseCase(
                 objectiveRepository,
                 new GetDailyEntryUseCase(dailyEntryRepository),
-                new CompleteObjectiveUseCase(objectiveRepository, completionRepository));
+                new CompleteObjectiveUseCase(objectiveRepository, completionRepository),
+                clock);
     }
 
     @Test
@@ -46,5 +54,20 @@ class CreateObjectiveUseCaseTest {
                 .singleElement()
                 .extracting(ObjectiveCompletion::getSource)
                 .isEqualTo(CompletionSource.AUTO);
+    }
+
+    @Test
+    void should_use_paris_date_when_server_clock_is_still_on_previous_utc_day() {
+        // 22/06/2026 23:30 UTC = mardi 23/06/2026 01:30 à Paris.
+        Clock clock = Clock.fixed(Instant.parse("2026-06-22T23:30:00Z"), ZoneId.of("Europe/Paris"));
+        LocalDate parisTuesday = LocalDate.of(2026, 6, 23);
+        dailyEntryRepository.save(new DailyEntry(null, USER_ID, parisTuesday, 1500, 0, 300, false));
+
+        useCaseAt(clock).execute(new Objective(null, USER_ID, 1, "Séance sport", 0, "SPORT", null));
+
+        assertThat(completionRepository.getAll())
+                .singleElement()
+                .extracting(ObjectiveCompletion::getDate)
+                .isEqualTo(parisTuesday);
     }
 }

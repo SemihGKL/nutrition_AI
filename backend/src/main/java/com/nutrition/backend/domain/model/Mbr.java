@@ -7,6 +7,6 @@ public record Mbr(double mbr, double tdee, double dailyCalorieGoal) {
     }
 
     public double deficitPercentage(int caloriesConsumed) {
-        return ((tdee - caloriesConsumed) / mbr) * 100;
+        return ((tdee - caloriesConsumed) / tdee) * 100;
     }
 }

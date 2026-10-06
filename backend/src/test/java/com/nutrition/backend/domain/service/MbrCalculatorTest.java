@@ -53,16 +53,25 @@ class MbrCalculatorTest {
     }
 
     @Test
-    void should_calculate_daily_calorie_goal_as_mbr_minus_200_rounded_to_50() {
+    void should_calculate_daily_calorie_goal_as_tdee_minus_400_rounded_to_50() {
         // Given
-        // MBR = 1780 → goal = round((1780 - 200) / 50) * 50 = round(31.6) * 50 = 32 * 50 = 1600
+        // TDEE = 1780 × 1.2 = 2136 → goal = round((2136 − 400) / 50) × 50 = round(34.72) × 50 = 1750
         var profile = new UserProfile(80.0, 180.0, 30, Gender.MALE);
 
         // When
         Mbr result = calculator.calculate(profile);
 
         // Then
-        assertEquals(1600.0, result.dailyCalorieGoal(), 0.001);
+        assertEquals(1750.0, result.dailyCalorieGoal(), 0.001);
+    }
+
+    @Test
+    void should_keep_default_goal_within_recommended_300_to_500_kcal_deficit_under_tdee() {
+        for (double weight = 45; weight <= 160; weight += 5) {
+            Mbr result = calculator.calculate(new UserProfile(weight, 170.0, 35, Gender.FEMALE));
+            double deficit = result.tdee() - result.dailyCalorieGoal();
+            org.assertj.core.api.Assertions.assertThat(deficit).isBetween(300.0, 500.0);
+        }
     }
 
     @Test

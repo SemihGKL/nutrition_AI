@@ -12,8 +12,17 @@ import com.nutrition.backend.domain.service.PasswordPolicy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Clock;
+import java.time.ZoneId;
+
 @Configuration
 public class DomainConfig {
+
+    /** Horloge métier : les « aujourd'hui » du domaine sont ceux des utilisateurs (France). */
+    @Bean
+    public Clock clock() {
+        return Clock.system(ZoneId.of("Europe/Paris"));
+    }
 
     @Bean
     public MbrCalculator mbrCalculator() {
