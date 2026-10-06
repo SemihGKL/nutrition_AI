@@ -2,13 +2,16 @@ import type { CSSProperties } from 'react';
 import { formatNumber } from '../../utils/format';
 
 interface Props {
-  calories: number;
+  /** Calories mangées : décide si la journée est commencée. */
+  consumed: number;
+  /** Bilan net (mangé − activité) : base des messages. Peut être ≤ 0 avec du sport. */
+  net: number;
   target: number;
   mbr?: number;
 }
 
-export function ContextMessage({ calories, target, mbr }: Props) {
-  if (calories <= 0) {
+export function ContextMessage({ consumed, net: calories, target, mbr }: Props) {
+  if (consumed <= 0) {
     return (
       <div style={STYLE}>
         commence ta journée — saisis tes calories

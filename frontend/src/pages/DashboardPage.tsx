@@ -116,7 +116,7 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8, marginBottom: 10 }}>
           <ProgressRing
-            value={Math.max(0, net)}
+            value={net}
             target={target}
             mbr={mbrValue}
             size={232}
@@ -125,7 +125,7 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
           />
         </div>
 
-        <ContextMessage calories={net} target={target} mbr={mbrValue} />
+        <ContextMessage consumed={calories} net={net} target={target} mbr={mbrValue} />
 
         <EntrySection
           key={viewedDate}

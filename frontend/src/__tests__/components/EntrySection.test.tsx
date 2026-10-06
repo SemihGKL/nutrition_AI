@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EntrySection } from '../../components/dashboard/EntrySection';
 import type { Meals } from '../../types/api';
@@ -144,5 +145,98 @@ describe('EntrySection — saisie du jour', () => {
     const { onRetry } = setup({ saveFailed: true });
     await userEvent.click(screen.getByRole('button', { name: /non enregistré/ }));
     expect(onRetry).toHaveBeenCalled();
+  });
+
+});
+
+// Parent avec état réel : vérifie l'enchaînement cocher / décocher / recocher.
+function StatefulEntry() {
+  const [burned, setBurned] = useState(0);
+  const [meals, setMeals] = useState<Meals>(NO_MEALS);
+  const total = meals.breakfast + meals.lunch + meals.snack + meals.dinner;
+  return (
+    <>
+      <EntrySection
+        meals={meals}
+        calories={total}
+        steps={0}
+        burned={burned}
+        weightKg={70}
+        isSaving={false}
+        saveFailed={false}
+        onRetry={() => {}}
+        onMeal={(meal, v) => setMeals(m => ({ ...m, [meal]: v }))}
+        onSteps={() => {}}
+        onBurned={setBurned}
+      />
+      <output data-testid="burned">{burned}</output>
+      <output data-testid="total">{total}</output>
+    </>
+  );
+}
+
+describe('EntrySection — cocher, decocher, recocher', () => {
+  const plus = () => screen.getAllByRole('button', { name: 'augmenter' });
+  const last = <T,>(xs: T[]) => xs[xs.length - 1];
+  const sessionInput = () => last(screen.getAllByRole('textbox')) as HTMLInputElement;
+
+  it('la seance decochee puis recochee repart de 0 et le compteur suit les boutons', async () => {
+    render(<StatefulEntry />);
+    await userEvent.click(screen.getByText('Séance de sport effectuée'));
+    await userEvent.click(last(plus()));
+    await userEvent.click(last(plus()));
+    expect(screen.getByTestId('burned')).toHaveTextContent('100');
+
+    await userEvent.click(screen.getByText('Séance de sport effectuée')); // décoche
+    expect(screen.getByTestId('burned')).toHaveTextContent('0');
+    expect(screen.queryByText('Calories brûlées (séance)')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByText('Séance de sport effectuée')); // recoche
+    expect(sessionInput().value).toBe('0');
+    await userEvent.click(last(plus()));
+    expect(screen.getByTestId('burned')).toHaveTextContent('50');
+    expect(sessionInput().value).toBe('50');
+  });
+
+  it('decocher la seance pendant la saisie clavier remet bien a 0', async () => {
+    render(<StatefulEntry />);
+    await userEvent.click(screen.getByText('Séance de sport effectuée'));
+    await userEvent.clear(sessionInput());
+    await userEvent.type(sessionInput(), '320');
+    expect(screen.getByTestId('burned')).toHaveTextContent('320');
+
+    // Le tap sur la case ne retire pas le focus (iOS)
+    fireEvent.click(screen.getByText('Séance de sport effectuée'));
+    expect(screen.getByTestId('burned')).toHaveTextContent('0');
+
+    fireEvent.click(screen.getByText('Séance de sport effectuée'));
+    expect(sessionInput().value).toBe('0');
+  });
+
+  it('un repas decoche puis recoche repart de 0 et le total suit', async () => {
+    render(<StatefulEntry />);
+    await userEvent.click(screen.getByText('Dîner'));
+    await userEvent.click(plus()[0]);
+    await userEvent.click(plus()[0]);
+    expect(screen.getByTestId('total')).toHaveTextContent('100');
+
+    await userEvent.click(screen.getByText('Dîner'));
+    expect(screen.getByTestId('total')).toHaveTextContent('0');
+
+    await userEvent.click(screen.getByText('Dîner'));
+    await userEvent.click(plus()[0]);
+    expect(screen.getByTestId('total')).toHaveTextContent('50');
+    expect((screen.getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('50');
+  });
+
+  it('remettre un repas a 0 avec - garde le repas coche et met le total a jour', async () => {
+    render(<StatefulEntry />);
+    await userEvent.click(screen.getByText('Déjeuner'));
+    await userEvent.click(plus()[0]);
+    await userEvent.click(screen.getAllByRole('button', { name: 'diminuer' })[0]);
+
+    expect(screen.getByTestId('total')).toHaveTextContent('0');
+    expect(screen.getByText('Calories déjeuner')).toBeInTheDocument();
+    expect((screen.getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('0');
   });
 });

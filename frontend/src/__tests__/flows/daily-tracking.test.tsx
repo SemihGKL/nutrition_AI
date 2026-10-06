@@ -141,6 +141,21 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     await waitFor(() => expect(screen.getByText('Petit-déjeuner')).toBeInTheDocument());
   });
 
+  it('n\'invite pas a commencer la journee quand le sport depasse ce qui a ete mange', async () => {
+    vi.mocked(dailyApi.getByDate).mockResolvedValue({
+      id: 1, date: TODAY, caloriesConsumed: 1500, caloriesBurned: 1600, steps: 0, confirmed: false, userId: 1,
+      meals: { breakfast: 0, lunch: 1500, snack: 0, dinner: 0 },
+    });
+    vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+    vi.mocked(dailyApi.getAll).mockResolvedValue([]);
+
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
+    await waitFor(() => screen.getByText('saisie du jour'));
+
+    expect(screen.queryByText(/commence ta journée/)).not.toBeInTheDocument();
+    expect(screen.getByText(/il te reste/)).toBeInTheDocument();
+  });
+
   it('le bouton Confirmer est desactive quand les calories valent 0', async () => {
     vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
     vi.mocked(dailyApi.getAll).mockResolvedValue([]);

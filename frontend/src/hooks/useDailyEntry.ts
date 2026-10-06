@@ -48,6 +48,18 @@ function emptyEntry(date: string, userId: number | undefined): DailyCalories {
   };
 }
 
+function sameEntryValues(a: DailyCalories, b: DailyCalories): boolean {
+  const ma = a.meals ?? NO_MEALS;
+  const mb = b.meals ?? NO_MEALS;
+  return a.caloriesConsumed === b.caloriesConsumed
+    && a.steps === b.steps
+    && a.caloriesBurned === b.caloriesBurned
+    && ma.breakfast === mb.breakfast
+    && ma.lunch === mb.lunch
+    && ma.snack === mb.snack
+    && ma.dinner === mb.dinner;
+}
+
 /**
  * Saisie du jour avec sauvegarde automatique.
  *
@@ -205,6 +217,8 @@ export function useDailyEntry(
       const current = entryRef.current;
       const base = current && current.date === date ? current : emptyEntry(date, userId);
       const updated = { ...base, ...patch(base), date };
+      // Rien ne change (ex. décocher une séance déjà à 0) : pas d'édition, pas de requête.
+      if (current && current.date === date && sameEntryValues(current, updated)) return;
       editSeqRef.current++;
       entryRef.current = updated;
       setState(s => ({ ...s, entry: updated }));

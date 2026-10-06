@@ -463,6 +463,23 @@ describe('useDailyEntry', () => {
     });
   });
 
+  it('n\'envoie aucune sauvegarde quand une modification ne change rien (ex. decocher une seance deja a 0)', async () => {
+    vi.mocked(dailyApi.getByDate).mockResolvedValue({ ...mockEntry, caloriesBurned: 0 });
+    vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+    vi.mocked(dailyApi.save).mockImplementation(async e => e);
+
+    const { result } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    vi.useFakeTimers();
+
+    act(() => { result.current.setBurned(0); });
+    act(() => { result.current.setSteps(mockEntry.steps); });
+    await act(async () => { vi.advanceTimersByTime(800); });
+    vi.useRealTimers();
+
+    expect(vi.mocked(dailyApi.save)).not.toHaveBeenCalled();
+  });
+
   describe('waitForPendingDailySaves', () => {
     it('attend la sauvegarde envoyee en quittant le dashboard', async () => {
       const save = deferred<DailyCalories>();

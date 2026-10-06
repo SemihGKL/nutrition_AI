@@ -41,7 +41,8 @@ export function ProgressRing({
 }: Props) {
   const scale = mbr ?? target;
   const goalRatio = scale > 0 ? target / scale : 1;
-  const ratio = Math.max(0, value / scale);
+  // Échelle nulle (objectif à 0, sans MBR) : pas de division par 0 → NaN dans le SVG.
+  const ratio = scale > 0 ? Math.max(0, value / scale) : 0;
   const status = resolveStatus(ratio, goalRatio, statusProp);
   const color = STATUS_COLOR[status];
 
@@ -88,16 +89,20 @@ export function ProgressRing({
           stroke="var(--paper-3)"
           strokeWidth={stroke}
         />
-        <circle
-          cx={cx} cy={cy} r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={stroke}
-          strokeDasharray={circumference}
-          strokeDashoffset={drawnOffset}
-          strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(.2,.7,.2,1)' }}
-        />
+        {/* Un arc de longueur nulle avec strokeLinecap="round" laisse un point coloré :
+            on ne le dessine que s'il y a une progression. */}
+        {ratio > 0 && (
+          <circle
+            cx={cx} cy={cy} r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth={stroke}
+            strokeDasharray={circumference}
+            strokeDashoffset={drawnOffset}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(.2,.7,.2,1)' }}
+          />
+        )}
         {overRatio > 0 && (
           <circle
             cx={cx} cy={cy} r={r}

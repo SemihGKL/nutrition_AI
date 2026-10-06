@@ -36,33 +36,44 @@ export function Stepper({
 }: Props) {
   const decimals = step < 1 ? Math.round(-Math.log10(step)) : 0;
   const round = (n: number) => parseFloat(n.toFixed(decimals));
+  const format = (n: number) => round(n).toFixed(decimals);
 
-  const [raw, setRaw] = useState(() => round(value).toFixed(decimals));
-  const isFocusedRef = useRef(false);
+  // Valeur numérique représentée par le texte saisi. Vide ou illisible = min, pour que
+  // le parent (total, anneau) reste cohérent pendant la saisie. La virgule est acceptée
+  // (clavier français) : sans ça, parseFloat("72,5") vaut 72.
+  const parse = (str: string) => {
+    const parsed = parseFloat(str.replace(',', '.'));
+    return isNaN(parsed) ? min : Math.max(min, round(parsed));
+  };
 
+  const [raw, setRaw] = useState(() => format(value));
+  const rawRef = useRef(raw);
+  rawRef.current = raw;
+
+  // Resynchronise le texte dès que la valeur change pour une autre raison que la
+  // frappe en cours (boutons +/−, case décochée, rechargement). On ne teste pas le
+  // focus : sur iOS, un tap sur +/− ne retire pas le focus du champ, et l'affichage
+  // restait figé sur l'ancienne valeur.
   useEffect(() => {
-    if (!isFocusedRef.current) {
-      setRaw(round(value).toFixed(decimals));
-    }
+    if (parse(rawRef.current) !== value) setRaw(format(value));
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const commit = (str: string) => {
-    const parsed = parseFloat(str);
-    const next = isNaN(parsed) ? min : Math.max(min, round(parsed));
-    onChange(next);
-    setRaw(String(next));
+  const emit = (next: number) => {
+    if (next !== value) onChange(next);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const str = e.target.value;
-    setRaw(str);
-    const parsed = parseFloat(str);
-    if (!isNaN(parsed)) {
-      onChange(Math.max(min, round(parsed)));
-    }
+    setRaw(e.target.value);
+    emit(parse(e.target.value));
   };
 
-  const step_ = (delta: number) => onChange(Math.max(min, round(value + delta)));
+  const commit = (str: string) => {
+    const next = parse(str);
+    emit(next);
+    setRaw(format(next));
+  };
+
+  const step_ = (delta: number) => emit(Math.max(min, round(value + delta)));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -95,11 +106,11 @@ export function Stepper({
             </span>
           )}
           <input
-            inputMode="numeric"
+            inputMode={decimals > 0 ? 'decimal' : 'numeric'}
             value={raw}
             onChange={handleChange}
-            onFocus={e => { isFocusedRef.current = true; e.currentTarget.select(); }}
-            onBlur={e => { isFocusedRef.current = false; commit(e.currentTarget.value); }}
+            onFocus={e => e.currentTarget.select()}
+            onBlur={e => commit(e.currentTarget.value)}
             onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
             style={{
               background: 'transparent',
