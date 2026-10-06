@@ -12,8 +12,13 @@ public interface ObjectiveCompletionRepository {
     ObjectiveCompletion save(ObjectiveCompletion completion);
 
     /**
-     * Insère une complétion de façon idempotente (no-op si (objectiveId, date) existe déjà).
-     * Évite la course check-then-act entre l'auto-complétion SPORT et la coche manuelle.
+     * Insère une complétion de façon idempotente sur (objectiveId, date), sans course
+     * check-then-act entre l'auto-complétion SPORT et la coche manuelle.
+     * Si une complétion existe déjà, une coche MANUAL la rend manuelle (l'intention de
+     * l'utilisateur l'emporte) ; une coche AUTO ne modifie jamais l'existant.
      */
     void insertIfAbsent(ObjectiveCompletion completion);
+
+    /** Retire la complétion de ce jour uniquement si elle a été posée automatiquement. */
+    void deleteAutomaticCompletion(Long objectiveId, LocalDate date);
 }

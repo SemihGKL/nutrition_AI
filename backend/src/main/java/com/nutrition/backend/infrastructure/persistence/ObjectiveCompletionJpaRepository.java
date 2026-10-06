@@ -17,14 +17,28 @@ public interface ObjectiveCompletionJpaRepository extends JpaRepository<Objectiv
 
     List<ObjectiveCompletionJpaEntity> findByUserIdAndDateBetween(Long userId, LocalDate from, LocalDate to);
 
-    /** Insertion idempotente : la contrainte uq_objective_completion (objective_id, date) absorbe la course. */
+    /**
+     * Insertion idempotente : la contrainte uq_objective_completion (objective_id, date)
+     * absorbe la course. Sur conflit, une coche MANUAL rend l'existante manuelle ; une
+     * coche AUTO ne change rien.
+     */
     @Modifying
     @Query(value = """
-            INSERT INTO objective_completions (user_id, objective_id, date)
-            VALUES (:userId, :objectiveId, :date)
-            ON CONFLICT (objective_id, date) DO NOTHING
+            INSERT INTO objective_completions (user_id, objective_id, date, source)
+            VALUES (:userId, :objectiveId, :date, :source)
+            ON CONFLICT (objective_id, date) DO UPDATE SET source = 'MANUAL'
+                WHERE EXCLUDED.source = 'MANUAL'
             """, nativeQuery = true)
     void insertIfAbsent(@Param("userId") Long userId,
                         @Param("objectiveId") Long objectiveId,
-                        @Param("date") LocalDate date);
+                        @Param("date") LocalDate date,
+                        @Param("source") String source);
+
+    @Modifying
+    @Query(value = """
+            DELETE FROM objective_completions
+            WHERE objective_id = :objectiveId AND date = :date AND source = 'AUTO'
+            """, nativeQuery = true)
+    void deleteAutomaticCompletion(@Param("objectiveId") Long objectiveId,
+                                   @Param("date") LocalDate date);
 }

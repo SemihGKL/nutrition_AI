@@ -30,7 +30,7 @@ public class CreateObjectiveUseCase {
             if (saved.getDayOfWeek() == todayDow) {
                 getDailyEntryUseCase.byUserAndDate(saved.getUserId(), today)
                         .filter(entry -> entry.getCaloriesBurned() > 0)
-                        .ifPresent(entry -> completeObjectiveUseCase.execute(saved.getId(), saved.getUserId(), today));
+                        .ifPresent(entry -> completeObjectiveUseCase.executeAutomatic(saved.getId(), saved.getUserId(), today));
             }
         }
 

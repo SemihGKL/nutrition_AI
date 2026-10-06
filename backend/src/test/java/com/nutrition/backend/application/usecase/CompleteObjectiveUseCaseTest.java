@@ -3,6 +3,8 @@ package com.nutrition.backend.application.usecase;
 import com.nutrition.backend.application.usecase.fake.FakeObjectiveCompletionRepository;
 import com.nutrition.backend.application.usecase.fake.FakeObjectiveRepository;
 import com.nutrition.backend.domain.entity.Objective;
+import com.nutrition.backend.domain.entity.ObjectiveCompletion;
+import com.nutrition.backend.domain.model.CompletionSource;
 import com.nutrition.backend.domain.exception.ObjectiveAccessDeniedException;
 import com.nutrition.backend.domain.exception.ObjectiveNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,6 +72,64 @@ class CompleteObjectiveUseCaseTest {
         objectiveRepository.add(objective);
 
         assertThatThrownBy(() -> useCase.execute(OBJECTIVE_ID, USER_ID, DATE))
+                .isInstanceOf(ObjectiveAccessDeniedException.class);
+    }
+
+    @Test
+    void should_record_manual_completion_when_user_checks_objective() {
+        objectiveRepository.add(new Objective(OBJECTIVE_ID, USER_ID, 3, "Running", 1, "SPORT", 30));
+
+        useCase.execute(OBJECTIVE_ID, USER_ID, DATE);
+
+        assertThat(objectiveCompletionRepository.getAll())
+                .singleElement()
+                .extracting(ObjectiveCompletion::getSource)
+                .isEqualTo(CompletionSource.MANUAL);
+    }
+
+    @Test
+    void should_record_automatic_completion_when_completed_automatically() {
+        objectiveRepository.add(new Objective(OBJECTIVE_ID, USER_ID, 3, "Running", 1, "SPORT", 30));
+
+        useCase.executeAutomatic(OBJECTIVE_ID, USER_ID, DATE);
+
+        assertThat(objectiveCompletionRepository.getAll())
+                .singleElement()
+                .extracting(ObjectiveCompletion::getSource)
+                .isEqualTo(CompletionSource.AUTO);
+    }
+
+    @Test
+    void should_turn_automatic_completion_into_manual_when_user_checks_it() {
+        objectiveRepository.add(new Objective(OBJECTIVE_ID, USER_ID, 3, "Running", 1, "SPORT", 30));
+        useCase.executeAutomatic(OBJECTIVE_ID, USER_ID, DATE);
+
+        useCase.execute(OBJECTIVE_ID, USER_ID, DATE);
+
+        assertThat(objectiveCompletionRepository.getAll())
+                .singleElement()
+                .extracting(ObjectiveCompletion::getSource)
+                .isEqualTo(CompletionSource.MANUAL);
+    }
+
+    @Test
+    void should_keep_manual_completion_when_completed_automatically_afterwards() {
+        objectiveRepository.add(new Objective(OBJECTIVE_ID, USER_ID, 3, "Running", 1, "SPORT", 30));
+        useCase.execute(OBJECTIVE_ID, USER_ID, DATE);
+
+        useCase.executeAutomatic(OBJECTIVE_ID, USER_ID, DATE);
+
+        assertThat(objectiveCompletionRepository.getAll())
+                .singleElement()
+                .extracting(ObjectiveCompletion::getSource)
+                .isEqualTo(CompletionSource.MANUAL);
+    }
+
+    @Test
+    void should_reject_automatic_completion_of_objective_owned_by_another_user() {
+        objectiveRepository.add(new Objective(OBJECTIVE_ID, OTHER_USER_ID, 3, "Running", 1, "SPORT", 30));
+
+        assertThatThrownBy(() -> useCase.executeAutomatic(OBJECTIVE_ID, USER_ID, DATE))
                 .isInstanceOf(ObjectiveAccessDeniedException.class);
     }
 }

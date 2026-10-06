@@ -1,5 +1,6 @@
 package com.nutrition.backend.infrastructure.persistence;
 
+import com.nutrition.backend.domain.model.CompletionSource;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,4 +25,8 @@ public class ObjectiveCompletionJpaEntity {
 
     @Column(name = "date")
     private LocalDate date;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source")
+    private CompletionSource source;
 }

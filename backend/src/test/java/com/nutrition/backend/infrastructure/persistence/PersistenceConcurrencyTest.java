@@ -6,6 +6,7 @@ import com.nutrition.backend.domain.entity.ObjectiveCompletion;
 import com.nutrition.backend.domain.entity.RefreshToken;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.entity.WeightEntry;
+import com.nutrition.backend.domain.model.CompletionSource;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.model.Meals;
 import com.nutrition.backend.domain.ports.DailyEntryRepository;
@@ -146,6 +147,37 @@ class PersistenceConcurrencyTest {
 
         assertThatCode(() -> CompletableFuture.allOf(futures).join()).doesNotThrowAnyException();
         assertThat(objectiveCompletionRepository.findByUserIdAndDateBetween(u.getId(), date, date)).hasSize(1);
+    }
+
+    @Test
+    void should_turn_automatic_completion_into_manual_and_keep_it_on_auto_removal() {
+        User u = newPersistedUser("source@test.com");
+        Objective obj = objectiveRepository.save(new Objective(null, u.getId(), 0, "Sport", 0, "SPORT", null));
+        LocalDate date = LocalDate.of(2026, 6, 4);
+
+        objectiveCompletionRepository.insertIfAbsent(
+                new ObjectiveCompletion(null, u.getId(), obj.getId(), date, CompletionSource.AUTO));
+        objectiveCompletionRepository.insertIfAbsent(
+                new ObjectiveCompletion(null, u.getId(), obj.getId(), date, CompletionSource.MANUAL));
+        objectiveCompletionRepository.deleteAutomaticCompletion(obj.getId(), date);
+
+        assertThat(objectiveCompletionRepository.findByUserIdAndDateBetween(u.getId(), date, date))
+                .singleElement()
+                .extracting(ObjectiveCompletion::getSource)
+                .isEqualTo(CompletionSource.MANUAL);
+    }
+
+    @Test
+    void should_delete_automatic_completion_only() {
+        User u = newPersistedUser("source-auto@test.com");
+        Objective obj = objectiveRepository.save(new Objective(null, u.getId(), 0, "Sport", 0, "SPORT", null));
+        LocalDate date = LocalDate.of(2026, 6, 5);
+
+        objectiveCompletionRepository.insertIfAbsent(
+                new ObjectiveCompletion(null, u.getId(), obj.getId(), date, CompletionSource.AUTO));
+        objectiveCompletionRepository.deleteAutomaticCompletion(obj.getId(), date);
+
+        assertThat(objectiveCompletionRepository.findByUserIdAndDateBetween(u.getId(), date, date)).isEmpty();
     }
 
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────

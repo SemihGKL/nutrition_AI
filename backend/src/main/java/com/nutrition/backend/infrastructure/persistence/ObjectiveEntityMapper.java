@@ -36,7 +36,8 @@ public class ObjectiveEntityMapper {
                 entity.getId(),
                 entity.getUserId(),
                 entity.getObjectiveId(),
-                entity.getDate()
+                entity.getDate(),
+                entity.getSource()
         );
     }
 
@@ -46,6 +47,7 @@ public class ObjectiveEntityMapper {
         entity.setUserId(completion.getUserId());
         entity.setObjectiveId(completion.getObjectiveId());
         entity.setDate(completion.getDate());
+        entity.setSource(completion.getSource());
         return entity;
     }
 }

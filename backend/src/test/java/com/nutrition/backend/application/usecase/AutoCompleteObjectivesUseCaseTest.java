@@ -3,6 +3,8 @@ package com.nutrition.backend.application.usecase;
 import com.nutrition.backend.application.usecase.fake.FakeObjectiveCompletionRepository;
 import com.nutrition.backend.application.usecase.fake.FakeObjectiveRepository;
 import com.nutrition.backend.domain.entity.Objective;
+import com.nutrition.backend.domain.entity.ObjectiveCompletion;
+import com.nutrition.backend.domain.model.CompletionSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +26,7 @@ class AutoCompleteObjectivesUseCaseTest {
         objectiveRepository = new FakeObjectiveRepository();
         completionRepository = new FakeObjectiveCompletionRepository();
         completeObjectiveUseCase = new CompleteObjectiveUseCase(objectiveRepository, completionRepository);
-        useCase = new AutoCompleteObjectivesUseCase(objectiveRepository, completeObjectiveUseCase);
+        useCase = new AutoCompleteObjectivesUseCase(objectiveRepository, completeObjectiveUseCase, completionRepository);
     }
 
     @Test
@@ -89,5 +91,94 @@ class AutoCompleteObjectivesUseCaseTest {
         useCase.execute(USER_ID, wednesday, 200);
 
         assertThat(completionRepository.existsByObjectiveIdAndDate(30L, wednesday)).isTrue();
+    }
+
+    // ── Origine de la coche : seules les coches automatiques sont retirées ──
+
+    private static final LocalDate MONDAY = LocalDate.of(2026, 6, 22);
+    private static final Long SPORT_ID = 10L;
+
+    private void givenMondaySportObjective() {
+        objectiveRepository.add(new Objective(SPORT_ID, USER_ID, 0, "Séance sport lundi", 0, "SPORT", null));
+    }
+
+    @Test
+    void should_mark_completion_as_automatic_when_sport_objective_is_auto_completed() {
+        givenMondaySportObjective();
+
+        useCase.execute(USER_ID, MONDAY, 300);
+
+        assertThat(completionRepository.getAll())
+                .singleElement()
+                .extracting(ObjectiveCompletion::getSource)
+                .isEqualTo(CompletionSource.AUTO);
+    }
+
+    @Test
+    void should_remove_automatic_completion_when_calories_burned_goes_back_to_zero() {
+        givenMondaySportObjective();
+        useCase.execute(USER_ID, MONDAY, 300);
+
+        useCase.execute(USER_ID, MONDAY, 0);
+
+        assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isFalse();
+    }
+
+    @Test
+    void should_keep_manual_completion_when_calories_burned_is_zero() {
+        givenMondaySportObjective();
+        completionRepository.add(new ObjectiveCompletion(1L, USER_ID, SPORT_ID, MONDAY, CompletionSource.MANUAL));
+
+        useCase.execute(USER_ID, MONDAY, 0);
+
+        assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isTrue();
+    }
+
+    @Test
+    void should_keep_manual_completion_manual_when_session_is_recorded_then_cleared() {
+        givenMondaySportObjective();
+        completionRepository.add(new ObjectiveCompletion(1L, USER_ID, SPORT_ID, MONDAY, CompletionSource.MANUAL));
+
+        useCase.execute(USER_ID, MONDAY, 300);
+        useCase.execute(USER_ID, MONDAY, 0);
+
+        assertThat(completionRepository.getAll())
+                .singleElement()
+                .extracting(ObjectiveCompletion::getSource)
+                .isEqualTo(CompletionSource.MANUAL);
+    }
+
+    @Test
+    void should_only_remove_automatic_completion_of_the_cleared_day() {
+        givenMondaySportObjective();
+        LocalDate nextMonday = MONDAY.plusWeeks(1);
+        useCase.execute(USER_ID, MONDAY, 300);
+        useCase.execute(USER_ID, nextMonday, 300);
+
+        useCase.execute(USER_ID, nextMonday, 0);
+
+        assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isTrue();
+        assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, nextMonday)).isFalse();
+    }
+
+    @Test
+    void should_complete_again_automatically_when_session_is_cleared_then_recorded_again() {
+        givenMondaySportObjective();
+        useCase.execute(USER_ID, MONDAY, 300);
+        useCase.execute(USER_ID, MONDAY, 0);
+
+        useCase.execute(USER_ID, MONDAY, 250);
+
+        assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isTrue();
+    }
+
+    @Test
+    void should_not_remove_completion_of_custom_objective_when_calories_burned_is_zero() {
+        objectiveRepository.add(new Objective(20L, USER_ID, 0, "Boire 2L d'eau", 0, "CUSTOM", null));
+        completionRepository.add(new ObjectiveCompletion(1L, USER_ID, 20L, MONDAY, CompletionSource.AUTO));
+
+        useCase.execute(USER_ID, MONDAY, 0);
+
+        assertThat(completionRepository.existsByObjectiveIdAndDate(20L, MONDAY)).isTrue();
     }
 }
