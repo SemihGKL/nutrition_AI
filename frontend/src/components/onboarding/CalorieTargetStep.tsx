@@ -2,19 +2,25 @@ import { useState, useEffect } from 'react';
 import { formatNumber } from '../../utils/format';
 
 interface Props {
-  mbr: number;
+  /** Dépense du jour (TDEE = MBR × 1,2) : référence du déficit. */
+  tdee: number;
   target: number;
   onTargetChange: (v: number) => void;
   submitError?: string | null;
 }
 
-export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: Props) {
-  const foodDeficit = mbr - target;
+// Plage recommandée : 300 à 500 kcal/jour sous la dépense du jour (cf. CLAUDE.md).
+const RECOMMENDED_MIN_DEFICIT = 300;
+const RECOMMENDED_MAX_DEFICIT = 500;
+const MAX_DEFICIT = 800;
+
+export function CalorieTargetStep({ tdee, target, onTargetChange, submitError }: Props) {
+  const foodDeficit = tdee - target;
   const minWeeklyLossKg = (foodDeficit * 7) / 7700;
 
   type Zone = 'light' | 'recommended' | 'intensive';
-  const zone: Zone = foodDeficit < 100 ? 'light'
-    : foodDeficit < 250 ? 'recommended'
+  const zone: Zone = foodDeficit < RECOMMENDED_MIN_DEFICIT ? 'light'
+    : foodDeficit <= RECOMMENDED_MAX_DEFICIT ? 'recommended'
     : 'intensive';
 
   const zoneLabel: Record<Zone, string> = {
@@ -23,9 +29,9 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
     intensive:   'intensif',
   };
   const zoneHint: Record<Zone, string> = {
-    light:       "l'activité crée l'essentiel du déficit",
-    recommended: "100 – 250 kcal / jour depuis l'assiette",
-    intensive:   '250 – 400 kcal / jour depuis l\'assiette',
+    light:       'moins de 300 kcal / jour sous ta dépense',
+    recommended: '300 – 500 kcal / jour sous ta dépense',
+    intensive:   'plus de 500 kcal / jour sous ta dépense',
   };
   const zoneColor: Record<Zone, string> = {
     light:       'var(--ink-2)',
@@ -33,8 +39,8 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
     intensive:   'var(--orange)',
   };
 
-  const sliderMin = Math.round((mbr - 400) / 50) * 50;
-  const sliderMax = Math.round(mbr / 50) * 50;
+  const sliderMin = Math.round((tdee - MAX_DEFICIT) / 50) * 50;
+  const sliderMax = Math.round(tdee / 50) * 50;
   const sliderRange = sliderMax - sliderMin;
 
   useEffect(() => {
@@ -44,8 +50,8 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
   }, [sliderMin, sliderMax]);
 
   const ZONE_SEGMENTS = [
-    { upTo: mbr - 250, color: 'var(--orange)', label: 'intensif'   },
-    { upTo: mbr - 100, color: 'var(--green)',  label: 'recommandé' },
+    { upTo: tdee - RECOMMENDED_MAX_DEFICIT, color: 'var(--orange)', label: 'intensif'   },
+    { upTo: tdee - RECOMMENDED_MIN_DEFICIT, color: 'var(--green)',  label: 'recommandé' },
     { upTo: sliderMax, color: 'var(--ink-3)',  label: 'léger'      },
   ];
 
@@ -65,18 +71,18 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <ResultStat
-          label="métabolisme de base"
+          label="dépense quotidienne"
           uppercase={false}
-          description="calories brûlées sans bouger"
-          tooltip="Ton corps brûle des calories même au repos — pour faire battre ton cœur, respirer, digérer. C'est ton minimum vital. Ton objectif alimentaire est fixé en dessous pour créer un déficit."
-          value={formatNumber(Math.round(mbr))}
+          description="calories brûlées sur une journée calme"
+          tooltip="Ton métabolisme de base (respirer, digérer, faire battre ton cœur) plus les gestes d'une journée calme, sans sport. Ton objectif alimentaire est fixé en dessous pour créer un déficit ; ton sport et tes pas s'y ajoutent."
+          value={formatNumber(Math.round(tdee))}
           suffix="kcal"
         />
         <ResultStat
           label="déficit alim. / j"
           description="ce que tu retires chaque jour de l'assiette — ta perte quotidienne via l'alimentation"
           uppercase={false}
-          tooltip="Déficit créé uniquement par ton alimentation (MBR − objectif)."
+          tooltip="Déficit créé uniquement par ton alimentation (dépense quotidienne − objectif)."
           value={foodDeficit > 0 ? `−${formatNumber(Math.round(foodDeficit))}` : `+${formatNumber(Math.round(-foodDeficit))}`}
           suffix="kcal"
         />
@@ -172,7 +178,7 @@ export function CalorieTargetStep({ mbr, target, onTargetChange, submitError }: 
           fontSize: 11, color: 'var(--ink-3)', marginTop: 4,
         }}>
           <span className="tabular">{formatNumber(sliderMin)} kcal · déficit max</span>
-          <span className="tabular">métabolisme de base · {formatNumber(sliderMax)} kcal</span>
+          <span className="tabular">dépense quotidienne · {formatNumber(sliderMax)} kcal</span>
         </div>
       </div>
 

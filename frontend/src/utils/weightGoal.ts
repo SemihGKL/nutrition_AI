@@ -13,6 +13,7 @@ export type WeightGoalStatus =
   | 'no-goal'      // pas de poids cible renseigné
   | 'reached'      // poids cible déjà atteint
   | 'no-deficit'   // l'objectif calorique ne crée aucun déficit → pas de projection
+  | 'gain-goal'    // objectif de prise de poids : pas de projection (le plan vise un déficit)
   | 'projected';   // projection disponible
 
 export type Pace =
@@ -31,7 +32,7 @@ export interface WeightGoalInput {
   startWeight: number;
   currentWeight: number;      // idéalement la dernière pesée, sinon le profil
   weightGoal: number;
-  dailyTargetDeficit: number; // mbr − objectif calorique quotidien (kcal/j)
+  dailyTargetDeficit: number; // TDEE − objectif calorique quotidien (kcal/j)
   avgDailyCaloriesBurned: number; // moyenne kcal sport/j sur les 30 derniers jours
   weighIns: WeighInPoint[];
   today: string;              // ISO yyyy-mm-dd
@@ -67,7 +68,7 @@ export interface WeightGoalProjection {
   avgDailyCaloriesBurned: number;
 }
 
-function daysBetween(fromIso: string, toIso: string): number {
+export function daysBetween(fromIso: string, toIso: string): number {
   const from = new Date(fromIso + 'T00:00:00').getTime();
   const to = new Date(toIso + 'T00:00:00').getTime();
   return Math.round((to - from) / 86_400_000);
@@ -94,6 +95,23 @@ export function projectWeightGoal(input: WeightGoalInput): WeightGoalProjection 
   };
 
   if (!weightGoal || weightGoal <= 0) return empty;
+
+  // Objectif de prise de poids : on suit le parcours, sans projection de déficit.
+  if (weightGoal > startWeight) {
+    const totalToGain = weightGoal - startWeight;
+    const gained = Math.min(Math.max(currentWeight - startWeight, 0), totalToGain);
+    if (currentWeight >= weightGoal) {
+      return { ...empty, status: 'reached', totalToLose: -totalToGain, doneKg: gained, progressPct: 100 };
+    }
+    return {
+      ...empty,
+      status: 'gain-goal',
+      remainingKg: Math.round((weightGoal - currentWeight) * 10) / 10,
+      totalToLose: -totalToGain,
+      doneKg: gained,
+      progressPct: Math.round((gained / totalToGain) * 100),
+    };
+  }
 
   const remainingKg = currentWeight - weightGoal;
   const totalToLose = startWeight - weightGoal;

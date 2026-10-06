@@ -5,7 +5,7 @@ import { Chevron } from '../components/ui/icons';
 import { authApi } from '../api/auth';
 import { useAuth } from '../hooks/useAuth';
 import { ApiError } from '../api/client';
-import { computeMbr, suggestedTarget } from '../utils/mbr';
+import { computeMbr, computeTdee, suggestedTarget } from '../utils/mbr';
 import { CalorieTargetStep } from '../components/onboarding/CalorieTargetStep';
 
 
@@ -67,8 +67,8 @@ export function OnboardingPage({ onDone, onBack }: Props) {
     setErrors(e => ({ ...e, [key]: undefined }));
   };
 
-  const mbr = form.age && form.height && form.weight
-    ? computeMbr(parseFloat(form.weight), parseFloat(form.height), parseInt(form.age), form.gender)
+  const tdee = form.age && form.height && form.weight
+    ? computeTdee(computeMbr(parseFloat(form.weight), parseFloat(form.height), parseInt(form.age), form.gender))
     : 0;
 
   const validateStep1 = (): boolean => {
@@ -96,7 +96,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
   const handleNext = () => {
     if (step === 1 && !validateStep1()) return;
     if (step === 1) {
-      const computed = suggestedTarget(mbr);
+      const computed = suggestedTarget(tdee);
       set('target', computed);
     }
     setStep(s => s + 1);
@@ -117,6 +117,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
         weightGoal: parseFloat(form.weightGoal),
         weighInDay: form.weighInDay,
         dailyStepsGoal: form.stepsGoal.trim() ? parseInt(form.stepsGoal, 10) : null,
+        dailyCalorieGoal: form.target,
       });
       login(token, user);
       onDone();
@@ -215,7 +216,7 @@ export function OnboardingPage({ onDone, onBack }: Props) {
 
         {step === 2 && (
           <CalorieTargetStep
-            mbr={mbr}
+            tdee={tdee}
             target={form.target}
             onTargetChange={v => set('target', v)}
             submitError={submitError}

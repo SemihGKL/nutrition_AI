@@ -8,8 +8,8 @@ import {
   isoToday, addDays, frenchDateShort,
   formatNumber, formatDecimal, frenchDayShort, stepsToKcal,
 } from '../utils/format';
-import { computeMbr } from '../utils/mbr';
-import { projectWeightGoal, type WeightGoalProjection } from '../utils/weightGoal';
+import { computeMbr, computeTdee } from '../utils/mbr';
+import { projectWeightGoal, daysBetween, type WeightGoalProjection } from '../utils/weightGoal';
 
 interface Props {
   onTabChange: (tab: NavTab) => void;
@@ -20,9 +20,10 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const { user } = useAuth();
   const today = isoToday();
   const target = user?.dailyCalorieGoal ?? 1800;
-  const mbr = user
-    ? Math.round(computeMbr(user.currentWeight, user.height, user.age, user.gender as 'MALE' | 'FEMALE'))
-    : 1800;
+  // Référence du déficit : la dépense du jour (TDEE), comme le récap serveur.
+  const tdee = user
+    ? Math.round(computeTdee(computeMbr(user.currentWeight, user.height, user.age, user.gender as 'MALE' | 'FEMALE')))
+    : 2000;
   // Fenêtre glissante : les 7 derniers jours en terminant aujourd'hui (inclus),
   // alignée sur le streak — le récap ne se vide plus au changement de semaine.
   const windowStart = addDays(today, -6);
@@ -62,8 +63,8 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   [windowStart, entryMap, target, today]);
 
   const confirmedDays = weekDays.filter(d => !d.future && d.net !== null && d.confirmed);
-  const totalRealDeficit = confirmedDays.reduce((s, d) => s + (mbr - (d.net ?? 0)), 0);
-  const theoreticalForConfirmedDays = (mbr - target) * confirmedDays.length;
+  const totalRealDeficit = confirmedDays.reduce((s, d) => s + (tdee - (d.net ?? 0)), 0);
+  const theoreticalForConfirmedDays = (tdee - target) * confirmedDays.length;
   const maxBarVal = Math.max(Math.abs(totalRealDeficit), Math.abs(theoreticalForConfirmedDays), 1);
 
   const sortedWeighIns = [...weighIns].sort((a, b) => a.date > b.date ? -1 : 1);
@@ -72,7 +73,11 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const weightDiff = latestWeighIn && prevWeighIn
     ? latestWeighIn.weight - prevWeighIn.weight
     : null;
+  const weighInSpanDays = latestWeighIn && prevWeighIn
+    ? daysBetween(prevWeighIn.date, latestWeighIn.date)
+    : null;
 
+  // Signé : > 0 = perte attendue, < 0 = prise attendue (semaine en surplus).
   const expectedLoss = totalRealDeficit / 7700;
   const actualLoss = weightDiff !== null ? -weightDiff : null;
 
@@ -93,12 +98,12 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
       startWeight: user?.startWeight ?? user?.currentWeight ?? 0,
       currentWeight: latestWeighIn?.weight ?? user?.currentWeight ?? 0,
       weightGoal: user?.weightGoal ?? 0,
-      dailyTargetDeficit: mbr - target,
+      dailyTargetDeficit: tdee - target,
       avgDailyCaloriesBurned,
       weighIns: weighIns.map(w => ({ date: w.date, weight: w.weight })),
       today,
     }),
-  [user, latestWeighIn, mbr, target, avgDailyCaloriesBurned, weighIns, today]);
+  [user, latestWeighIn, tdee, target, avgDailyCaloriesBurned, weighIns, today]);
 
   return (
     <PageShell>
@@ -132,7 +137,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
                   <span style={{ fontSize: 16, color: 'var(--ink-2)' }}>kg</span>
                 </div>
                 <div className="tabular" style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 8 }}>
-                  {formatDecimal(prevWeighIn!.weight)} → {formatDecimal(latestWeighIn.weight)} kg · sur 7 jours
+                  {formatDecimal(prevWeighIn!.weight)} → {formatDecimal(latestWeighIn.weight)} kg · sur {weighInSpanDays} jour{weighInSpanDays !== 1 ? 's' : ''}
                 </div>
               </>
             ) : (
@@ -261,7 +266,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
                 {totalRealDeficit >= 0 ? '−' : '+'}{formatNumber(Math.abs(totalRealDeficit))} kcal
               </span>
               <br />
-              perte attendue{' '}
+              {expectedLoss >= 0 ? 'perte attendue' : 'prise attendue'}{' '}
               <span className="tabular">~{formatDecimal(Math.abs(expectedLoss))} kg</span>
               {actualLoss !== null && (
                 <>
@@ -273,7 +278,7 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
                 </>
               )}
             </div>
-            {actualLoss !== null && Math.abs(actualLoss - Math.abs(expectedLoss)) > 0.1 && (
+            {actualLoss !== null && Math.abs(actualLoss - expectedLoss) > 0.1 && (
               <div style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 10, lineHeight: 1.5 }}>
                 écart probablement lié à l'eau et au glycogène — c'est normal.
               </div>
@@ -407,6 +412,21 @@ function WeightGoalCard({ projection, weightGoal, startWeight, onGoToProfil }: {
         </div>
         <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 4 }}>
           cible {formatDecimal(weightGoal)} kg — bravo pour la constance.
+        </div>
+      </div>
+    );
+  }
+
+  if (p.status === 'gain-goal') {
+    return (
+      <div style={{
+        background: 'var(--paper-2)', borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--hairline-2)', padding: 16, marginBottom: 14,
+      }}>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.3, marginBottom: 4 }}>cap sur l'objectif</div>
+        <div style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+          objectif de prise de poids : encore {formatDecimal(p.remainingKg)} kg pour atteindre {formatDecimal(weightGoal)} kg.
+          L'estimation de durée n'est disponible que pour une perte de poids.
         </div>
       </div>
     );

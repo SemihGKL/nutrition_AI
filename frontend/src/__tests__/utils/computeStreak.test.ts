@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { computeStreak } from '../../hooks/useStreak';
 import type { DailyCalories } from '../../types/api';
 
+// Node change de fuseau à chaud via process.env.TZ (types Node non installés côté front).
+declare const process: { env: Record<string, string | undefined> };
+
 const TODAY = '2026-06-22';
 
 function entry(date: string, confirmed: boolean): DailyCalories {
@@ -98,5 +101,23 @@ describe('computeStreak', () => {
       entry('2026-06-22', false), // non confirmee
     ];
     expect(computeStreak(entries, TODAY).current).toBe(0);
+  });
+
+  describe('changement d\'heure (Europe/Paris)', () => {
+    const originalTz = process.env.TZ;
+    beforeEach(() => { process.env.TZ = 'Europe/Paris'; });
+    afterEach(() => { process.env.TZ = originalTz; });
+
+    it('ne coupe pas le record de serie a cheval sur le passage a l\'heure d\'ete', () => {
+      // Nuit du 28 au 29 mars 2026 : journée de 23 h.
+      const entries = ['2026-03-27', '2026-03-28', '2026-03-29', '2026-03-30'].map(d => entry(d, true));
+      expect(computeStreak(entries, TODAY).best).toBe(4);
+    });
+
+    it('ne coupe pas le record de serie a cheval sur le passage a l\'heure d\'hiver', () => {
+      // Nuit du 24 au 25 octobre 2026 : journée de 25 h.
+      const entries = ['2026-10-24', '2026-10-25', '2026-10-26'].map(d => entry(d, true));
+      expect(computeStreak(entries, TODAY).best).toBe(3);
+    });
   });
 });

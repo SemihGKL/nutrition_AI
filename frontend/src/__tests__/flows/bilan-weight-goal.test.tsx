@@ -50,13 +50,13 @@ describe('BilanPage — cap sur le poids cible', () => {
   it('sans assez de pesées, retombe sur l\'estimation du plan', async () => {
     (weighInApi.getAll as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     renderBilan();
-    // MBR femme 76 kg = 10*76 + 6.25*165 - 5*30 - 161 = 760+1031.25-150-161 = 1480.25 → 1480
-    // déficit plan = 1480 - 1500 = -20 → pas de déficit
+    // TDEE femme 76 kg = 1480.25 × 1.2 = 1776.3 → 1776 ; objectif 1800 → pas de déficit
+    mockUser.dailyCalorieGoal = 1800;
     await waitFor(() => expect(screen.getByText(/ne crée pas de déficit/)).toBeInTheDocument());
   });
 
   it('avec deux pesées espacées et une perte rapide, indique « en avance »', async () => {
-    // MBR sur 76 kg ≈ 1480, objectif 1200 → déficit plan = 280 kcal/j (déficit réel)
+    // TDEE sur 76 kg ≈ 1776, objectif 1200 → déficit plan = 576 kcal/j
     mockUser.dailyCalorieGoal = 1200;
     (weighInApi.getAll as ReturnType<typeof vi.fn>).mockResolvedValue([
       { id: 1, date: '2026-06-07', weight: 79 },

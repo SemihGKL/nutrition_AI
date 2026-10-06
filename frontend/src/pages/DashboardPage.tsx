@@ -15,6 +15,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useDailyEntry } from '../hooks/useDailyEntry';
 import { computeStreak } from '../hooks/useStreak';
 import { isoToday, addDays, stepsToKcal } from '../utils/format';
+import { computeMbr, computeTdee } from '../utils/mbr';
 import type { DailyCalories } from '../types/api';
 import type { StreakInfo } from '../hooks/useStreak';
 
@@ -50,9 +51,12 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
   const stepsKcal = stepsToKcal(steps, user?.currentWeight ?? 70);
   const net       = calories - stepsKcal - burned;
 
-  const mbrValue = recap?.mbr ?? (user
-    ? Math.round((10 * (user.currentWeight ?? 70)) + (6.25 * (user.height ?? 170)) - (5 * (user.age ?? 30)) + (user.gender === 'MALE' ? 5 : -161))
-    : undefined);
+  // Référence du déficit : la dépense du jour (TDEE), celle du recap serveur dès qu'il existe.
+  const tdeeValue = recap?.tdee !== undefined
+    ? Math.round(recap.tdee)
+    : user
+      ? Math.round(computeTdee(computeMbr(user.currentWeight ?? 70, user.height ?? 170, user.age ?? 30, user.gender as 'MALE' | 'FEMALE')))
+      : undefined;
 
   const openCalendar = () => setIsCalendarOpen(true);
   const closeCalendar = () => setIsCalendarOpen(false);
@@ -118,14 +122,14 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
           <ProgressRing
             value={net}
             target={target}
-            mbr={mbrValue}
+            expenditure={tdeeValue}
             size={232}
             stroke={14}
             label="kcal net"
           />
         </div>
 
-        <ContextMessage consumed={calories} net={net} target={target} mbr={mbrValue} />
+        <ContextMessage consumed={calories} net={net} target={target} tdee={tdeeValue} />
 
         <EntrySection
           key={viewedDate}
@@ -148,7 +152,7 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
         )}
 
         {calories > 0 && (
-          <DeficitBanner net={net} target={target} mbr={mbrValue} />
+          <DeficitBanner net={net} target={target} tdee={tdeeValue} />
         )}
 
         <PrimaryCTA

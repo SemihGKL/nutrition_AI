@@ -25,6 +25,19 @@ function recap(overrides: Partial<DailyRecap> = {}): DailyRecap {
 }
 
 describe('ConfirmationView — bannière résultat', () => {
+  it('juge le deficit par rapport au TDEE : net entre MBR et TDEE reste un deficit', () => {
+    render(
+      <ConfirmationView
+        date="2026-06-22"
+        recap={recap({ netCalories: 2100, dailyCalorieGoal: 1800, mbr: 2000, tdee: 2400 })}
+        streak={streak}
+        onEdit={vi.fn()}
+        onOpenCalendar={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Objectif dépassé — déficit préservé')).toBeInTheDocument();
+  });
+
   it('affiche "Objectif atteint" quand net est sous l\'objectif', () => {
     render(
       <ConfirmationView
@@ -38,7 +51,7 @@ describe('ConfirmationView — bannière résultat', () => {
     expect(screen.getByText('Objectif atteint')).toBeInTheDocument();
   });
 
-  it('affiche "Objectif dépassé — déficit préservé" quand net dépasse l\'objectif mais reste sous le MBR', () => {
+  it('affiche "Objectif dépassé — déficit préservé" quand net dépasse l\'objectif mais reste sous le TDEE', () => {
     render(
       <ConfirmationView
         date="2026-06-22"
@@ -51,11 +64,11 @@ describe('ConfirmationView — bannière résultat', () => {
     expect(screen.getByText('Objectif dépassé — déficit préservé')).toBeInTheDocument();
   });
 
-  it('affiche "Au-dessus de l\'objectif" quand net dépasse le MBR', () => {
+  it('affiche "Au-dessus de l\'objectif" quand net dépasse le TDEE', () => {
     render(
       <ConfirmationView
         date="2026-06-22"
-        recap={recap({ netCalories: 2200, dailyCalorieGoal: 1800, mbr: 2000 })}
+        recap={recap({ netCalories: 2500, dailyCalorieGoal: 1800, mbr: 2000, tdee: 2400 })}
         streak={streak}
         onEdit={vi.fn()}
         onOpenCalendar={vi.fn()}
@@ -77,11 +90,11 @@ describe('ConfirmationView — bannière résultat', () => {
     expect(screen.getAllByText('Déficit préservé').length).toBeGreaterThan(0);
   });
 
-  it('affiche "Surplus calorique" dans le bilan du jour quand net dépasse le MBR', () => {
+  it('affiche "Surplus calorique" dans le bilan du jour quand net dépasse le TDEE', () => {
     render(
       <ConfirmationView
         date="2026-06-22"
-        recap={recap({ netCalories: 2200, dailyCalorieGoal: 1800, mbr: 2000 })}
+        recap={recap({ netCalories: 2500, dailyCalorieGoal: 1800, mbr: 2000, tdee: 2400 })}
         streak={streak}
         onEdit={vi.fn()}
         onOpenCalendar={vi.fn()}

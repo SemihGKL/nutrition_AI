@@ -3,14 +3,15 @@ import { formatNumber } from '../../utils/format';
 interface Props {
   net: number;
   target: number;
-  mbr?: number;
+  /** Dépense du jour (TDEE) : tant que le net reste dessous, la journée est en déficit. */
+  tdee?: number;
 }
 
 type State = 'on-track' | 'partial' | 'over';
 
-function resolveState(net: number, target: number, mbr?: number): State {
+function resolveState(net: number, target: number, tdee?: number): State {
   if (net <= target) return 'on-track';
-  if (mbr !== undefined && net <= mbr) return 'partial';
+  if (tdee !== undefined && net <= tdee) return 'partial';
   return 'over';
 }
 
@@ -30,8 +31,8 @@ const TINT: Record<State, string> = {
   'over':     'var(--red-soft)',
 };
 
-export function DeficitBanner({ net, target, mbr }: Props) {
-  const state = resolveState(net, target, mbr);
+export function DeficitBanner({ net, target, tdee }: Props) {
+  const state = resolveState(net, target, tdee);
   const color = COLOR[state];
   const bg    = BG[state];
   const tint  = TINT[state];

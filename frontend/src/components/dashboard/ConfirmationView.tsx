@@ -29,7 +29,8 @@ export function ConfirmationView({ date, recap, streak, onEdit, onOpenCalendar }
   const stepsKcal  = recap.stepsKcal;
   const ecart      = recap.netCalories - recap.dailyCalorieGoal;
   const isOnTarget = ecart <= 0;
-  const isPartial  = ecart > 0 && recap.netCalories <= recap.mbr;
+  // Au-dessus de l'objectif mais sous la dépense du jour (TDEE) : le déficit est préservé.
+  const isPartial  = ecart > 0 && recap.netCalories <= recap.tdee;
   const absEcart   = Math.abs(ecart);
   const resultColor = isOnTarget ? 'var(--green)' : isPartial ? 'var(--amber)' : 'var(--red)';
 
