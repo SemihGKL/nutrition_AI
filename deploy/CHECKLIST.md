@@ -112,6 +112,9 @@ ALLOWED_ORIGINS=https://DOMAIN
 MAIL_USERNAME=<compte-gmail@gmail.com>
 MAIL_PASSWORD=<mot de passe d'application Gmail — 16 car., 2FA requise>
 APP_BASE_URL=https://DOMAIN
+VAPID_PUBLIC_KEY=<npx web-push generate-vapid-keys — une seule fois>
+VAPID_PRIVATE_KEY=<idem, ne jamais régénérer : abonnements push invalidés>
+VAPID_SUBJECT=mailto:support@DOMAIN
 ```
 - [ ] `SPRING_PROFILES_ACTIVE=prod` (sinon retombée sur `dev` → seed de test en prod !)
 - [ ] `DB_USERNAME`/`DB_PASSWORD` **identiques** au `.env` de docker-compose (étape 4)
