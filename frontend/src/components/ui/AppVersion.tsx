@@ -1,12 +1,13 @@
+const AUTHOR = 'by GOKOL Semi';
+
 interface VersionInfo {
   version: string;
-  commit: string;
   buildDate: string; // ISO yyyy-mm-dd
 }
 
-export function formatAppVersion({ version, commit, buildDate }: VersionInfo): string {
+export function formatAppVersion({ version, buildDate }: VersionInfo): string {
   const [y, m, d] = buildDate.split('-');
-  return ['Kaloriim v' + version, commit, `${d}/${m}/${y}`].filter(Boolean).join(' · ');
+  return `Kaloriim v${version} · ${AUTHOR} · ${d}/${m}/${y}`;
 }
 
 export function AppVersion() {
@@ -15,7 +16,7 @@ export function AppVersion() {
       textAlign: 'center', fontSize: 11, color: 'var(--ink-3)',
       marginTop: 16, letterSpacing: 0.3,
     }}>
-      {formatAppVersion({ version: __APP_VERSION__, commit: __APP_COMMIT__, buildDate: __APP_BUILD_DATE__ })}
+      {formatAppVersion({ version: __APP_VERSION__, buildDate: __APP_BUILD_DATE__ })}
     </div>
   );
 }
