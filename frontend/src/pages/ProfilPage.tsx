@@ -11,6 +11,7 @@ import { computeMbr, computeTdee } from '../utils/mbr';
 import { parseStepsGoalInput, parseWeightGoalInput } from '../utils/profileForm';
 import { CalorieTargetStep } from '../components/onboarding/CalorieTargetStep';
 import { Chevron } from '../components/ui/icons';
+import { AppVersion } from '../components/ui/AppVersion';
 import { SupportPage } from './SupportPage';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
@@ -239,6 +240,8 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
             Se déconnecter
           </button>
         </div>
+
+        <AppVersion />
       </div>
 
       <BottomNav active="profil" onChange={onTabChange} />
