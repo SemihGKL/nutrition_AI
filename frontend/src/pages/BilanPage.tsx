@@ -63,9 +63,6 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   [windowStart, entryMap, target, today]);
 
   const confirmedDays = weekDays.filter(d => !d.future && d.net !== null && d.confirmed);
-  const totalRealDeficit = confirmedDays.reduce((s, d) => s + (tdee - (d.net ?? 0)), 0);
-  const theoreticalForConfirmedDays = (tdee - target) * confirmedDays.length;
-  const maxBarVal = Math.max(Math.abs(totalRealDeficit), Math.abs(theoreticalForConfirmedDays), 1);
 
   const sortedWeighIns = [...weighIns].sort((a, b) => a.date > b.date ? -1 : 1);
   const latestWeighIn = sortedWeighIns[0] ?? null;
@@ -76,10 +73,6 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
   const weighInSpanDays = latestWeighIn && prevWeighIn
     ? daysBetween(prevWeighIn.date, latestWeighIn.date)
     : null;
-
-  // Signé : > 0 = perte attendue, < 0 = prise attendue (semaine en surplus).
-  const expectedLoss = totalRealDeficit / 7700;
-  const actualLoss = weightDiff !== null ? -weightDiff : null;
 
   const weekRange = `${frenchDateShort(windowStart)} → ${frenchDateShort(today)}`;
 
@@ -252,76 +245,6 @@ export function BilanPage({ onTabChange, allEntries }: Props) {
             ))}
           </div>
         </div>
-
-        {/* Coherence reading */}
-        {confirmedDays.length > 0 && (
-          <div style={{
-            background: 'var(--orange-tint)', border: '1px solid var(--orange-soft)',
-            borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 14,
-          }}>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.3, marginBottom: 6 }}>lecture de cohérence</div>
-            <div className="display" style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.5, color: 'var(--ink)' }}>
-              déficit cumulé{' '}
-              <span className="tabular" style={{ color: 'var(--orange)' }}>
-                {totalRealDeficit >= 0 ? '−' : '+'}{formatNumber(Math.abs(totalRealDeficit))} kcal
-              </span>
-              <br />
-              {expectedLoss >= 0 ? 'perte attendue' : 'prise attendue'}{' '}
-              <span className="tabular">~{formatDecimal(Math.abs(expectedLoss))} kg</span>
-              {actualLoss !== null && (
-                <>
-                  <br />
-                  perte réelle{' '}
-                  <span className="tabular" style={{ color: actualLoss >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                    {actualLoss >= 0 ? '−' : '+'}{formatDecimal(Math.abs(actualLoss))} kg
-                  </span>
-                </>
-              )}
-            </div>
-            {actualLoss !== null && Math.abs(actualLoss - expectedLoss) > 0.1 && (
-              <div style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 10, lineHeight: 1.5 }}>
-                écart probablement lié à l'eau et au glycogène — c'est normal.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Theoretical vs real deficit */}
-        {confirmedDays.length > 0 && (
-          <div style={{
-            background: 'var(--paper-2)', borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--hairline-2)', padding: 16, marginBottom: 14,
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <div className="display" style={{ fontSize: 15, fontWeight: 500 }}>plan vs réel</div>
-              <div style={{
-                fontSize: 12, fontWeight: 700,
-                color: 'var(--orange)',
-                background: 'var(--orange-tint)',
-                borderRadius: 999,
-                padding: '3px 10px',
-              }}>
-                {confirmedDays.length} / 7 j
-              </div>
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 14 }}>
-              comparaison sur les {confirmedDays.length} jour{confirmedDays.length > 1 ? 's' : ''} confirmé{confirmedDays.length > 1 ? 's' : ''}
-            </div>
-            <BarRow
-              label="si plan de base suivi à la lettre"
-              value={`${theoreticalForConfirmedDays >= 0 ? '−' : '+'}${formatNumber(Math.abs(theoreticalForConfirmedDays))} kcal`}
-              pct={Math.round((Math.abs(theoreticalForConfirmedDays) / maxBarVal) * 100)}
-              color="var(--ink-3)"
-            />
-            <div style={{ height: 10 }} />
-            <BarRow
-              label="déficit réel accumulé"
-              value={`${totalRealDeficit >= 0 ? '−' : '+'}${formatNumber(Math.abs(totalRealDeficit))} kcal`}
-              pct={Math.round((Math.abs(totalRealDeficit) / maxBarVal) * 100)}
-              color={totalRealDeficit >= 0 ? 'var(--green)' : 'var(--red)'}
-            />
-          </div>
-        )}
 
         {confirmedDays.length === 0 && (
           <div style={{
@@ -530,22 +453,6 @@ function WeightGoalCard({ projection, weightGoal, startWeight, onGoToProfil }: {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function BarRow({ label, value, pct, color }: {
-  label: string; value: string; pct: number; color: string;
-}) {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{label}</span>
-        <span className="tabular" style={{ fontSize: 13, fontWeight: 600, color }}>{value}</span>
-      </div>
-      <div style={{ height: 8, background: 'var(--paper-3)', borderRadius: 999, overflow: 'hidden' }}>
-        <div style={{ width: `${Math.max(2, pct)}%`, height: '100%', background: color, borderRadius: 999, opacity: 0.85 }} />
-      </div>
     </div>
   );
 }

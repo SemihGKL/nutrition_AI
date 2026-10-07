@@ -43,24 +43,12 @@ describe('BilanPage — calculs', () => {
     (weighInApi.getAll as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   });
 
-  it('calcule le deficit cumule par rapport au TDEE', async () => {
-    renderBilan([day('2026-07-04', 1500)]);
-    await waitFor(() => expect(screen.getByText('lecture de cohérence')).toBeInTheDocument());
-    // 1776 − 1500 = 276
-    expect(screen.getAllByText(/−276 kcal/).length).toBeGreaterThan(0);
-  });
-
-  it('parle de prise attendue quand la semaine est en surplus', async () => {
-    renderBilan([day('2026-07-03', 2600), day('2026-07-04', 2600)]);
-    await waitFor(() => expect(screen.getByText('lecture de cohérence')).toBeInTheDocument());
-    expect(screen.getByText(/prise attendue/)).toBeInTheDocument();
-    expect(screen.queryByText(/perte attendue/)).not.toBeInTheDocument();
-  });
-
-  it('parle de perte attendue quand la semaine est en deficit', async () => {
-    renderBilan([day('2026-07-04', 1200)]);
-    await waitFor(() => expect(screen.getByText('lecture de cohérence')).toBeInTheDocument());
-    expect(screen.getByText(/perte attendue/)).toBeInTheDocument();
+  it('n\'affiche plus la lecture de coherence ni le plan vs reel', async () => {
+    renderBilan([day('2026-07-03', 2600), day('2026-07-04', 1200)]);
+    await waitFor(() => expect(screen.getByText('jour par jour')).toBeInTheDocument());
+    expect(screen.queryByText('lecture de cohérence')).not.toBeInTheDocument();
+    expect(screen.queryByText('plan vs réel')).not.toBeInTheDocument();
+    expect(screen.queryByText(/attendue/)).not.toBeInTheDocument();
   });
 
   it('affiche la vraie duree entre les deux dernieres pesees', async () => {

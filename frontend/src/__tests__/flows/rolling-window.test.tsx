@@ -67,8 +67,8 @@ describe('Fenêtre glissante — le lundi, le récap garde les jours confirmés 
 
     // Les jours confirmés sont dans la fenêtre → pas de vide.
     expect(screen.queryByText(/aucune journée confirmée/)).toBeNull();
-    // Les cartes de synthèse s'affichent car confirmedDays > 0.
-    expect(screen.getByText('plan vs réel')).toBeInTheDocument();
+    // Le tableau jour par jour montre ces deux jours saisis.
+    expect(screen.getByText(/objectif respecté/)).toBeInTheDocument();
   });
 
   it('SemainePage calcule la moyenne à partir de ces jours', () => {
