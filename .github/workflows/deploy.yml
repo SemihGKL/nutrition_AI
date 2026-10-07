@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   test:
-    name: Tests
+    name: Tests backend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,9 +26,33 @@ jobs:
         working-directory: backend
         run: ./mvnw test
 
+  frontend-test:
+    name: Tests frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Type check
+        working-directory: frontend
+        run: npx tsc --noEmit -p .
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm test -- --run
+
   deploy:
     name: Build & Deploy
-    needs: test
+    needs: [test, frontend-test]   # aucun déploiement si un test back OU front échoue
     runs-on: ubuntu-latest
     permissions:
       contents: write   # commit du nouveau numéro de version sur main
