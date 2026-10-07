@@ -12,6 +12,7 @@ import { parseStepsGoalInput, parseWeightGoalInput } from '../utils/profileForm'
 import { CalorieTargetStep } from '../components/onboarding/CalorieTargetStep';
 import { Chevron } from '../components/ui/icons';
 import { AppVersion } from '../components/ui/AppVersion';
+import { MealRemindersSection } from '../components/profile/MealRemindersSection';
 import { SupportPage } from './SupportPage';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
@@ -179,9 +180,9 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
               padding: '13px 16px',
             }}>
               <div>
-                <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>Rappel de pesée</div>
+                <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>Notifications</div>
                 <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
-                  {isSubscribed ? 'Notification activée' : 'Reçois un rappel le jour de ta pesée'}
+                  {isSubscribed ? 'Activées sur cet appareil' : 'Rappel de pesée et rappels repas'}
                 </div>
               </div>
               <button
@@ -201,6 +202,12 @@ export function ProfilPage({ onTabChange, streakCount }: Props) {
                 {pushLoading ? '…' : isSubscribed ? 'Activé' : 'Activer'}
               </button>
             </div>
+          </Section>
+        )}
+
+        {pushSupported && (
+          <Section label="rappels repas">
+            <MealRemindersSection notificationsEnabled={isSubscribed} />
           </Section>
         )}
 

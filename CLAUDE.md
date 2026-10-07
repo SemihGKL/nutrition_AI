@@ -77,9 +77,9 @@ Le TDEE utilise le coefficient sédentaire (1.2). Les calories brûlées par l'a
 
 Les fichiers sont dans `backend/src/main/resources/db/migration/`.
 - `V1__create_tables.sql` — tables `users` et `daily_calories`
-- `V2` → `V19` — colonnes supplémentaires, contraintes, refresh tokens, push, calories par repas, origine des coches d'objectifs, poids objectif décimal, etc.
+- `V2` → `V20` — colonnes supplémentaires, contraintes, refresh tokens, push, calories par repas, origine des coches d'objectifs, poids objectif décimal, rappels repas, etc.
 
-**Règle** : toute modification de schéma = nouveau fichier `V{N+1}__description.sql`, jamais de modification d'un fichier existant. Prochaine migration : `V20`.
+**Règle** : toute modification de schéma = nouveau fichier `V{N+1}__description.sql`, jamais de modification d'un fichier existant. Prochaine migration : `V21`.
 
 ---
 
@@ -126,6 +126,8 @@ POST /api/objectives/{id}/completions/{date}   ✅
 DELETE /api/objectives/{id}/completions/{date} ✅
 GET  /api/objectives/completions       ✅
 POST /api/support                      ✅
+GET  /api/meal-reminders               ✅
+PUT  /api/meal-reminders               ✅
 ```
 
 ---

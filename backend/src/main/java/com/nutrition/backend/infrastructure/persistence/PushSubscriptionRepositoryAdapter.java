@@ -50,6 +50,11 @@ public class PushSubscriptionRepositoryAdapter implements PushSubscriptionReposi
                 .toList();
     }
 
+    @Override
+    public List<PushSubscription> findByUserId(Long userId) {
+        return jpaRepository.findByUserId(userId).stream().map(this::toDomain).toList();
+    }
+
     private PushSubscription toDomain(PushSubscriptionJpaEntity entity) {
         return new PushSubscription(entity.getId(), entity.getUserId(),
                 entity.getEndpoint(), entity.getP256dh(), entity.getAuth());

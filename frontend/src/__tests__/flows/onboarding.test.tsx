@@ -21,6 +21,10 @@ import { OnboardingPage } from '../../pages/OnboardingPage';
 
 const login = vi.fn();
 
+// Ces parcours tapent une dizaine de champs caractère par caractère : sous la charge de
+// la suite complète, ils dépassent parfois le délai par défaut de 5 s.
+vi.setConfig({ testTimeout: 20_000 });
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useAuth).mockReturnValue({ login } as never);

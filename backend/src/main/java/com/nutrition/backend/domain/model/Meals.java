@@ -10,6 +10,15 @@ public record Meals(int breakfast, int lunch, int snack, int dinner) {
         return breakfast + lunch + snack + dinner;
     }
 
+    public int kcalFor(MealType meal) {
+        return switch (meal) {
+            case BREAKFAST -> breakfast;
+            case LUNCH -> lunch;
+            case SNACK -> snack;
+            case DINNER -> dinner;
+        };
+    }
+
     public boolean isEmpty() {
         return total() == 0;
     }
