@@ -8,4 +8,5 @@ public interface PushSubscriptionRepository {
     PushSubscription saveOrUpdate(PushSubscription subscription);
     void deleteByEndpoint(String endpoint);
     List<PushSubscription> findPendingWeighInReminders(String dayOfWeek, String weekStartDate);
+    List<PushSubscription> findByUserId(Long userId);
 }

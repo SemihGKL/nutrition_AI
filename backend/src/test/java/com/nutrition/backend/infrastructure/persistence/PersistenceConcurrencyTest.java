@@ -180,6 +180,26 @@ class PersistenceConcurrencyTest {
         assertThat(objectiveCompletionRepository.findByUserIdAndDateBetween(u.getId(), date, date)).isEmpty();
     }
 
+    // ── Rappels repas ───────────────────────────────────────────────────────
+
+    @Autowired com.nutrition.backend.domain.ports.MealReminderRepository mealReminderRepository;
+
+    @Test
+    void should_upsert_meal_reminders_and_find_enabled_ones_at_a_given_time() {
+        User u = newPersistedUser("meal-reminders@test.com");
+        java.time.LocalTime noon = java.time.LocalTime.of(12, 30);
+
+        mealReminderRepository.saveAll(u.getId(), java.util.List.of(
+                new com.nutrition.backend.domain.entity.MealReminder(u.getId(), com.nutrition.backend.domain.model.MealType.LUNCH, java.time.LocalTime.of(12, 0), false)));
+        mealReminderRepository.saveAll(u.getId(), java.util.List.of(
+                new com.nutrition.backend.domain.entity.MealReminder(u.getId(), com.nutrition.backend.domain.model.MealType.LUNCH, noon, true)));
+
+        assertThat(mealReminderRepository.findByUserId(u.getId())).hasSize(1);
+        assertThat(mealReminderRepository.findEnabledAt(noon))
+                .extracting(com.nutrition.backend.domain.entity.MealReminder::userId)
+                .contains(u.getId());
+    }
+
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────
 
     @Test
