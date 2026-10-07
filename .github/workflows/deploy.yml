@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
 
+# Un seul déploiement à la fois : deux runs concurrents se disputeraient le numéro de version.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
 jobs:
   test:
     name: Tests
@@ -25,6 +30,8 @@ jobs:
     name: Build & Deploy
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # commit du nouveau numéro de version sur main
 
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +55,15 @@ jobs:
           node-version: '20'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+
+      # Règle de version : chaque push sur main = +0.1 (0.1.0 → 0.2.0 → 0.3.0…).
+      # Le numéro n'est commité qu'après un déploiement réussi (étape « Commit version »).
+      - name: Bump version
+        id: version
+        working-directory: frontend
+        run: |
+          npm version minor --no-git-tag-version
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Build frontend
         working-directory: frontend
@@ -104,3 +120,14 @@ jobs:
             echo "❌ Backend PAS prêt après 90s — dernières lignes de log :"
             sudo journalctl -u nutritionIA --no-pager -n 60
             exit 1
+
+      # ── Version ────────────────────────────────────────────────
+      # Pousser avec GITHUB_TOKEN ne redéclenche aucun workflow (pas de boucle).
+      - name: Commit version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/package.json frontend/package-lock.json
+          git commit -m "chore(release): v${{ steps.version.outputs.version }} [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
