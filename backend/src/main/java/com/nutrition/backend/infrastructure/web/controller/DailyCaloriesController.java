@@ -61,17 +61,7 @@ public class DailyCaloriesController {
                                                    Authentication auth) {
         User user = getUserProfileUseCase.byEmail(auth.getName());
 
-        DailyEntry entry = new DailyEntry(
-                request.id(),
-                user.getId(),
-                request.date(),
-                request.caloriesConsumed(),
-                request.steps(),
-                request.caloriesBurned(),
-                request.confirmed()
-        );
-
-        DailyEntry saved = recordDailyEntryUseCase.execute(entry);
+        DailyEntry saved = recordDailyEntryUseCase.execute(DailyEntryMapper.toDomain(request, user.getId()));
         return ResponseEntity.ok(DailyEntryMapper.toDto(saved));
     }
 

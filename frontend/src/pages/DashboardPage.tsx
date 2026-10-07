@@ -6,13 +6,16 @@ import { Check } from '../components/ui/icons';
 import { DayHeader } from '../components/dashboard/DayHeader';
 import { ContextMessage } from '../components/dashboard/ContextMessage';
 import { EntrySection } from '../components/dashboard/EntrySection';
+import { NO_MEALS } from '../utils/meals';
 import { NetBalanceRow } from '../components/dashboard/NetBalanceRow';
 import { DeficitBanner } from '../components/dashboard/DeficitBanner';
 import { ConfirmationView } from '../components/dashboard/ConfirmationView';
+import { CalendarModal } from '../components/dashboard/CalendarModal';
 import { useAuth } from '../hooks/useAuth';
 import { useDailyEntry } from '../hooks/useDailyEntry';
 import { computeStreak } from '../hooks/useStreak';
 import { isoToday, addDays, stepsToKcal } from '../utils/format';
+import { computeMbr, computeTdee } from '../utils/mbr';
 import type { DailyCalories } from '../types/api';
 import type { StreakInfo } from '../hooks/useStreak';
 
@@ -28,14 +31,15 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
   const { user } = useAuth();
   const [viewedDate, setViewedDate] = useState(isoToday);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const today = isoToday();
-  const isToday = viewedDate === today;
-  const isPast  = viewedDate < today;
 
   useEffect(() => { setIsEditing(false); }, [viewedDate]);
 
-  const { entry, recap, isLoading, isSaving, setCalories, setSteps, setBurned, confirm } =
-    useDailyEntry(user?.id, viewedDate);
+  const {
+    entry, recap, isLoading, isSaving, saveFailed, error,
+    setMeal, setSteps, setBurned, confirm, retrySave, reload,
+  } = useDailyEntry(user?.id, viewedDate);
 
   const streak = user ? computeStreak(allEntries, viewedDate) : EMPTY_STREAK;
 
@@ -47,19 +51,42 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
   const stepsKcal = stepsToKcal(steps, user?.currentWeight ?? 70);
   const net       = calories - stepsKcal - burned;
 
-  const mbrValue = recap?.mbr ?? (user
-    ? Math.round((10 * (user.currentWeight ?? 70)) + (6.25 * (user.height ?? 170)) - (5 * (user.age ?? 30)) + (user.gender === 'MALE' ? 5 : -161))
-    : undefined);
+  // Référence du déficit : la dépense du jour (TDEE), celle du recap serveur dès qu'il existe.
+  const tdeeValue = recap?.tdee !== undefined
+    ? Math.round(recap.tdee)
+    : user
+      ? Math.round(computeTdee(computeMbr(user.currentWeight ?? 70, user.height ?? 170, user.age ?? 30, user.gender as 'MALE' | 'FEMALE')))
+      : undefined;
 
+  const openCalendar = () => setIsCalendarOpen(true);
+  const closeCalendar = () => setIsCalendarOpen(false);
 
   const handleConfirm = async () => {
-    await confirm();
+    try {
+      await confirm();
+    } catch {
+      return; // échec signalé par EntrySection (« non enregistré · réessayer »)
+    }
     onEntriesRefresh();
     setIsEditing(false);
   };
 
+  const calendarModal = isCalendarOpen && (
+    <CalendarModal
+      selectedDate={viewedDate}
+      todayDate={today}
+      onSelect={setViewedDate}
+      onClose={closeCalendar}
+    />
+  );
+
   if (isLoading) {
     return <PageShell><LoadingState /></PageShell>;
+  }
+
+  // Sans les données du jour, une saisie écraserait la journée existante : on bloque.
+  if (error) {
+    return <PageShell><ErrorState message={error} onRetry={reload} /></PageShell>;
   }
 
   if (entry?.confirmed && recap && !isEditing) {
@@ -69,40 +96,12 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
           date={viewedDate}
           recap={recap}
           streak={streak}
-          canEdit={isToday}
           onEdit={() => setIsEditing(true)}
+          onOpenCalendar={openCalendar}
         />
         <BottomNav active="jour" onChange={onTabChange} />
         <HomeIndicator />
-      </PageShell>
-    );
-  }
-
-  if (isPast && !isEditing) {
-    return (
-      <PageShell>
-        <DayHeader
-          date={viewedDate}
-          streakCount={streak.current}
-          canGoForward
-          onPrev={() => setViewedDate(d => addDays(d, -1))}
-          onNext={() => setViewedDate(d => addDays(d, 1))}
-        />
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          gap: 8, padding: '0 24px',
-        }}>
-          <div style={{ fontSize: 32 }}>📋</div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
-            Journée non confirmée
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--ink-3)', textAlign: 'center', lineHeight: 1.5 }}>
-            Les jours passés ne peuvent plus être modifiés.
-          </div>
-        </div>
-        <BottomNav active="jour" onChange={onTabChange} />
-        <HomeIndicator />
+        {calendarModal}
       </PageShell>
     );
   }
@@ -115,31 +114,35 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
         canGoForward={viewedDate < today}
         onPrev={() => setViewedDate(d => addDays(d, -1))}
         onNext={() => setViewedDate(d => addDays(d, 1))}
+        onOpenCalendar={openCalendar}
       />
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 20px 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8, marginBottom: 10 }}>
           <ProgressRing
-            value={Math.max(0, net)}
+            value={net}
             target={target}
-            mbr={mbrValue}
+            expenditure={tdeeValue}
             size={232}
             stroke={14}
             label="kcal net"
           />
         </div>
 
-        <ContextMessage calories={net} target={target} mbr={mbrValue} />
+        <ContextMessage consumed={calories} net={net} target={target} tdee={tdeeValue} />
 
         <EntrySection
           key={viewedDate}
+          meals={entry?.meals ?? NO_MEALS}
           calories={calories}
           steps={steps}
           burned={burned}
           weightKg={user?.currentWeight ?? 70}
           stepsGoal={user?.dailyStepsGoal}
           isSaving={isSaving}
-          onCalories={setCalories}
+          saveFailed={saveFailed}
+          onRetry={() => { retrySave(); }}
+          onMeal={setMeal}
           onSteps={setSteps}
           onBurned={setBurned}
         />
@@ -149,7 +152,7 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
         )}
 
         {calories > 0 && (
-          <DeficitBanner net={net} target={target} mbr={mbrValue} />
+          <DeficitBanner net={net} target={target} tdee={tdeeValue} />
         )}
 
         <PrimaryCTA
@@ -166,6 +169,7 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
 
       <BottomNav active="jour" onChange={onTabChange} />
       <HomeIndicator />
+      {calendarModal}
     </PageShell>
   );
 }
@@ -220,6 +224,38 @@ function LoadingState() {
       fontSize: 14,
     }}>
       chargement…
+    </div>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div style={{
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      color: 'var(--ink-3)',
+      fontSize: 14,
+    }}>
+      {message}
+      <button
+        onClick={onRetry}
+        style={{
+          fontSize: 14,
+          fontWeight: 500,
+          color: 'var(--orange)',
+          background: 'none',
+          border: '1px solid var(--orange)',
+          borderRadius: 8,
+          padding: '8px 16px',
+          cursor: 'pointer',
+        }}
+      >
+        Réessayer
+      </button>
     </div>
   );
 }

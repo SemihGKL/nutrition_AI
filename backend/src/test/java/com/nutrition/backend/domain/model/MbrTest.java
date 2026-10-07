@@ -16,7 +16,7 @@ class MbrTest {
         double result = mbr.deficitPercentage(1736);
 
         // Then: déficit = 2136 - 1736 = 400, déficit% = (400 / 1780) * 100 = 22.47
-        assertEquals(22.47, result, 0.01);
+        assertEquals(18.73, result, 0.01); // (2136 − 1736) / TDEE 2136
     }
 
     @Test
@@ -28,7 +28,7 @@ class MbrTest {
         double result = mbr.deficitPercentage(2500);
 
         // Then: déficit = 2136 - 2500 = -364, déficit% = (-364 / 1780) * 100 = -20.45
-        assertEquals(-20.45, result, 0.01);
+        assertEquals(-17.04, result, 0.01); // (2136 − 2500) / TDEE 2136
     }
 
     @Test

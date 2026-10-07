@@ -34,9 +34,9 @@ class UpdateUserProfileUseCaseTest {
     void should_recalculate_daily_calorie_goal_from_body_metrics_when_no_explicit_goal_is_provided() {
         // Given — male, 28 years, 180cm, 75kg
         // MBR = (10*75) + (6.25*180) - (5*28) + 5 = 750 + 1125 - 140 + 5 = 1740
-        // dailyCalorieGoal = round((1740 - 200) / 50) * 50 = round(30.8) * 50 = 31 * 50 = 1550
+        // TDEE = 2088 → dailyCalorieGoal = round((2088 − 400) / 50) × 50 = round(33.76) × 50 = 1700
         User user = buildAndSaveUser("user@example.com", null);
-        int expectedCalorieGoal = 1550;
+        int expectedCalorieGoal = 1700;
 
         // When
         User result = updateUserProfileUseCase.execute(
@@ -98,7 +98,7 @@ class UpdateUserProfileUseCaseTest {
         // When
         User result = updateUserProfileUseCase.execute(
                 user.getId(), "testuser", null, Gender.MALE, 30, 175.0, 70.0,
-                "MONDAY", 1800, null, 60);
+                "MONDAY", 1800, null, 60.0);
 
         // Then
         assertThat(result.getWeightGoal()).isEqualTo(60);
@@ -154,5 +154,27 @@ class UpdateUserProfileUseCaseTest {
                 user.getId(), "testuser", null, Gender.MALE, 30, 175.0, currentWeight,
                 "MONDAY", null, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void should_remove_daily_steps_goal_when_zero_is_provided() {
+        User user = buildAndSaveUser("user@example.com", 8000);
+
+        User result = updateUserProfileUseCase.execute(
+                user.getId(), "testuser", null, Gender.MALE, 30, 175.0, 70.0,
+                "MONDAY", 1800, 0, null);
+
+        assertThat(result.getDailyStepsGoal()).isNull();
+    }
+
+    @Test
+    void should_keep_decimal_weight_goal_when_updating_profile() {
+        User user = buildAndSaveUser("user@example.com", null);
+
+        User result = updateUserProfileUseCase.execute(
+                user.getId(), "testuser", null, Gender.MALE, 30, 175.0, 70.0,
+                "MONDAY", 1800, null, 62.5);
+
+        assertThat(result.getWeightGoal()).isEqualTo(62.5);
     }
 }

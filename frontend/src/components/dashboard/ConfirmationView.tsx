@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Flame, Pencil, Chevron } from '../ui/icons';
 import { PipStrip } from '../ui/PipStrip';
 import { BilanRow } from './BilanRow';
-import { frenchWeekday, frenchDay, formatNumber } from '../../utils/format';
+import { DateVignette } from './DateVignette';
+import { formatNumber } from '../../utils/format';
 import type { DailyRecap } from '../../types/api';
 import type { StreakInfo } from '../../hooks/useStreak';
 
@@ -10,8 +11,8 @@ interface Props {
   date: string;
   recap: DailyRecap;
   streak: StreakInfo;
-  canEdit?: boolean;
   onEdit: () => void;
+  onOpenCalendar: () => void;
 }
 
 
@@ -23,12 +24,13 @@ function motivationMessage(current: number): string {
   return "Tu es dans une dynamique solide, chaque jour compte.";
 }
 
-export function ConfirmationView({ date, recap, streak, canEdit = false, onEdit }: Props) {
+export function ConfirmationView({ date, recap, streak, onEdit, onOpenCalendar }: Props) {
   const [bilanOpen, setBilanOpen] = useState(false);
   const stepsKcal  = recap.stepsKcal;
   const ecart      = recap.netCalories - recap.dailyCalorieGoal;
   const isOnTarget = ecart <= 0;
-  const isPartial  = ecart > 0 && recap.netCalories <= recap.mbr;
+  // Au-dessus de l'objectif mais sous la dépense du jour (TDEE) : le déficit est préservé.
+  const isPartial  = ecart > 0 && recap.netCalories <= recap.tdee;
   const absEcart   = Math.abs(ecart);
   const resultColor = isOnTarget ? 'var(--green)' : isPartial ? 'var(--amber)' : 'var(--red)';
 
@@ -36,33 +38,26 @@ export function ConfirmationView({ date, recap, streak, canEdit = false, onEdit 
     <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px 20px' }}>
 
       {/* Top bar */}
-      <div style={{ padding: '0 0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ lineHeight: 1.1 }}>
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.4 }}>
-            {frenchWeekday(date)}
-          </div>
-          <div className="display" style={{ fontSize: 26, fontWeight: 500, marginTop: 2 }}>
-            {frenchDay(date)}
-          </div>
-        </div>
-        {canEdit && (
-          <button
-            onClick={onEdit}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '6px 12px', borderRadius: 999,
-              background: 'transparent',
-              border: '1.5px solid var(--hairline)',
-              color: 'var(--ink-2)',
-              fontSize: 13, fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-body)',
-            }}
-          >
-            <Pencil size={13} color="var(--ink-2)" sw={1.8} />
-            Modifier
-          </button>
-        )}
+      <div style={{ padding: '0 0 16px', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center' }}>
+        <div />
+        <DateVignette date={date} onClick={onOpenCalendar} />
+        <button
+          onClick={onEdit}
+          style={{
+            justifySelf: 'end',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', borderRadius: 999,
+            background: 'transparent',
+            border: '1.5px solid var(--hairline)',
+            color: 'var(--ink-2)',
+            fontSize: 13, fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          <Pencil size={13} color="var(--ink-2)" sw={1.8} />
+          Modifier
+        </button>
       </div>
 
       {/* Day result banner */}

@@ -5,17 +5,18 @@ import com.nutrition.backend.domain.model.Mbr;
 import com.nutrition.backend.domain.model.UserProfile;
 
 // ⚠️ SYNC : dupliqué côté front (frontend/src/utils/mbr.ts) pour l'aperçu live.
-// Toute modification (MBR, TDEE ×1.2, cible = round((mbr-200)/50)*50) doit y être répercutée.
+// Toute modification (MBR, TDEE ×1.2, cible = round((tdee-400)/50)*50) doit y être répercutée.
 public class MbrCalculator {
 
-    private static final int DEFAULT_FOOD_DEFICIT = 200;
+    // Déficit par défaut sous le TDEE : milieu de la plage recommandée (300–500 kcal/j).
+    private static final int DEFAULT_DEFICIT_UNDER_TDEE = 400;
 
     public Mbr calculate(UserProfile profile) {
         double base = (10 * profile.weightKg()) + (6.25 * profile.heightCm()) - (5 * profile.age());
         double genderConstant = profile.gender() == Gender.MALE ? 5 : -161;
         double mbr = base + genderConstant;
         double tdee = mbr * 1.2;
-        double dailyCalorieGoal = Math.round((mbr - DEFAULT_FOOD_DEFICIT) / 50.0) * 50;
+        double dailyCalorieGoal = Math.round((tdee - DEFAULT_DEFICIT_UNDER_TDEE) / 50.0) * 50;
         return new Mbr(mbr, tdee, dailyCalorieGoal);
     }
 }

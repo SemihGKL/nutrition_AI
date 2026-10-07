@@ -2,13 +2,17 @@ import type { CSSProperties } from 'react';
 import { formatNumber } from '../../utils/format';
 
 interface Props {
-  calories: number;
+  /** Calories mangées : décide si la journée est commencée. */
+  consumed: number;
+  /** Bilan net (mangé − activité) : base des messages. Peut être ≤ 0 avec du sport. */
+  net: number;
   target: number;
-  mbr?: number;
+  /** Dépense du jour (TDEE) : référence du déficit. */
+  tdee?: number;
 }
 
-export function ContextMessage({ calories, target, mbr }: Props) {
-  if (calories <= 0) {
+export function ContextMessage({ consumed, net: calories, target, tdee }: Props) {
+  if (consumed <= 0) {
     return (
       <div style={STYLE}>
         commence ta journée — saisis tes calories
@@ -32,29 +36,29 @@ export function ContextMessage({ calories, target, mbr }: Props) {
 
   const over = Math.abs(remaining);
 
-  if (mbr !== undefined && calories <= mbr) {
-    const mbrDeficit = mbr - calories;
+  if (tdee !== undefined && calories <= tdee) {
+    const deficit = tdee - calories;
     return (
       <div style={STYLE}>
         <span className="tabular" style={{ color: 'var(--amber)', fontWeight: 600 }}>
           +{formatNumber(over)} kcal
         </span>{' '}
-        au-dessus de l'objectif · tu restes sous ton métabolisme de base, c'est correct{' '}
+        au-dessus de l'objectif · tu restes sous ta dépense du jour, c'est correct{' '}
         <span style={{ color: 'var(--green)', fontWeight: 600 }}>
-          (déficit de {formatNumber(mbrDeficit)} kcal)
+          (déficit de {formatNumber(deficit)} kcal)
         </span>
       </div>
     );
   }
 
-  if (mbr !== undefined && calories > mbr) {
-    const overMbr = calories - mbr;
+  if (tdee !== undefined && calories > tdee) {
+    const overTdee = calories - tdee;
     return (
       <div style={STYLE}>
         <span className="tabular" style={{ color: 'var(--red)', fontWeight: 600 }}>
-          +{formatNumber(overMbr)} kcal
+          +{formatNumber(overTdee)} kcal
         </span>{' '}
-        au-dessus de ton métabolisme de base — essaie de compenser cette semaine
+        au-dessus de ta dépense du jour — essaie de compenser cette semaine
       </div>
     );
   }

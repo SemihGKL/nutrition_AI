@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { Chevron } from '../ui/icons';
 import { StreakChip } from '../ui/StreakChip';
-import { frenchWeekday, frenchDay } from '../../utils/format';
+import { DateVignette } from './DateVignette';
 
 interface Props {
   date: string;
@@ -9,6 +9,7 @@ interface Props {
   canGoForward: boolean;
   onPrev: () => void;
   onNext: () => void;
+  onOpenCalendar: () => void;
 }
 
 const MINI_BTN: CSSProperties = {
@@ -23,29 +24,23 @@ const MINI_BTN: CSSProperties = {
   cursor: 'pointer',
 };
 
-export function DayHeader({ date, streakCount, canGoForward, onPrev, onNext }: Props) {
-  const weekday = frenchWeekday(date);
-  const day = frenchDay(date);
-
+export function DayHeader({ date, streakCount, canGoForward, onPrev, onNext, onOpenCalendar }: Props) {
   return (
     <div style={{
       padding: '10px 20px 0',
-      display: 'flex',
+      display: 'grid',
+      gridTemplateColumns: '1fr auto 1fr',
       alignItems: 'center',
-      justifyContent: 'space-between',
     }}>
-      <div style={{ lineHeight: 1.1 }}>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 0.4 }}>
-          {weekday}
-        </div>
-        <div className="display" style={{ fontSize: 26, fontWeight: 500, marginTop: 2, letterSpacing: '-0.02em' }}>
-          {day}
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
         <button style={MINI_BTN} onClick={onPrev} aria-label="jour précédent">
           <Chevron dir="left" size={14} color="var(--ink-2)" />
         </button>
+      </div>
+
+      <DateVignette date={date} onClick={onOpenCalendar} />
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
         <StreakChip count={streakCount} size="md" />
         <button
           style={{ ...MINI_BTN, opacity: canGoForward ? 1 : 0.4 }}

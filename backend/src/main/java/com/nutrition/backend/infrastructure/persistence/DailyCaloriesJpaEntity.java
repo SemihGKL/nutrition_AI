@@ -23,6 +23,18 @@ public class DailyCaloriesJpaEntity {
     @Column(name = "calories_consumed")
     private int caloriesConsumed;
 
+    @Column(name = "breakfast_kcal")
+    private int breakfastKcal;
+
+    @Column(name = "lunch_kcal")
+    private int lunchKcal;
+
+    @Column(name = "snack_kcal")
+    private int snackKcal;
+
+    @Column(name = "dinner_kcal")
+    private int dinnerKcal;
+
     @Column(name = "is_confirmed")
     private boolean confirmed;
 

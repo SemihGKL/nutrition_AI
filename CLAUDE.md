@@ -67,8 +67,8 @@ Le TDEE utilise le coefficient sédentaire (1.2). Les calories brûlées par l'a
 
 ### Agrégats principaux
 
-- **User** : profil complet (MBR, TDEE, objectif calorique)
-- **DailyCalories** : saisie journalière (kcal, pas, kcal brûlées, confirmation)
+- **User** : profil complet (MBR, TDEE, objectif calorique — par défaut TDEE − 400 arrondi à 50)
+- **DailyCalories** : saisie journalière (kcal par repas — petit-déj, déjeuner, collation, dîner —, pas, kcal brûlées, confirmation)
 - **WeeklyWeighIn** : pesée hebdomadaire
 
 ---
@@ -77,9 +77,9 @@ Le TDEE utilise le coefficient sédentaire (1.2). Les calories brûlées par l'a
 
 Les fichiers sont dans `backend/src/main/resources/db/migration/`.
 - `V1__create_tables.sql` — tables `users` et `daily_calories`
-- `V2` → `V14` — colonnes supplémentaires, contraintes, refresh tokens, etc.
+- `V2` → `V19` — colonnes supplémentaires, contraintes, refresh tokens, push, calories par repas, origine des coches d'objectifs, poids objectif décimal, etc.
 
-**Règle** : toute modification de schéma = nouveau fichier `V{N+1}__description.sql`, jamais de modification d'un fichier existant. Prochaine migration : `V15`.
+**Règle** : toute modification de schéma = nouveau fichier `V{N+1}__description.sql`, jamais de modification d'un fichier existant. Prochaine migration : `V20`.
 
 ---
 

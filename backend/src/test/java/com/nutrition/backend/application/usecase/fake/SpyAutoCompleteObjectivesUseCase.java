@@ -11,7 +11,7 @@ public class SpyAutoCompleteObjectivesUseCase extends AutoCompleteObjectivesUseC
     private Integer capturedCaloriesBurned;
 
     public SpyAutoCompleteObjectivesUseCase() {
-        super(null, null);
+        super(null, null, null);
     }
 
     @Override

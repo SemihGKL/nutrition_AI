@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { UserEvent } from '@testing-library/user-event';
 
@@ -104,5 +104,48 @@ describe("OnboardingPage — objectif de pas à l'inscription", () => {
     expect(screen.getByText('ex. 8000')).toBeInTheDocument();
     expect(screen.queryByText('voici tes chiffres')).not.toBeInTheDocument();
     expect(authApi.register).not.toHaveBeenCalled();
+  });
+});
+
+describe("OnboardingPage — objectif calorique choisi", () => {
+  it("envoie l'objectif suggere (TDEE − 400) quand il n'est pas modifie", async () => {
+    // Homme 30 ans, 175 cm, 70 kg : MBR 1648.75 → TDEE 1978.5 → objectif 1600
+    const user = userEvent.setup();
+    renderOnboarding();
+
+    await fillStep1(user);
+    await user.click(screen.getByRole('button', { name: 'continuer' }));
+    await user.click(await screen.findByRole('button', { name: "c'est parti" }));
+
+    await waitFor(() => expect(authApi.register).toHaveBeenCalledTimes(1));
+    expect(authApi.register).toHaveBeenCalledWith(expect.objectContaining({ dailyCalorieGoal: 1600 }));
+  });
+
+  it("envoie l'objectif regle avec le curseur", async () => {
+    const user = userEvent.setup();
+    renderOnboarding();
+
+    await fillStep1(user);
+    await user.click(screen.getByRole('button', { name: 'continuer' }));
+    fireEvent.change(await screen.findByRole('slider'), { target: { value: '1500' } });
+    await user.click(screen.getByRole('button', { name: "c'est parti" }));
+
+    await waitFor(() => expect(authApi.register).toHaveBeenCalledTimes(1));
+    expect(authApi.register).toHaveBeenCalledWith(expect.objectContaining({ dailyCalorieGoal: 1500 }));
+  });
+
+  it('envoie un poids objectif decimal', async () => {
+    const user = userEvent.setup();
+    renderOnboarding();
+
+    await fillStep1(user);
+    const goal = screen.getAllByRole('spinbutton')[3];
+    await user.clear(goal);
+    await user.type(goal, '64.5');
+    await user.click(screen.getByRole('button', { name: 'continuer' }));
+    await user.click(await screen.findByRole('button', { name: "c'est parti" }));
+
+    await waitFor(() => expect(authApi.register).toHaveBeenCalledTimes(1));
+    expect(authApi.register).toHaveBeenCalledWith(expect.objectContaining({ weightGoal: 64.5 }));
   });
 });

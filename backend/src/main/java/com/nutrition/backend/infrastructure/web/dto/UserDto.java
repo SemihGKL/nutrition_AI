@@ -5,7 +5,7 @@ public record UserDto(
         String username,
         String email,
         int dailyCalorieGoal,
-        int weightGoal,
+        double weightGoal,
         String gender,
         int age,
         double height,

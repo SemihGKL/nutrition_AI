@@ -35,8 +35,8 @@ class RegisterUserUseCaseTest {
     void should_assign_mbr_derived_calorie_goal_to_new_user_when_registering_with_body_metrics() {
         // Given — male, 30 years, 175cm, 70kg
         // MBR = (10*70) + (6.25*175) - (5*30) + 5 = 700 + 1093.75 - 150 + 5 = 1648.75
-        // dailyCalorieGoal = round((1648.75 - 200) / 50) * 50 = round(28.975) * 50 = 29 * 50 = 1450
-        int expectedCalorieGoal = 1450;
+        // TDEE = 1978.5 → dailyCalorieGoal = round((1978.5 − 400) / 50) × 50 = round(31.57) × 50 = 1600
+        int expectedCalorieGoal = 1600;
 
         // When
         User result = registerUserUseCase.execute(
@@ -51,8 +51,8 @@ class RegisterUserUseCaseTest {
     void should_assign_different_mbr_derived_calorie_goal_for_female_user_with_same_body_metrics() {
         // Given — female, 30 years, 175cm, 70kg
         // MBR = (10*70) + (6.25*175) - (5*30) - 161 = 700 + 1093.75 - 150 - 161 = 1482.75
-        // dailyCalorieGoal = round((1482.75 - 200) / 50) * 50 = round(25.655) * 50 = 26 * 50 = 1300
-        int expectedCalorieGoal = 1300;
+        // TDEE = 1779.3 → dailyCalorieGoal = round((1779.3 − 400) / 50) × 50 = round(27.59) × 50 = 1400
+        int expectedCalorieGoal = 1400;
 
         // When
         User result = registerUserUseCase.execute(
@@ -189,5 +189,32 @@ class RegisterUserUseCaseTest {
                 "alice", "alice@example.com", "password",
                 65, Gender.MALE, 30, 175.0, startWeight, "MONDAY", null))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void should_use_calorie_goal_chosen_during_onboarding_when_provided() {
+        User result = registerUserUseCase.execute(
+                "alice", "alice@example.com", "password",
+                65, Gender.MALE, 30, 175.0, 70.0, "MONDAY", null, 1500);
+
+        assertThat(result.getDailyCalorieGoal()).isEqualTo(1500);
+    }
+
+    @Test
+    void should_fall_back_to_computed_calorie_goal_when_none_is_chosen() {
+        User result = registerUserUseCase.execute(
+                "alice", "alice@example.com", "password",
+                65, Gender.MALE, 30, 175.0, 70.0, "MONDAY", null, null);
+
+        assertThat(result.getDailyCalorieGoal()).isEqualTo(1600);
+    }
+
+    @Test
+    void should_keep_decimal_weight_goal_when_registering() {
+        User result = registerUserUseCase.execute(
+                "alice", "alice@example.com", "password",
+                72.5, Gender.MALE, 30, 175.0, 80.0, "MONDAY", null, null);
+
+        assertThat(result.getWeightGoal()).isEqualTo(72.5);
     }
 }

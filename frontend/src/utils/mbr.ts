@@ -11,6 +11,9 @@ export function computeTdee(mbr: number): number {
   return mbr * 1.2;
 }
 
-export function suggestedTarget(mbr: number): number {
-  return Math.round((mbr - 200) / 50) * 50;
+// Déficit par défaut sous la dépense du jour : milieu de la plage recommandée 300–500 kcal.
+export const DEFAULT_DEFICIT_UNDER_TDEE = 400;
+
+export function suggestedTarget(tdee: number): number {
+  return Math.round((tdee - DEFAULT_DEFICIT_UNDER_TDEE) / 50) * 50;
 }

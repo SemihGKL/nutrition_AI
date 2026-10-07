@@ -6,7 +6,9 @@ import com.nutrition.backend.domain.entity.ObjectiveCompletion;
 import com.nutrition.backend.domain.entity.RefreshToken;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.entity.WeightEntry;
+import com.nutrition.backend.domain.model.CompletionSource;
 import com.nutrition.backend.domain.model.Gender;
+import com.nutrition.backend.domain.model.Meals;
 import com.nutrition.backend.domain.ports.DailyEntryRepository;
 import com.nutrition.backend.domain.ports.ObjectiveCompletionRepository;
 import com.nutrition.backend.domain.ports.ObjectiveRepository;
@@ -99,6 +101,34 @@ class PersistenceConcurrencyTest {
         assertThat(dailyEntryRepository.findByUserId(u.getId())).hasSize(1);
     }
 
+    // ── Saisie par repas ────────────────────────────────────────────────────
+
+    @Test
+    void should_persist_meals_breakdown_and_summed_total_when_saving_entry_with_meals() {
+        User u = newPersistedUser("meals-a@test.com");
+        LocalDate date = LocalDate.of(2026, 9, 29);
+
+        dailyEntryRepository.save(new DailyEntry(null, u.getId(), date, new Meals(400, 700, 150, 600), 0, 0, false));
+
+        var found = dailyEntryRepository.findByUserIdAndDate(u.getId(), date);
+        assertThat(found).isPresent();
+        assertThat(found.get().getMeals()).isEqualTo(new Meals(400, 700, 150, 600));
+        assertThat(found.get().getCaloriesConsumed()).isEqualTo(1850);
+    }
+
+    @Test
+    void should_keep_direct_total_when_saving_legacy_entry_without_meals() {
+        User u = newPersistedUser("meals-b@test.com");
+        LocalDate date = LocalDate.of(2026, 9, 30);
+
+        dailyEntryRepository.save(new DailyEntry(null, u.getId(), date, 1800, 0, 0, false));
+
+        var found = dailyEntryRepository.findByUserIdAndDate(u.getId(), date);
+        assertThat(found).isPresent();
+        assertThat(found.get().getCaloriesConsumed()).isEqualTo(1800);
+        assertThat(found.get().getMeals()).isEqualTo(Meals.none());
+    }
+
     // ── P3 : complétion d'objectif idempotente ──────────────────────────────
 
     @Test
@@ -117,6 +147,37 @@ class PersistenceConcurrencyTest {
 
         assertThatCode(() -> CompletableFuture.allOf(futures).join()).doesNotThrowAnyException();
         assertThat(objectiveCompletionRepository.findByUserIdAndDateBetween(u.getId(), date, date)).hasSize(1);
+    }
+
+    @Test
+    void should_turn_automatic_completion_into_manual_and_keep_it_on_auto_removal() {
+        User u = newPersistedUser("source@test.com");
+        Objective obj = objectiveRepository.save(new Objective(null, u.getId(), 0, "Sport", 0, "SPORT", null));
+        LocalDate date = LocalDate.of(2026, 6, 4);
+
+        objectiveCompletionRepository.insertIfAbsent(
+                new ObjectiveCompletion(null, u.getId(), obj.getId(), date, CompletionSource.AUTO));
+        objectiveCompletionRepository.insertIfAbsent(
+                new ObjectiveCompletion(null, u.getId(), obj.getId(), date, CompletionSource.MANUAL));
+        objectiveCompletionRepository.deleteAutomaticCompletion(obj.getId(), date);
+
+        assertThat(objectiveCompletionRepository.findByUserIdAndDateBetween(u.getId(), date, date))
+                .singleElement()
+                .extracting(ObjectiveCompletion::getSource)
+                .isEqualTo(CompletionSource.MANUAL);
+    }
+
+    @Test
+    void should_delete_automatic_completion_only() {
+        User u = newPersistedUser("source-auto@test.com");
+        Objective obj = objectiveRepository.save(new Objective(null, u.getId(), 0, "Sport", 0, "SPORT", null));
+        LocalDate date = LocalDate.of(2026, 6, 5);
+
+        objectiveCompletionRepository.insertIfAbsent(
+                new ObjectiveCompletion(null, u.getId(), obj.getId(), date, CompletionSource.AUTO));
+        objectiveCompletionRepository.deleteAutomaticCompletion(obj.getId(), date);
+
+        assertThat(objectiveCompletionRepository.findByUserIdAndDateBetween(u.getId(), date, date)).isEmpty();
     }
 
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────

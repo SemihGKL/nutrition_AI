@@ -5,6 +5,7 @@ import { isoToday, weekStart, addDays } from '../utils/format';
 import { objectivesApi, type CompletionsMap } from '../api/objectives';
 import type { ObjectiveDto } from '../types/api';
 import { useAuth } from '../hooks/useAuth';
+import { waitForPendingDailySaves } from '../hooks/useDailyEntry';
 
 const DAYS      = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const DAYS_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -58,6 +59,9 @@ export function ObjectifsPage({ onTabChange }: Props) {
   const loadData = useCallback(async () => {
     setLoadError(false);
     try {
+      // La saisie du jour (envoyée en quittant le dashboard) peut auto-cocher un
+      // objectif SPORT : on l'attend pour ne pas afficher les complétions d'avant.
+      await waitForPendingDailySaves();
       const [fetchedTasks, fetchedCompletions] = await Promise.all([
         objectivesApi.getAll(),
         objectivesApi.getCompletions(monday, sunday),

@@ -1,37 +1,58 @@
 import { useState } from 'react';
 import { Stepper } from '../ui/Stepper';
 import { formatNumber, stepsToKcal } from '../../utils/format';
+import { MEAL_LABELS, MEAL_ORDER, mealsTotal } from '../../utils/meals';
+import type { Meals, MealKey } from '../../types/api';
 
 interface Props {
+  meals: Meals;
   calories: number;
   steps: number;
   burned: number;
   weightKg: number;
   stepsGoal?: number | null;
   isSaving: boolean;
-  onCalories: (v: number) => void;
+  saveFailed: boolean;
+  onRetry: () => void;
+  onMeal: (meal: MealKey, v: number) => void;
   onSteps: (v: number) => void;
   onBurned: (v: number) => void;
 }
 
 export function EntrySection({
+  meals,
   calories,
   steps,
   burned,
   weightKg,
   stepsGoal,
   isSaving,
-  onCalories,
+  saveFailed,
+  onRetry,
+  onMeal,
   onSteps,
   onBurned,
 }: Props) {
   const [hasSession, setHasSession] = useState(burned > 0);
+  const [checkedMeals, setCheckedMeals] = useState<Record<MealKey, boolean>>(() => ({
+    breakfast: meals.breakfast > 0,
+    lunch: meals.lunch > 0,
+    snack: meals.snack > 0,
+    dinner: meals.dinner > 0,
+  }));
+  const isLegacyTotal = mealsTotal(meals) === 0 && calories > 0;
 
   const stepsKcal = stepsToKcal(steps, weightKg);
 
   const toggleSession = (checked: boolean) => {
     setHasSession(checked);
     if (!checked) onBurned(0);
+  };
+
+  const toggleMeal = (meal: MealKey) => {
+    const checked = !checkedMeals[meal];
+    setCheckedMeals(m => ({ ...m, [meal]: checked }));
+    if (!checked) onMeal(meal, 0);
   };
 
   return (
@@ -45,25 +66,69 @@ export function EntrySection({
         <span className="display" style={{ fontSize: 17, fontWeight: 500 }}>
           saisie du jour
         </span>
-        <span style={{
-          fontSize: 11,
-          color: 'var(--ink-3)',
-          letterSpacing: 0.4,
-          transition: 'opacity 200ms',
-          opacity: isSaving ? 1 : 0.6,
-        }}>
-          {isSaving ? 'enregistrement…' : 'auto-enregistré'}
-        </span>
+        {saveFailed ? (
+          <button
+            onClick={onRetry}
+            style={{
+              fontSize: 11,
+              color: 'var(--red)',
+              letterSpacing: 0.4,
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            non enregistré · réessayer
+          </button>
+        ) : (
+          <span style={{
+            fontSize: 11,
+            color: 'var(--ink-3)',
+            letterSpacing: 0.4,
+            transition: 'opacity 200ms',
+            opacity: isSaving ? 1 : 0.6,
+          }}>
+            {isSaving ? 'enregistrement…' : 'auto-enregistré'}
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-        <Stepper
-          label="Calories consommées"
-          value={calories}
-          onChange={onCalories}
-          suffix="kcal"
-          step={50}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {MEAL_ORDER.map(meal => (
+            <div key={meal} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <CheckRow
+                label={MEAL_LABELS[meal]}
+                checked={checkedMeals[meal]}
+                onToggle={() => toggleMeal(meal)}
+              />
+              {checkedMeals[meal] && (
+                <Stepper
+                  label={`Calories ${MEAL_LABELS[meal].toLowerCase()}`}
+                  value={meals[meal]}
+                  onChange={v => onMeal(meal, v)}
+                  suffix="kcal"
+                  step={50}
+                />
+              )}
+            </div>
+          ))}
+
+          {isLegacyTotal ? (
+            <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>
+              {formatNumber(calories)} kcal saisis sans détail par repas — coche tes repas pour remplacer ce total
+            </span>
+          ) : calories > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500 }}>Total consommé</span>
+              <span className="tabular" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+                {formatNumber(calories)} kcal
+              </span>
+            </div>
+          )}
+        </div>
 
         <Stepper
           label="Pas"
@@ -78,41 +143,11 @@ export function EntrySection({
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button
-            onClick={() => toggleSession(!hasSession)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              textAlign: 'left',
-            }}
-          >
-            <div style={{
-              width: 20,
-              height: 20,
-              borderRadius: 5,
-              border: `2px solid ${hasSession ? 'var(--orange)' : 'var(--hairline-2)'}`,
-              background: hasSession ? 'var(--orange)' : 'transparent',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              transition: 'all 150ms',
-            }}>
-              {hasSession && (
-                <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
-                  <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </div>
-            <span style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500 }}>
-              Séance de sport effectuée
-            </span>
-          </button>
+          <CheckRow
+            label="Séance de sport effectuée"
+            checked={hasSession}
+            onToggle={() => toggleSession(!hasSession)}
+          />
 
           {hasSession && (
             <Stepper
@@ -127,6 +162,46 @@ export function EntrySection({
         </div>
       </div>
     </div>
+  );
+}
+
+function CheckRow({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: 0,
+        textAlign: 'left',
+      }}
+    >
+      <div style={{
+        width: 20,
+        height: 20,
+        borderRadius: 5,
+        border: `2px solid ${checked ? 'var(--orange)' : 'var(--hairline-2)'}`,
+        background: checked ? 'var(--orange)' : 'transparent',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        transition: 'all 150ms',
+      }}>
+        {checked && (
+          <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
+            <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+      <span style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500 }}>
+        {label}
+      </span>
+    </button>
   );
 }
 

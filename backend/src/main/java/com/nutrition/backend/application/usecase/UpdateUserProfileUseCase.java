@@ -22,7 +22,7 @@ public class UpdateUserProfileUseCase {
     public User execute(Long id, String username, String email, Gender gender,
                         int age, double height, double currentWeight,
                         String weighInDay, Integer dailyCalorieGoal, Integer dailyStepsGoal,
-                        Integer weightGoal) {
+                        Double weightGoal) {
         if (height <= 0) {
             throw new IllegalArgumentException("La taille doit être supérieure à 0");
         }
@@ -43,7 +43,8 @@ public class UpdateUserProfileUseCase {
             user = user.withEmail(email);
         }
         if (dailyStepsGoal != null) {
-            user = user.withDailyStepsGoal(dailyStepsGoal);
+            // 0 = l'utilisateur retire son objectif de pas ; absent = inchangé.
+            user = user.withDailyStepsGoal(dailyStepsGoal == 0 ? null : dailyStepsGoal);
         }
         if (weightGoal != null) {
             user = user.withWeightGoal(weightGoal);

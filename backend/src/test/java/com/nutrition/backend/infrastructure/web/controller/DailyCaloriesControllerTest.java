@@ -9,11 +9,13 @@ import com.nutrition.backend.application.usecase.RecordDailyEntryUseCase;
 import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.model.Gender;
+import com.nutrition.backend.domain.model.Meals;
 import com.nutrition.backend.domain.ports.TokenService;
 import com.nutrition.backend.application.usecase.DailyRecapResult;
 import com.nutrition.backend.infrastructure.web.dto.CreateDailyCaloriesRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -27,6 +29,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -138,7 +142,7 @@ class DailyCaloriesControllerTest {
         when(recordDailyEntryUseCase.execute(any(DailyEntry.class))).thenReturn(saved);
 
         String body = objectMapper.writeValueAsString(
-                new CreateDailyCaloriesRequest(null, date, 1850, 8000, 180, false)
+                new CreateDailyCaloriesRequest(null, date, 1850, 8000, 180, false, null)
         );
 
         mockMvc.perform(post("/api/daily-kcal")
@@ -160,7 +164,7 @@ class DailyCaloriesControllerTest {
         when(recordDailyEntryUseCase.execute(any(DailyEntry.class))).thenReturn(updated);
 
         String body = objectMapper.writeValueAsString(
-                new CreateDailyCaloriesRequest(10L, date, 2200, 10000, 300, true)
+                new CreateDailyCaloriesRequest(10L, date, 2200, 10000, 300, true, null)
         );
 
         mockMvc.perform(post("/api/daily-kcal")
@@ -210,5 +214,77 @@ class DailyCaloriesControllerTest {
                 .andExpect(jsonPath("$.caloriesConsumed").value(1900))
                 .andExpect(jsonPath("$.netCalories").value(1550))
                 .andExpect(jsonPath("$.dailyCalorieGoal").value(1950));
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_record_entry_with_meals_and_summed_total_when_post_body_contains_meals() throws Exception {
+        LocalDate date = LocalDate.of(2026, 9, 29);
+        when(recordDailyEntryUseCase.execute(any(DailyEntry.class)))
+                .thenReturn(new DailyEntry(10L, 1L, date, new Meals(400, 700, 150, 600), 0, 0, false));
+
+        mockMvc.perform(post("/api/daily-kcal")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"date":"2026-09-29","caloriesConsumed":0,"steps":0,"caloriesBurned":0,"confirmed":false,
+                                 "meals":{"breakfast":400,"lunch":700,"snack":150,"dinner":600}}
+                                """))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<DailyEntry> captor = ArgumentCaptor.forClass(DailyEntry.class);
+        verify(recordDailyEntryUseCase).execute(captor.capture());
+        assertThat(captor.getValue().getMeals()).isEqualTo(new Meals(400, 700, 150, 600));
+        assertThat(captor.getValue().getCaloriesConsumed()).isEqualTo(1850);
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_keep_direct_total_when_post_body_has_no_meals() throws Exception {
+        LocalDate date = LocalDate.of(2026, 9, 29);
+        when(recordDailyEntryUseCase.execute(any(DailyEntry.class)))
+                .thenReturn(entry(10L, date, 1800, 0, 0, false));
+
+        mockMvc.perform(post("/api/daily-kcal")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"date":"2026-09-29","caloriesConsumed":1800,"steps":0,"caloriesBurned":0,"confirmed":false}
+                                """))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<DailyEntry> captor = ArgumentCaptor.forClass(DailyEntry.class);
+        verify(recordDailyEntryUseCase).execute(captor.capture());
+        assertThat(captor.getValue().getCaloriesConsumed()).isEqualTo(1800);
+        assertThat(captor.getValue().getMeals()).isEqualTo(Meals.none());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_return_400_when_a_meal_has_negative_calories() throws Exception {
+        mockMvc.perform(post("/api/daily-kcal")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"date":"2026-09-29","caloriesConsumed":0,"steps":0,"caloriesBurned":0,"confirmed":false,
+                                 "meals":{"breakfast":-50,"lunch":0,"snack":0,"dinner":0}}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_return_meals_breakdown_when_getting_entry_by_date() throws Exception {
+        LocalDate date = LocalDate.of(2026, 9, 29);
+        when(getDailyEntryUseCase.byUserAndDate(1L, date))
+                .thenReturn(Optional.of(new DailyEntry(1L, 1L, date, new Meals(400, 700, 150, 600), 0, 0, false)));
+
+        mockMvc.perform(get("/api/daily-kcal/2026-09-29"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.caloriesConsumed").value(1850))
+                .andExpect(jsonPath("$.meals.breakfast").value(400))
+                .andExpect(jsonPath("$.meals.lunch").value(700))
+                .andExpect(jsonPath("$.meals.snack").value(150))
+                .andExpect(jsonPath("$.meals.dinner").value(600));
     }
 }

@@ -24,6 +24,9 @@ interface BarDay {
   net: number;
   met: boolean;
   future: boolean;
+  /** Une saisie existe ce jour-là (un net ≤ 0 n'est pas une journée vide). */
+  hasEntry: boolean;
+  /** Saisie non confirmée : affichée en pointillés et exclue de la moyenne. */
   partial: boolean;
 }
 
@@ -47,21 +50,23 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
       const date = addDays(windowStart, i);
       const entry = entryMap.get(date);
       const isFuture = date > today;
-      const isToday = date === today;
       const weightKg = user?.currentWeight ?? 70;
       const steps = stepsToKcal(entry?.steps ?? 0, weightKg);
       const net = entry ? entry.caloriesConsumed - (entry.caloriesBurned ?? 0) - steps : 0;
-      const met = net > 0 && net <= target;
-      const partial = isToday && !!entry && !entry.confirmed;
-      return { label: frenchDayLetter(date), date, net, met, future: isFuture, partial };
+      const hasEntry = !!entry;
+      const met = hasEntry && net <= target;
+      const partial = hasEntry && !entry.confirmed;
+      return { label: frenchDayLetter(date), date, net, met, future: isFuture, hasEntry, partial };
     });
   }, [windowStart, entryMap, target, today]);
 
-  const confirmedBars = bars.filter(b => !b.future && !b.partial && b.net > 0);
-  const avgKcal = confirmedBars.length > 0
+  // Moyenne sur les seuls jours confirmés (comme le Bilan), y compris un net ≤ 0.
+  const confirmedBars = bars.filter(b => !b.future && b.hasEntry && !b.partial);
+  const hasAverage = confirmedBars.length > 0;
+  const avgKcal = hasAverage
     ? Math.round(confirmedBars.reduce((s, b) => s + b.net, 0) / confirmedBars.length)
     : 0;
-  const avgDeficit = avgKcal > 0 ? target - avgKcal : 0;
+  const avgDeficit = target - avgKcal;
 
   const maxVal = Math.max(target * 1.25, ...bars.map(b => b.net));
 
@@ -96,16 +101,16 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
           <MiniStat
             label="moy."
-            value={avgKcal > 0 ? formatNumber(avgKcal) : '—'}
+            value={hasAverage ? formatNumber(avgKcal) : '—'}
             suffix="kcal"
           />
           <MiniStat
             label="déficit/j"
-            value={avgKcal > 0
+            value={hasAverage
               ? (avgDeficit >= 0 ? `−${formatNumber(avgDeficit)}` : `+${formatNumber(-avgDeficit)}`)
               : '—'}
             suffix="kcal"
-            tone={avgKcal > 0 ? (avgDeficit >= 0 ? 'green' : 'red') : undefined}
+            tone={hasAverage ? (avgDeficit >= 0 ? 'green' : 'red') : undefined}
           />
           <MiniStat label="objectif" value={formatNumber(target)} suffix="kcal" muted />
         </div>
@@ -175,7 +180,7 @@ function WeekBars({ bars, target, max, h = 200 }: {
 
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: h - 24, gap: 8 }}>
         {bars.map((bar, i) => {
-          const isEmpty = bar.net === 0;
+          const isEmpty = !bar.hasEntry;
           const heightPct = (bar.future || isEmpty) ? 4 : Math.max(6, (bar.net / max) * 100);
           const color = bar.future || isEmpty
             ? 'var(--paper-3)'

@@ -13,7 +13,7 @@ public final class User {
     private final double startWeight;
     private final double currentWeight;
     private final int dailyCalorieGoal;
-    private final int weightGoal;
+    private final double weightGoal;
     private final String weighInDay;
     private final Integer dailyStepsGoal;
     // Version de verrouillage optimiste (null pour un nouvel utilisateur non encore persisté).
@@ -22,7 +22,7 @@ public final class User {
     public User(Long id, String username, String email, String passwordHash,
                 Gender gender, int age, double height,
                 double startWeight, double currentWeight,
-                int dailyCalorieGoal, int weightGoal,
+                int dailyCalorieGoal, double weightGoal,
                 String weighInDay, Integer dailyStepsGoal) {
         this(id, username, email, passwordHash, gender, age, height,
                 startWeight, currentWeight, dailyCalorieGoal, weightGoal,
@@ -32,7 +32,7 @@ public final class User {
     public User(Long id, String username, String email, String passwordHash,
                 Gender gender, int age, double height,
                 double startWeight, double currentWeight,
-                int dailyCalorieGoal, int weightGoal,
+                int dailyCalorieGoal, double weightGoal,
                 String weighInDay, Integer dailyStepsGoal, Long version) {
         this.id = id;
         this.username = username;
@@ -60,7 +60,7 @@ public final class User {
     public double getStartWeight() { return startWeight; }
     public double getCurrentWeight() { return currentWeight; }
     public int getDailyCalorieGoal() { return dailyCalorieGoal; }
-    public int getWeightGoal() { return weightGoal; }
+    public double getWeightGoal() { return weightGoal; }
     public String getWeighInDay() { return weighInDay; }
     public Integer getDailyStepsGoal() { return dailyStepsGoal; }
     public Long getVersion() { return version; }
@@ -85,7 +85,7 @@ public final class User {
                 startWeight, currentWeight, dailyCalorieGoal, weightGoal, weighInDay, dailyStepsGoal, version);
     }
 
-    public User withWeightGoal(int weightGoal) {
+    public User withWeightGoal(double weightGoal) {
         return new User(id, username, email, passwordHash, gender, age, height,
                 startWeight, currentWeight, dailyCalorieGoal, weightGoal, weighInDay, dailyStepsGoal, version);
     }

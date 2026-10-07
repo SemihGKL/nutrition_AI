@@ -2,6 +2,8 @@ package com.nutrition.backend.application.usecase;
 
 import com.nutrition.backend.application.usecase.fake.FakeDailyEntryRepository;
 import com.nutrition.backend.application.usecase.fake.FakeUserRepository;
+import com.nutrition.backend.application.usecase.fake.FakeWeightEntryRepository;
+import com.nutrition.backend.domain.entity.WeightEntry;
 import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.exception.DailyCaloriesNotFoundException;
@@ -28,6 +30,7 @@ class GetDailyRecapUseCaseTest {
 
     private FakeDailyEntryRepository dailyEntryRepository;
     private FakeUserRepository userRepository;
+    private FakeWeightEntryRepository weightEntryRepository;
     private MbrCalculator mbrCalculator;
     private GetDailyRecapUseCase getDailyRecapUseCase;
 
@@ -36,7 +39,8 @@ class GetDailyRecapUseCaseTest {
         dailyEntryRepository = new FakeDailyEntryRepository();
         userRepository = new FakeUserRepository();
         mbrCalculator = new MbrCalculator();
-        getDailyRecapUseCase = new GetDailyRecapUseCase(dailyEntryRepository, userRepository, mbrCalculator);
+        weightEntryRepository = new FakeWeightEntryRepository();
+        getDailyRecapUseCase = new GetDailyRecapUseCase(dailyEntryRepository, userRepository, weightEntryRepository, mbrCalculator);
 
         // Save standard user
         User user = new User(USER_ID, "testuser", "user@example.com", "encoded_pass",
@@ -109,14 +113,10 @@ class GetDailyRecapUseCaseTest {
     }
 
     @Test
-    void should_compute_deficit_percentage_relative_to_mbr_value_in_daily_recap() {
-        // Given — same as test 4: netCalories = 1600
-        // deficitPercentage = ((TDEE - netCalories) / MBR) * 100
-        //                   = ((1978.5 - 1600) / 1648.75) * 100
-        //                   = (378.5 / 1648.75) * 100
-        //                   ≈ 22.96%
+    void should_compute_deficit_percentage_relative_to_tdee_in_daily_recap() {
+        // Given — netCalories = 1600 ; deficitPercentage = (TDEE − net) / TDEE × 100 ≈ 19.13 %
         saveDailyEntry(2000, 8000, 300);
-        double expectedDeficitPercentage = ((TDEE - 1600) / MBR) * 100;
+        double expectedDeficitPercentage = ((TDEE - 1600) / TDEE) * 100;
 
         // When
         DailyRecapResult result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
@@ -132,5 +132,71 @@ class GetDailyRecapUseCaseTest {
         // When / Then
         assertThatThrownBy(() -> getDailyRecapUseCase.execute(USER_ID, TEST_DATE))
                 .isInstanceOf(DailyCaloriesNotFoundException.class);
+    }
+
+    // ── Poids du jour : un récap passé ne change pas avec les pesées suivantes ──
+
+    private void givenUser(double startWeight, double currentWeight) {
+        userRepository.save(new User(USER_ID, "testuser", "user@example.com", "encoded_pass",
+                Gender.MALE, 30, 175.0, startWeight, currentWeight, 1450, 65, "MONDAY", null));
+    }
+
+    private void weighIn(LocalDate date, double weight) {
+        weightEntryRepository.save(new WeightEntry(null, USER_ID, date, weight, null));
+    }
+
+    @Test
+    void should_use_weigh_in_of_that_period_for_a_past_recap_when_a_later_weigh_in_exists() {
+        // Pesée à 80 kg avant TEST_DATE, puis 70 kg après : le récap de TEST_DATE reste calculé à 80 kg.
+        givenUser(85.0, 70.0);
+        weighIn(TEST_DATE.minusDays(3), 80.0);
+        weighIn(TEST_DATE.plusDays(7), 70.0);
+        saveDailyEntry(2000, 0, 0);
+
+        DailyRecapResult result = getDailyRecapUseCase.execute(USER_ID, TEST_DATE);
+
+        // MBR à 80 kg = 800 + 1093.75 − 150 + 5 = 1748.75
+        assertThat(result.mbr()).isCloseTo(1748.75, within(0.01));
+    }
+
+    @Test
+    void should_use_weigh_in_of_the_same_day() {
+        givenUser(85.0, 70.0);
+        weighIn(TEST_DATE, 80.0);
+        weighIn(TEST_DATE.plusDays(7), 70.0);
+        saveDailyEntry(2000, 0, 0);
+
+        assertThat(getDailyRecapUseCase.execute(USER_ID, TEST_DATE).mbr()).isCloseTo(1748.75, within(0.01));
+    }
+
+    @Test
+    void should_use_start_weight_for_a_recap_older_than_every_weigh_in() {
+        givenUser(85.0, 70.0);
+        weighIn(TEST_DATE.plusDays(7), 70.0);
+        saveDailyEntry(2000, 0, 0);
+
+        // MBR à 85 kg = 850 + 1093.75 − 150 + 5 = 1798.75
+        assertThat(getDailyRecapUseCase.execute(USER_ID, TEST_DATE).mbr()).isCloseTo(1798.75, within(0.01));
+    }
+
+    @Test
+    void should_use_current_weight_when_no_weigh_in_is_more_recent_than_the_recap() {
+        givenUser(85.0, 72.0);
+        weighIn(TEST_DATE.minusDays(3), 80.0);
+        saveDailyEntry(2000, 0, 0);
+
+        // MBR à 72 kg = 720 + 1093.75 − 150 + 5 = 1668.75
+        assertThat(getDailyRecapUseCase.execute(USER_ID, TEST_DATE).mbr()).isCloseTo(1668.75, within(0.01));
+    }
+
+    @Test
+    void should_compute_steps_calories_with_weight_of_that_day() {
+        givenUser(85.0, 70.0);
+        weighIn(TEST_DATE.minusDays(1), 140.0);
+        weighIn(TEST_DATE.plusDays(7), 70.0);
+        saveDailyEntry(2000, 8000, 0);
+
+        // 4000 pas effectifs × (140/70) × 0.025 = 200
+        assertThat(getDailyRecapUseCase.execute(USER_ID, TEST_DATE).stepsKcal()).isEqualTo(200);
     }
 }

@@ -17,6 +17,8 @@ export interface RegisterPayload {
   weightGoal: number;
   weighInDay: string;
   dailyStepsGoal?: number | null;
+  /** Objectif calorique réglé à l'inscription ; absent → calculé par le serveur. */
+  dailyCalorieGoal?: number;
 }
 
 export const authApi = {

@@ -114,4 +114,22 @@ describe('projectWeightGoal', () => {
     const r = projectWeightGoal(make({ weighIns }));
     expect(r.pace).toBe('on-track');
   });
+
+  it('should not claim the goal is reached for a weight gain goal', () => {
+    const r = projectWeightGoal(make({ startWeight: 60, currentWeight: 60, weightGoal: 65 }));
+    expect(r.status).toBe('gain-goal');
+    expect(r.daysToGoal).toBeNull();
+  });
+
+  it('should report remaining kilos to gain for a weight gain goal', () => {
+    const r = projectWeightGoal(make({ startWeight: 60, currentWeight: 62, weightGoal: 65 }));
+    expect(r.status).toBe('gain-goal');
+    expect(r.remainingKg).toBe(3);
+    expect(r.progressPct).toBe(40);
+  });
+
+  it('should consider a gain goal reached once the target weight is reached', () => {
+    const r = projectWeightGoal(make({ startWeight: 60, currentWeight: 65.2, weightGoal: 65 }));
+    expect(r.status).toBe('reached');
+  });
 });

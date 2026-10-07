@@ -41,6 +41,10 @@ public class DailyCaloriesRepositoryAdapter implements DailyEntryRepository {
                 entry.getUserId(),
                 entry.getDate(),
                 entry.getCaloriesConsumed(),
+                entry.getMeals().breakfast(),
+                entry.getMeals().lunch(),
+                entry.getMeals().snack(),
+                entry.getMeals().dinner(),
                 entry.getSteps(),
                 entry.getCaloriesBurned(),
                 entry.isConfirmed()

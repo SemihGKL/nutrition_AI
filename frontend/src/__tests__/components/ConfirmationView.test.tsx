@@ -25,6 +25,19 @@ function recap(overrides: Partial<DailyRecap> = {}): DailyRecap {
 }
 
 describe('ConfirmationView — bannière résultat', () => {
+  it('juge le deficit par rapport au TDEE : net entre MBR et TDEE reste un deficit', () => {
+    render(
+      <ConfirmationView
+        date="2026-06-22"
+        recap={recap({ netCalories: 2100, dailyCalorieGoal: 1800, mbr: 2000, tdee: 2400 })}
+        streak={streak}
+        onEdit={vi.fn()}
+        onOpenCalendar={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Objectif dépassé — déficit préservé')).toBeInTheDocument();
+  });
+
   it('affiche "Objectif atteint" quand net est sous l\'objectif', () => {
     render(
       <ConfirmationView
@@ -32,30 +45,33 @@ describe('ConfirmationView — bannière résultat', () => {
         recap={recap({ netCalories: 1500, dailyCalorieGoal: 1800 })}
         streak={streak}
         onEdit={vi.fn()}
+        onOpenCalendar={vi.fn()}
       />,
     );
     expect(screen.getByText('Objectif atteint')).toBeInTheDocument();
   });
 
-  it('affiche "Objectif dépassé — déficit préservé" quand net dépasse l\'objectif mais reste sous le MBR', () => {
+  it('affiche "Objectif dépassé — déficit préservé" quand net dépasse l\'objectif mais reste sous le TDEE', () => {
     render(
       <ConfirmationView
         date="2026-06-22"
         recap={recap({ netCalories: 1900, dailyCalorieGoal: 1800, mbr: 2000 })}
         streak={streak}
         onEdit={vi.fn()}
+        onOpenCalendar={vi.fn()}
       />,
     );
     expect(screen.getByText('Objectif dépassé — déficit préservé')).toBeInTheDocument();
   });
 
-  it('affiche "Au-dessus de l\'objectif" quand net dépasse le MBR', () => {
+  it('affiche "Au-dessus de l\'objectif" quand net dépasse le TDEE', () => {
     render(
       <ConfirmationView
         date="2026-06-22"
-        recap={recap({ netCalories: 2200, dailyCalorieGoal: 1800, mbr: 2000 })}
+        recap={recap({ netCalories: 2500, dailyCalorieGoal: 1800, mbr: 2000, tdee: 2400 })}
         streak={streak}
         onEdit={vi.fn()}
+        onOpenCalendar={vi.fn()}
       />,
     );
     expect(screen.getByText("Au-dessus de l'objectif")).toBeInTheDocument();
@@ -68,18 +84,20 @@ describe('ConfirmationView — bannière résultat', () => {
         recap={recap({ netCalories: 1900, dailyCalorieGoal: 1800, mbr: 2000 })}
         streak={streak}
         onEdit={vi.fn()}
+        onOpenCalendar={vi.fn()}
       />,
     );
     expect(screen.getAllByText('Déficit préservé').length).toBeGreaterThan(0);
   });
 
-  it('affiche "Surplus calorique" dans le bilan du jour quand net dépasse le MBR', () => {
+  it('affiche "Surplus calorique" dans le bilan du jour quand net dépasse le TDEE', () => {
     render(
       <ConfirmationView
         date="2026-06-22"
-        recap={recap({ netCalories: 2200, dailyCalorieGoal: 1800, mbr: 2000 })}
+        recap={recap({ netCalories: 2500, dailyCalorieGoal: 1800, mbr: 2000, tdee: 2400 })}
         streak={streak}
         onEdit={vi.fn()}
+        onOpenCalendar={vi.fn()}
       />,
     );
     expect(screen.getAllByText('Surplus calorique').length).toBeGreaterThan(0);
@@ -92,11 +110,39 @@ describe('ConfirmationView — bannière résultat', () => {
         date="2026-06-22"
         recap={recap()}
         streak={streak}
-        canEdit={true}
         onEdit={onEdit}
+        onOpenCalendar={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByText('Modifier'));
     expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it('affiche toujours le bouton Modifier, y compris pour un jour passé', () => {
+    render(
+      <ConfirmationView
+        date="2026-06-10"
+        recap={recap()}
+        streak={streak}
+        onEdit={vi.fn()}
+        onOpenCalendar={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Modifier')).toBeInTheDocument();
+  });
+
+  it('appelle onOpenCalendar au clic sur la vignette de date', () => {
+    const onOpenCalendar = vi.fn();
+    render(
+      <ConfirmationView
+        date="2026-06-22"
+        recap={recap()}
+        streak={streak}
+        onEdit={vi.fn()}
+        onOpenCalendar={onOpenCalendar}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Changer de jour' }));
+    expect(onOpenCalendar).toHaveBeenCalledTimes(1);
   });
 });

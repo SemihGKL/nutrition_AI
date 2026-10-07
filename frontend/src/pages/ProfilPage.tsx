@@ -7,7 +7,8 @@ import { useWeighInContext } from '../hooks/useWeighIn';
 import { weighInApi } from '../api/weighIn';
 import { Stepper } from '../components/ui/Stepper';
 import { isoToday } from '../utils/format';
-import { computeMbr } from '../utils/mbr';
+import { computeMbr, computeTdee } from '../utils/mbr';
+import { parseStepsGoalInput, parseWeightGoalInput } from '../utils/profileForm';
 import { CalorieTargetStep } from '../components/onboarding/CalorieTargetStep';
 import { Chevron } from '../components/ui/icons';
 import { SupportPage } from './SupportPage';
@@ -254,7 +255,7 @@ interface EditViewProps {
     username: string; gender: string; age: number;
     height: number; currentWeight: number;
     weighInDay: string; dailyCalorieGoal: number;
-    dailyStepsGoal: number | null;
+    dailyStepsGoal: number;
     weightGoal: number | null;
   }) => Promise<void>;
   onCancel: () => void;
@@ -280,13 +281,13 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
   const setField = (key: keyof typeof form, value: string | number) =>
     setForm(f => ({ ...f, [key]: value }));
 
-  const mbr = form.age && form.height && form.currentWeight
-    ? computeMbr(
+  const tdee = form.age && form.height && form.currentWeight
+    ? computeTdee(computeMbr(
         parseFloat(String(form.currentWeight)),
         parseFloat(String(form.height)),
         parseInt(String(form.age), 10),
         form.gender as 'MALE' | 'FEMALE',
-      )
+      ))
     : 0;
 
   const handleNext = () => {
@@ -298,6 +299,7 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
     if (isNaN(age) || age < 13 || age > 100)            return setError('Âge invalide (13–100)');
     if (isNaN(height) || height < 100 || height > 230)  return setError('Taille invalide (100–230 cm)');
     if (isNaN(weight) || weight < 30 || weight > 300)   return setError('Poids invalide (30–300 kg)');
+    if (!parseWeightGoalInput(form.weightGoal).ok)      return setError('Poids objectif invalide (30–300 kg)');
 
     setError(null);
     setStep(2);
@@ -307,8 +309,7 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
     setSaving(true);
     setError(null);
     try {
-      const stepsGoalParsed = parseInt(form.dailyStepsGoal, 10);
-      const weightGoalParsed = parseInt(form.weightGoal, 10);
+      const weightGoalParsed = parseWeightGoalInput(form.weightGoal);
       await onSave({
         username:         form.username.trim(),
         gender:           form.gender,
@@ -317,8 +318,9 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
         currentWeight:    parseFloat(String(form.currentWeight)),
         weighInDay:       form.weighInDay,
         dailyCalorieGoal: form.dailyCalorieGoal,
-        dailyStepsGoal:   isNaN(stepsGoalParsed) || stepsGoalParsed <= 0 ? null : stepsGoalParsed,
-        weightGoal:       isNaN(weightGoalParsed) || weightGoalParsed <= 0 ? null : weightGoalParsed,
+        // 0 = retirer l'objectif de pas (un champ vidé doit vraiment le supprimer).
+        dailyStepsGoal:   parseStepsGoalInput(form.dailyStepsGoal),
+        weightGoal:       weightGoalParsed.ok ? weightGoalParsed.value : null,
       });
     } catch {
       setError('Erreur lors de la mise à jour');
@@ -407,7 +409,7 @@ function EditView({ user, onSave, onCancel, onTabChange }: EditViewProps) {
 
         {step === 2 && (
           <CalorieTargetStep
-            mbr={mbr}
+            tdee={tdee}
             target={form.dailyCalorieGoal}
             onTargetChange={v => setField('dailyCalorieGoal', v)}
             submitError={error}

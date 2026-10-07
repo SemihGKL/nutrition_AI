@@ -46,6 +46,13 @@ public class ObjectiveCompletionRepositoryAdapter implements ObjectiveCompletion
     @Transactional
     public void insertIfAbsent(ObjectiveCompletion completion) {
         objectiveCompletionJpaRepository.insertIfAbsent(
-                completion.getUserId(), completion.getObjectiveId(), completion.getDate());
+                completion.getUserId(), completion.getObjectiveId(), completion.getDate(),
+                completion.getSource().name());
+    }
+
+    @Override
+    @Transactional
+    public void deleteAutomaticCompletion(Long objectiveId, LocalDate date) {
+        objectiveCompletionJpaRepository.deleteAutomaticCompletion(objectiveId, date);
     }
 }

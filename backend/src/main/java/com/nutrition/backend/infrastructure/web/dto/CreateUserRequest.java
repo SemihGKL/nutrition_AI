@@ -14,7 +14,8 @@ public record CreateUserRequest(
         @Positive int age,
         @Positive double height,
         @Positive double startWeight,
-        @Positive int weightGoal,
+        @Positive double weightGoal,
         @NotBlank @Size(max = 10) String weighInDay,
-        @PositiveOrZero Integer dailyStepsGoal
+        @PositiveOrZero Integer dailyStepsGoal,
+        @Positive Integer dailyCalorieGoal
 ) {}

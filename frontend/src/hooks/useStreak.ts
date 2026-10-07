@@ -58,11 +58,9 @@ function computeBestStreak(entries: DailyCalories[]): number {
   let current = 1;
 
   for (let i = 1; i < confirmedDates.length; i++) {
-    const prev = new Date(confirmedDates[i - 1] + 'T00:00:00');
-    const curr = new Date(confirmedDates[i] + 'T00:00:00');
-    const diff = (curr.getTime() - prev.getTime()) / 86_400_000;
-
-    if (diff === 1) {
+    // Comparaison de dates calendaires (UTC) : une différence en millisecondes entre
+    // minuits locaux vaut 23 h ou 25 h aux changements d'heure et cassait la série.
+    if (subtractDays(confirmedDates[i], 1) === confirmedDates[i - 1]) {
       current++;
       if (current > best) best = current;
     } else {
