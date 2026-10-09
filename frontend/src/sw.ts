@@ -6,7 +6,13 @@ import { NetworkFirst } from 'workbox-strategies';
 
 declare const self: ServiceWorkerGlobalScope;
 
-self.skipWaiting();
+// Pas de skipWaiting() à l'installation : la nouvelle version attend que l'app la
+// demande (« Recharger » dans UpdatePrompt → message SKIP_WAITING de workbox-window).
+self.addEventListener('message', (event) => {
+  if ((event.data as { type?: string } | undefined)?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 clientsClaim();
 
 cleanupOutdatedCaches();

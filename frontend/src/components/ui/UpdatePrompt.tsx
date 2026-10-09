@@ -1,4 +1,8 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { waitForPendingDailySaves } from '../../hooks/useDailyEntry';
+
+// Une PWA peut rester ouverte des jours : on vérifie régulièrement s'il existe une version.
+const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
 /**
  * Toast « nouvelle version disponible ».
@@ -11,9 +15,19 @@ export function UpdatePrompt() {
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
-  } = useRegisterSW();
+  } = useRegisterSW({
+    onRegisteredSW(_url, registration) {
+      if (registration) setInterval(() => { registration.update().catch(() => {}); }, UPDATE_CHECK_INTERVAL_MS);
+    },
+  });
 
   if (!needRefresh) return null;
+
+  // La mise à jour recharge la page : on laisse d'abord partir la saisie du jour en attente.
+  const applyUpdate = async () => {
+    await waitForPendingDailySaves();
+    await updateServiceWorker(true);
+  };
 
   return (
     <div
@@ -65,7 +79,7 @@ export function UpdatePrompt() {
         Plus tard
       </button>
       <button
-        onClick={() => updateServiceWorker(true)}
+        onClick={() => { applyUpdate(); }}
         style={{
           background: 'var(--orange)',
           color: '#fff',
