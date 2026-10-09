@@ -1,6 +1,7 @@
 package com.nutrition.backend.application.usecase;
 
 import com.nutrition.backend.domain.entity.PasswordResetToken;
+import com.nutrition.backend.domain.model.EmailAddress;
 import com.nutrition.backend.domain.ports.EmailPort;
 import com.nutrition.backend.domain.ports.PasswordResetTokenRepository;
 import com.nutrition.backend.domain.ports.UserRepository;
@@ -24,7 +25,7 @@ public class RequestPasswordResetUseCase {
     }
 
     public void execute(String email, String baseUrl) {
-        userRepository.findByEmail(email).ifPresent(user -> {
+        userRepository.findByEmail(EmailAddress.normalize(email)).ifPresent(user -> {
             tokenRepository.deleteByUserId(user.getId());
             String rawToken = UUID.randomUUID().toString();
             Instant expiresAt = Instant.now().plus(1, ChronoUnit.HOURS);

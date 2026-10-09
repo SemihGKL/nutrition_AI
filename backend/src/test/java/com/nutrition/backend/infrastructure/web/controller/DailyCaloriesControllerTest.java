@@ -287,4 +287,55 @@ class DailyCaloriesControllerTest {
                 .andExpect(jsonPath("$.meals.snack").value(150))
                 .andExpect(jsonPath("$.meals.dinner").value(600));
     }
+
+    // ── Bornes hautes : une faute de frappe ne doit pas fausser le bilan ──────
+
+    private org.springframework.test.web.servlet.ResultActions postBody(String json) throws Exception {
+        return mockMvc.perform(post("/api/daily-kcal").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_return_400_when_a_meal_exceeds_5000_kcal() throws Exception {
+        postBody("""
+                {"date":"2026-09-29","caloriesConsumed":0,"steps":0,"caloriesBurned":0,"confirmed":false,
+                 "meals":{"breakfast":0,"lunch":25000,"snack":0,"dinner":0}}
+                """).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_accept_a_meal_of_exactly_5000_kcal() throws Exception {
+        when(recordDailyEntryUseCase.execute(any(DailyEntry.class)))
+                .thenReturn(new DailyEntry(10L, 1L, LocalDate.of(2026, 9, 29), new Meals(0, 5000, 0, 0), 0, 0, false));
+        postBody("""
+                {"date":"2026-09-29","caloriesConsumed":0,"steps":0,"caloriesBurned":0,"confirmed":false,
+                 "meals":{"breakfast":0,"lunch":5000,"snack":0,"dinner":0}}
+                """).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_return_400_when_calories_burned_exceed_10000() throws Exception {
+        postBody("""
+                {"date":"2026-09-29","caloriesConsumed":0,"steps":0,"caloriesBurned":10001,"confirmed":false}
+                """).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_return_400_when_steps_exceed_100000() throws Exception {
+        postBody("""
+                {"date":"2026-09-29","caloriesConsumed":0,"steps":100001,"caloriesBurned":0,"confirmed":false}
+                """).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_return_400_when_direct_total_exceeds_20000_kcal() throws Exception {
+        postBody("""
+                {"date":"2026-09-29","caloriesConsumed":20001,"steps":0,"caloriesBurned":0,"confirmed":false}
+                """).andExpect(status().isBadRequest());
+    }
 }

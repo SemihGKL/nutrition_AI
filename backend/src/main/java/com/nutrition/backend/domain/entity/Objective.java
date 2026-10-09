@@ -1,5 +1,7 @@
 package com.nutrition.backend.domain.entity;
 
+import java.time.LocalDate;
+
 public final class Objective {
 
     private final Long id;
@@ -27,4 +29,10 @@ public final class Objective {
     public int getPosition() { return position; }
     public String getType() { return type; }
     public Integer getTargetValue() { return targetValue; }
+
+    /** Seuls les objectifs SPORT se cochent tout seuls, le jour prévu ou tous les jours (-1). */
+    public boolean isAutoCompletableOn(LocalDate date) {
+        int dow = date.getDayOfWeek().getValue() - 1; // 0 = lundi … 6 = dimanche
+        return "SPORT".equals(type) && (dayOfWeek == dow || dayOfWeek == -1);
+    }
 }

@@ -239,4 +239,23 @@ describe('EntrySection — cocher, decocher, recocher', () => {
     expect(screen.getByText('Calories déjeuner')).toBeInTheDocument();
     expect((screen.getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('0');
   });
+
+  it('limite un repas a 5 000 kcal', async () => {
+    render(<StatefulEntry />);
+    await userEvent.click(screen.getByText('Dîner'));
+    const field = screen.getAllByRole('textbox')[0] as HTMLInputElement;
+    await userEvent.clear(field);
+    await userEvent.type(field, '25000');
+
+    expect(screen.getByTestId('total')).toHaveTextContent(/^5000$/);
+  });
+
+  it('limite la seance a 10 000 kcal', async () => {
+    render(<StatefulEntry />);
+    await userEvent.click(screen.getByText('Séance de sport effectuée'));
+    await userEvent.clear(sessionInput());
+    await userEvent.type(sessionInput(), '99999');
+
+    expect(screen.getByTestId('burned')).toHaveTextContent(/^10000$/);
+  });
 });

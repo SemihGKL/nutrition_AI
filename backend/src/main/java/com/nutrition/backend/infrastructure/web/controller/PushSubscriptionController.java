@@ -47,8 +47,10 @@ public class PushSubscriptionController {
     }
 
     @PostMapping("/unsubscribe")
-    public ResponseEntity<Void> unsubscribe(@Valid @RequestBody PushUnsubscribeRequest request) {
-        deletePushSubscriptionUseCase.execute(request.endpoint());
+    public ResponseEntity<Void> unsubscribe(@Valid @RequestBody PushUnsubscribeRequest request,
+                                            Authentication auth) {
+        User user = getUserProfileUseCase.byEmail(auth.getName());
+        deletePushSubscriptionUseCase.execute(user.getId(), request.endpoint());
         return ResponseEntity.noContent().build();
     }
 }

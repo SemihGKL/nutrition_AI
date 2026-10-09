@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Stepper } from '../ui/Stepper';
 import { formatNumber, stepsToKcal } from '../../utils/format';
 import { MEAL_LABELS, MEAL_ORDER, mealsTotal } from '../../utils/meals';
+import { MAX_BURNED_KCAL, MAX_MEAL_KCAL, MAX_STEPS } from '../../utils/limits';
 import type { Meals, MealKey } from '../../types/api';
 
 interface Props {
@@ -111,6 +112,7 @@ export function EntrySection({
                   onChange={v => onMeal(meal, v)}
                   suffix="kcal"
                   step={50}
+                  max={MAX_MEAL_KCAL}
                 />
               )}
             </div>
@@ -136,6 +138,7 @@ export function EntrySection({
           onChange={onSteps}
           suffix=""
           step={500}
+          max={MAX_STEPS}
           hint={stepsKcal > 0 ? `≈ ${formatNumber(stepsKcal)} kcal (est. basse)` : undefined}
         />
         {stepsGoal != null && stepsGoal > 0 && (
@@ -156,6 +159,7 @@ export function EntrySection({
               onChange={onBurned}
               suffix="kcal"
               step={50}
+              max={MAX_BURNED_KCAL}
               hint="chiffre affiché sur ta montre"
             />
           )}

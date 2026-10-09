@@ -8,6 +8,7 @@ interface Props {
   suffix?: string;
   step?: number;
   min?: number;
+  max?: number;
   hint?: string;
 }
 
@@ -32,6 +33,7 @@ export function Stepper({
   suffix = 'kcal',
   step = 50,
   min = 0,
+  max = Infinity,
   hint,
 }: Props) {
   const decimals = step < 1 ? Math.round(-Math.log10(step)) : 0;
@@ -41,9 +43,10 @@ export function Stepper({
   // Valeur numérique représentée par le texte saisi. Vide ou illisible = min, pour que
   // le parent (total, anneau) reste cohérent pendant la saisie. La virgule est acceptée
   // (clavier français) : sans ça, parseFloat("72,5") vaut 72.
+  const clamp = (n: number) => Math.min(max, Math.max(min, n));
   const parse = (str: string) => {
     const parsed = parseFloat(str.replace(',', '.'));
-    return isNaN(parsed) ? min : Math.max(min, round(parsed));
+    return isNaN(parsed) ? min : clamp(round(parsed));
   };
 
   const [raw, setRaw] = useState(() => format(value));
@@ -63,8 +66,10 @@ export function Stepper({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRaw(e.target.value);
-    emit(parse(e.target.value));
+    const next = parse(e.target.value);
+    // Au-delà du maximum, le champ affiche tout de suite la limite plutôt que la saisie.
+    setRaw(parseFloat(e.target.value.replace(',', '.')) > max ? format(max) : e.target.value);
+    emit(next);
   };
 
   const commit = (str: string) => {
@@ -73,7 +78,7 @@ export function Stepper({
     setRaw(format(next));
   };
 
-  const step_ = (delta: number) => emit(Math.max(min, round(value + delta)));
+  const step_ = (delta: number) => emit(clamp(round(value + delta)));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

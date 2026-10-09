@@ -17,8 +17,12 @@ public class RecordDailyEntryUseCase {
     }
 
     public DailyEntry execute(DailyEntry entry) {
+        int previousCaloriesBurned = dailyEntryRepository.findByUserIdAndDate(entry.getUserId(), entry.getDate())
+                .map(DailyEntry::getCaloriesBurned)
+                .orElse(0);
         DailyEntry saved = dailyEntryRepository.save(entry);
-        autoCompleteObjectivesUseCase.execute(entry.getUserId(), entry.getDate(), entry.getCaloriesBurned());
+        autoCompleteObjectivesUseCase.execute(entry.getUserId(), entry.getDate(),
+                previousCaloriesBurned, entry.getCaloriesBurned());
         return saved;
     }
 }

@@ -5,11 +5,13 @@ import userEvent from '@testing-library/user-event';
 import { Stepper } from '../../components/ui/Stepper';
 
 // Parent contrôlé, comme dans l'app : la valeur affichée vient du state du parent.
-function Controlled({ initial, step = 50, onChange }: { initial: number; step?: number; onChange?: (v: number) => void }) {
+function Controlled({ initial, step = 50, max, onChange }: {
+  initial: number; step?: number; max?: number; onChange?: (v: number) => void;
+}) {
   const [value, setValue] = useState(initial);
   return (
     <>
-      <Stepper label="Séance" value={value} step={step} onChange={v => { setValue(v); onChange?.(v); }} />
+      <Stepper label="Séance" value={value} step={step} max={max} onChange={v => { setValue(v); onChange?.(v); }} />
       <output data-testid="parent-value">{value}</output>
     </>
   );
@@ -104,5 +106,22 @@ describe('Stepper — cas limites de saisie', () => {
   it('propose un clavier decimal quand le pas est fractionnaire', () => {
     render(<Controlled initial={70} step={0.1} />);
     expect(input()).toHaveAttribute('inputmode', 'decimal');
+  });
+
+  it('ne depasse pas le maximum avec le bouton +', () => {
+    render(<Controlled initial={4980} max={5000} />);
+    fireEvent.click(screen.getByRole('button', { name: 'augmenter' }));
+    expect(parentValue()).toBe('5000');
+    fireEvent.click(screen.getByRole('button', { name: 'augmenter' }));
+    expect(parentValue()).toBe('5000');
+  });
+
+  it('ramene une saisie trop grande au maximum, des la frappe', async () => {
+    render(<Controlled initial={0} max={5000} />);
+    await userEvent.clear(input());
+    await userEvent.type(input(), '25000');
+
+    expect(parentValue()).toBe('5000');
+    expect(input().value).toBe('5000');
   });
 });

@@ -28,15 +28,12 @@ public class CreateObjectiveUseCase {
     public Objective execute(Objective objective) {
         Objective saved = objectiveRepository.save(objective);
 
-        if ("SPORT".equals(saved.getType())) {
-            // Jour de l'utilisateur (Europe/Paris), pas celui du serveur (souvent UTC).
-            LocalDate today = LocalDate.now(clock);
-            int todayDow = today.getDayOfWeek().getValue() - 1;
-            if (saved.getDayOfWeek() == todayDow) {
-                getDailyEntryUseCase.byUserAndDate(saved.getUserId(), today)
-                        .filter(entry -> entry.getCaloriesBurned() > 0)
-                        .ifPresent(entry -> completeObjectiveUseCase.executeAutomatic(saved.getId(), saved.getUserId(), today));
-            }
+        // Jour de l'utilisateur (Europe/Paris), pas celui du serveur (souvent UTC).
+        LocalDate today = LocalDate.now(clock);
+        if (saved.isAutoCompletableOn(today)) {
+            getDailyEntryUseCase.byUserAndDate(saved.getUserId(), today)
+                    .filter(entry -> entry.getCaloriesBurned() > 0)
+                    .ifPresent(entry -> completeObjectiveUseCase.executeAutomatic(saved.getId(), saved.getUserId(), today));
         }
 
         return saved;

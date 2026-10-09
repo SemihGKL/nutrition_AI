@@ -217,4 +217,23 @@ class RegisterUserUseCaseTest {
 
         assertThat(result.getWeightGoal()).isEqualTo(72.5);
     }
+
+    // ── Email insensible à la casse ─────────────────────────────────────────
+
+    @Test
+    void should_store_email_in_lowercase_without_surrounding_spaces() {
+        User result = registerUserUseCase.execute(
+                "alice", "  Alice@Example.COM ", "password", 65, Gender.MALE, 30, 175.0, 70.0, "MONDAY", null);
+
+        assertThat(result.getEmail()).isEqualTo("alice@example.com");
+    }
+
+    @Test
+    void should_reject_registration_when_the_email_exists_with_another_case() {
+        registerUserUseCase.execute("alice", "alice@example.com", "password", 65, Gender.MALE, 30, 175.0, 70.0, "MONDAY", null);
+
+        assertThatThrownBy(() -> registerUserUseCase.execute(
+                "alice2", "ALICE@example.com", "password", 65, Gender.MALE, 30, 175.0, 70.0, "MONDAY", null))
+                .isInstanceOf(EmailAlreadyUsedException.class);
+    }
 }

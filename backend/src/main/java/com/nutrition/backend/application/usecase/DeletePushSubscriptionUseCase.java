@@ -10,7 +10,7 @@ public class DeletePushSubscriptionUseCase {
         this.repository = repository;
     }
 
-    public void execute(String endpoint) {
-        repository.deleteByEndpoint(endpoint);
+    public void execute(Long userId, String endpoint) {
+        repository.deleteByEndpointForUser(endpoint, userId);
     }
 }

@@ -18,8 +18,8 @@ public class FakePushSubscriptionRepository implements PushSubscriptionRepositor
     }
 
     @Override
-    public void deleteByEndpoint(String endpoint) {
-        store.removeIf(s -> s.endpoint().equals(endpoint));
+    public void deleteByEndpointForUser(String endpoint, Long userId) {
+        store.removeIf(s -> s.endpoint().equals(endpoint) && s.userId().equals(userId));
     }
 
     @Override

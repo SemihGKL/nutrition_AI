@@ -18,7 +18,9 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
-      registerType: 'autoUpdate',
+      // « prompt » : la nouvelle version attend que l'utilisateur la demande (UpdatePrompt),
+      // au lieu de recharger la page d'elle-même, éventuellement en pleine saisie.
+      registerType: 'prompt',
       injectRegister: 'auto',
       includeAssets: [
         'favicon.png',

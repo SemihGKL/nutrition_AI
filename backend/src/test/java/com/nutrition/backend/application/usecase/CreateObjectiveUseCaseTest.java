@@ -70,4 +70,25 @@ class CreateObjectiveUseCaseTest {
                 .extracting(ObjectiveCompletion::getDate)
                 .isEqualTo(parisTuesday);
     }
+
+    @Test
+    void should_complete_new_daily_sport_objective_automatically_when_a_session_is_already_recorded_today() {
+        dailyEntryRepository.save(new DailyEntry(null, USER_ID, LocalDate.now(), 1500, 0, 300, false));
+
+        useCase.execute(new Objective(null, USER_ID, -1, "Sport quotidien", 0, "SPORT", null));
+
+        assertThat(completionRepository.getAll())
+                .singleElement()
+                .extracting(ObjectiveCompletion::getSource)
+                .isEqualTo(CompletionSource.AUTO);
+    }
+
+    @Test
+    void should_not_complete_new_sport_objective_when_no_session_is_recorded_today() {
+        dailyEntryRepository.save(new DailyEntry(null, USER_ID, LocalDate.now(), 1500, 0, 0, false));
+
+        useCase.execute(new Objective(null, USER_ID, -1, "Sport quotidien", 0, "SPORT", null));
+
+        assertThat(completionRepository.getAll()).isEmpty();
+    }
 }
