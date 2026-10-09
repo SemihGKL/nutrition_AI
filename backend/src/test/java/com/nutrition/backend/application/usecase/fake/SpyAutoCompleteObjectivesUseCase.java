@@ -8,6 +8,7 @@ public class SpyAutoCompleteObjectivesUseCase extends AutoCompleteObjectivesUseC
 
     private Long capturedUserId;
     private LocalDate capturedDate;
+    private Integer capturedPreviousCaloriesBurned;
     private Integer capturedCaloriesBurned;
 
     public SpyAutoCompleteObjectivesUseCase() {
@@ -15,7 +16,8 @@ public class SpyAutoCompleteObjectivesUseCase extends AutoCompleteObjectivesUseC
     }
 
     @Override
-    public void execute(Long userId, LocalDate date, int caloriesBurned) {
+    public void execute(Long userId, LocalDate date, int previousCaloriesBurned, int caloriesBurned) {
+        this.capturedPreviousCaloriesBurned = previousCaloriesBurned;
         this.capturedUserId = userId;
         this.capturedDate = date;
         this.capturedCaloriesBurned = caloriesBurned;
@@ -27,6 +29,10 @@ public class SpyAutoCompleteObjectivesUseCase extends AutoCompleteObjectivesUseC
 
     public LocalDate getCapturedDate() {
         return capturedDate;
+    }
+
+    public Integer getCapturedPreviousCaloriesBurned() {
+        return capturedPreviousCaloriesBurned;
     }
 
     public Integer getCapturedCaloriesBurned() {

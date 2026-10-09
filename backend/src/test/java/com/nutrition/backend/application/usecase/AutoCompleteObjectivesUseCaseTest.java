@@ -37,7 +37,7 @@ class AutoCompleteObjectivesUseCaseTest {
         Objective sportObj = new Objective(10L, USER_ID, dow, "Séance sport lundi", 0, "SPORT", null);
         objectiveRepository.add(sportObj);
 
-        useCase.execute(USER_ID, monday, 300);
+        useCase.execute(USER_ID, monday, 0, 300);
 
         assertThat(completionRepository.existsByObjectiveIdAndDate(10L, monday)).isTrue();
     }
@@ -50,7 +50,7 @@ class AutoCompleteObjectivesUseCaseTest {
         Objective sportObj = new Objective(10L, USER_ID, dow, "Séance sport lundi", 0, "SPORT", null);
         objectiveRepository.add(sportObj);
 
-        useCase.execute(USER_ID, monday, 0);
+        useCase.execute(USER_ID, monday, 0, 0);
 
         assertThat(completionRepository.getAll()).isEmpty();
     }
@@ -63,7 +63,7 @@ class AutoCompleteObjectivesUseCaseTest {
         Objective customObj = new Objective(20L, USER_ID, dow, "Boire 2L d'eau", 0, "CUSTOM", null);
         objectiveRepository.add(customObj);
 
-        useCase.execute(USER_ID, monday, 300);
+        useCase.execute(USER_ID, monday, 0, 300);
 
         assertThat(completionRepository.getAll()).isEmpty();
     }
@@ -76,7 +76,7 @@ class AutoCompleteObjectivesUseCaseTest {
         Objective sportObj = new Objective(10L, USER_ID, monday.getDayOfWeek().getValue() - 1, "Séance sport lundi", 0, "SPORT", null);
         objectiveRepository.add(sportObj);
 
-        useCase.execute(USER_ID, tuesday, 300);
+        useCase.execute(USER_ID, tuesday, 0, 300);
 
         assertThat(completionRepository.getAll()).isEmpty();
     }
@@ -88,7 +88,7 @@ class AutoCompleteObjectivesUseCaseTest {
         Objective dailySportObj = new Objective(30L, USER_ID, -1, "Sport quotidien", 0, "SPORT", null);
         objectiveRepository.add(dailySportObj);
 
-        useCase.execute(USER_ID, wednesday, 200);
+        useCase.execute(USER_ID, wednesday, 0, 200);
 
         assertThat(completionRepository.existsByObjectiveIdAndDate(30L, wednesday)).isTrue();
     }
@@ -106,7 +106,7 @@ class AutoCompleteObjectivesUseCaseTest {
     void should_mark_completion_as_automatic_when_sport_objective_is_auto_completed() {
         givenMondaySportObjective();
 
-        useCase.execute(USER_ID, MONDAY, 300);
+        useCase.execute(USER_ID, MONDAY, 0, 300);
 
         assertThat(completionRepository.getAll())
                 .singleElement()
@@ -117,9 +117,9 @@ class AutoCompleteObjectivesUseCaseTest {
     @Test
     void should_remove_automatic_completion_when_calories_burned_goes_back_to_zero() {
         givenMondaySportObjective();
-        useCase.execute(USER_ID, MONDAY, 300);
+        useCase.execute(USER_ID, MONDAY, 0, 300);
 
-        useCase.execute(USER_ID, MONDAY, 0);
+        useCase.execute(USER_ID, MONDAY, 300, 0);
 
         assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isFalse();
     }
@@ -129,7 +129,7 @@ class AutoCompleteObjectivesUseCaseTest {
         givenMondaySportObjective();
         completionRepository.add(new ObjectiveCompletion(1L, USER_ID, SPORT_ID, MONDAY, CompletionSource.MANUAL));
 
-        useCase.execute(USER_ID, MONDAY, 0);
+        useCase.execute(USER_ID, MONDAY, 0, 0);
 
         assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isTrue();
     }
@@ -139,8 +139,8 @@ class AutoCompleteObjectivesUseCaseTest {
         givenMondaySportObjective();
         completionRepository.add(new ObjectiveCompletion(1L, USER_ID, SPORT_ID, MONDAY, CompletionSource.MANUAL));
 
-        useCase.execute(USER_ID, MONDAY, 300);
-        useCase.execute(USER_ID, MONDAY, 0);
+        useCase.execute(USER_ID, MONDAY, 0, 300);
+        useCase.execute(USER_ID, MONDAY, 300, 0);
 
         assertThat(completionRepository.getAll())
                 .singleElement()
@@ -152,10 +152,10 @@ class AutoCompleteObjectivesUseCaseTest {
     void should_only_remove_automatic_completion_of_the_cleared_day() {
         givenMondaySportObjective();
         LocalDate nextMonday = MONDAY.plusWeeks(1);
-        useCase.execute(USER_ID, MONDAY, 300);
-        useCase.execute(USER_ID, nextMonday, 300);
+        useCase.execute(USER_ID, MONDAY, 0, 300);
+        useCase.execute(USER_ID, nextMonday, 0, 300);
 
-        useCase.execute(USER_ID, nextMonday, 0);
+        useCase.execute(USER_ID, nextMonday, 300, 0);
 
         assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isTrue();
         assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, nextMonday)).isFalse();
@@ -164,10 +164,10 @@ class AutoCompleteObjectivesUseCaseTest {
     @Test
     void should_complete_again_automatically_when_session_is_cleared_then_recorded_again() {
         givenMondaySportObjective();
-        useCase.execute(USER_ID, MONDAY, 300);
-        useCase.execute(USER_ID, MONDAY, 0);
+        useCase.execute(USER_ID, MONDAY, 0, 300);
+        useCase.execute(USER_ID, MONDAY, 300, 0);
 
-        useCase.execute(USER_ID, MONDAY, 250);
+        useCase.execute(USER_ID, MONDAY, 0, 250);
 
         assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isTrue();
     }
@@ -177,8 +177,43 @@ class AutoCompleteObjectivesUseCaseTest {
         objectiveRepository.add(new Objective(20L, USER_ID, 0, "Boire 2L d'eau", 0, "CUSTOM", null));
         completionRepository.add(new ObjectiveCompletion(1L, USER_ID, 20L, MONDAY, CompletionSource.AUTO));
 
-        useCase.execute(USER_ID, MONDAY, 0);
+        useCase.execute(USER_ID, MONDAY, 0, 0);
 
         assertThat(completionRepository.existsByObjectiveIdAndDate(20L, MONDAY)).isTrue();
+    }
+
+    // ── Coche seulement quand une séance apparaît : un décochage manuel est respecté ──
+
+    @Test
+    void should_not_complete_again_when_the_session_is_edited_after_the_user_unchecked_the_objective() {
+        givenMondaySportObjective();
+        useCase.execute(USER_ID, MONDAY, 0, 300);              // séance saisie → cochée
+        completionRepository.deleteByObjectiveIdAndDate(SPORT_ID, MONDAY); // décochée à la main
+
+        useCase.execute(USER_ID, MONDAY, 300, 350);            // séance modifiée
+
+        assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isFalse();
+    }
+
+    @Test
+    void should_complete_again_when_a_new_session_is_entered_after_the_previous_one_was_cleared() {
+        givenMondaySportObjective();
+        useCase.execute(USER_ID, MONDAY, 0, 300);
+        completionRepository.deleteByObjectiveIdAndDate(SPORT_ID, MONDAY);
+        useCase.execute(USER_ID, MONDAY, 300, 0);              // séance effacée
+
+        useCase.execute(USER_ID, MONDAY, 0, 400);              // nouvelle séance
+
+        assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isTrue();
+    }
+
+    @Test
+    void should_not_touch_completions_when_session_stays_at_zero() {
+        givenMondaySportObjective();
+        completionRepository.add(new ObjectiveCompletion(1L, USER_ID, SPORT_ID, MONDAY, CompletionSource.AUTO));
+
+        useCase.execute(USER_ID, MONDAY, 0, 0);
+
+        assertThat(completionRepository.existsByObjectiveIdAndDate(SPORT_ID, MONDAY)).isFalse();
     }
 }

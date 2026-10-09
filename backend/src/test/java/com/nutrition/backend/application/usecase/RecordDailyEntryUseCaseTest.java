@@ -56,5 +56,17 @@ class RecordDailyEntryUseCaseTest {
         assertThat(spyAutoComplete.getCapturedUserId()).isEqualTo(userId);
         assertThat(spyAutoComplete.getCapturedDate()).isEqualTo(date);
         assertThat(spyAutoComplete.getCapturedCaloriesBurned()).isEqualTo(caloriesBurned);
+        assertThat(spyAutoComplete.getCapturedPreviousCaloriesBurned()).isZero(); // pas d'entrée avant
+    }
+
+    @Test
+    void should_pass_previously_recorded_calories_burned_to_auto_completion() {
+        LocalDate date = LocalDate.of(2024, 6, 3);
+        dailyEntryRepository.save(new DailyEntry(null, 5L, date, 1800, 0, 300, false));
+
+        recordDailyEntryUseCase.execute(new DailyEntry(null, 5L, date, 1800, 0, 350, false));
+
+        assertThat(spyAutoComplete.getCapturedPreviousCaloriesBurned()).isEqualTo(300);
+        assertThat(spyAutoComplete.getCapturedCaloriesBurned()).isEqualTo(350);
     }
 }
