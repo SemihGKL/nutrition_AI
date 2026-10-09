@@ -61,4 +61,24 @@ class LoginUserUseCaseTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Mot de passe incorrect");
     }
+
+    // ── Email insensible à la casse ─────────────────────────────────────────
+
+    @Test
+    void should_authenticate_when_email_is_typed_with_another_case_and_spaces() {
+        User saved = userRepository.save(buildUser("alice@example.com", "secret123"));
+
+        User result = loginUserUseCase.execute(" Alice@Example.com ", "secret123");
+
+        assertThat(result.getId()).isEqualTo(saved.getId());
+    }
+
+    @Test
+    void should_authenticate_legacy_account_stored_with_uppercase_letters() {
+        User saved = userRepository.save(buildUser("Bob@Example.com", "secret123"));
+
+        User result = loginUserUseCase.execute("bob@example.com", "secret123");
+
+        assertThat(result.getId()).isEqualTo(saved.getId());
+    }
 }

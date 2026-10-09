@@ -2,6 +2,7 @@ package com.nutrition.backend.application.usecase;
 
 import com.nutrition.backend.domain.entity.User;
 import com.nutrition.backend.domain.exception.EmailAlreadyUsedException;
+import com.nutrition.backend.domain.model.EmailAddress;
 import com.nutrition.backend.domain.model.Gender;
 import com.nutrition.backend.domain.model.UserProfile;
 import com.nutrition.backend.domain.ports.PasswordEncoderPort;
@@ -46,6 +47,7 @@ public class RegisterUserUseCase {
                         double weightGoal, Gender gender, int age,
                         double height, double startWeight, String weighInDay,
                         Integer dailyStepsGoal, Integer chosenCalorieGoal) {
+        email = EmailAddress.normalize(email);
         if (height <= 0) {
             throw new IllegalArgumentException("La taille doit être supérieure à 0");
         }

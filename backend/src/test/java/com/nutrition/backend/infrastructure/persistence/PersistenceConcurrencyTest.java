@@ -200,6 +200,23 @@ class PersistenceConcurrencyTest {
                 .contains(u.getId());
     }
 
+    // ── Email insensible à la casse ─────────────────────────────────────────
+
+    @Test
+    void should_find_user_by_email_whatever_the_case() {
+        User u = newPersistedUser("Mixed.Case@Test.com");
+
+        assertThat(userRepository.findByEmail("mixed.case@test.com")).map(User::getId).contains(u.getId());
+    }
+
+    @Test
+    void should_prefer_exact_email_match_when_case_variants_exist() {
+        newPersistedUser("dup@test.com");
+        User exact = newPersistedUser("Dup@Test.com");
+
+        assertThat(userRepository.findByEmail("Dup@Test.com")).map(User::getId).contains(exact.getId());
+    }
+
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────
 
     @Test

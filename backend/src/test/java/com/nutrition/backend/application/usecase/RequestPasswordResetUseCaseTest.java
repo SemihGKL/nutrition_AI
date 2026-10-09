@@ -107,4 +107,13 @@ class RequestPasswordResetUseCaseTest {
         assertThat(emailPort.getLastSentLink())
                 .isEqualTo("https://app.example.com/reset-password?token=" + savedToken);
     }
+
+    @Test
+    void should_send_reset_email_when_email_is_typed_with_another_case() {
+        userRepository.save(buildUser("alice@example.com"));
+
+        useCase.execute("ALICE@Example.com", "https://app.example.com");
+
+        assertThat(emailPort.wasEmailSent()).isTrue();
+    }
 }
