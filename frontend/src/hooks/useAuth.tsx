@@ -12,6 +12,7 @@ import {
 import { refreshSession } from '../api/client';
 import { authApi } from '../api/auth';
 import { sessionBus } from '../auth/sessionBus';
+import { attachDeviceToCurrentUser, detachDeviceFromCurrentUser } from '../push/deviceSubscription';
 
 interface AuthState {
   token: string | null;
@@ -22,7 +23,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (token: string, user: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (user: User) => void;
 }
 
@@ -72,7 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Détache d'abord l'appareil (rappels push) : la requête doit partir avec le token,
+    // donc avant d'effacer la session. Un échec ne bloque pas la déconnexion.
+    await detachDeviceFromCurrentUser().catch(() => {});
     // Révoque le refresh token côté serveur (fire-and-forget), efface localement tout de suite.
     authApi.logout().catch(() => {});
     clearAuthSession();
@@ -105,6 +109,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  // Connexion ou session restaurée : l'appareil abonné aux notifications est rattaché
+  // au compte connecté (sur un appareil partagé, les rappels suivent la personne).
+  // Une session expirée ne détache rien : seuls les rappels d'une déconnexion volontaire s'arrêtent.
+  const connectedUserId = state.token ? state.user?.id : undefined;
+  useEffect(() => {
+    if (connectedUserId !== undefined) attachDeviceToCurrentUser().catch(() => {});
+  }, [connectedUserId]);
 
   const login = useCallback((token: string, user: User) => {
     persistAuthSession(token, user);

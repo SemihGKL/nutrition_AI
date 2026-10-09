@@ -217,6 +217,28 @@ class PersistenceConcurrencyTest {
         assertThat(userRepository.findByEmail("Dup@Test.com")).map(User::getId).contains(exact.getId());
     }
 
+    // ── Abonnements push : appareil partagé ─────────────────────────────────
+
+    @Autowired com.nutrition.backend.domain.ports.PushSubscriptionRepository pushSubscriptionRepository;
+
+    @Test
+    void should_reassign_a_shared_device_to_the_last_subscribed_user() {
+        User alice = newPersistedUser("push-alice@test.com");
+        User bob = newPersistedUser("push-bob@test.com");
+        var device = "https://push.example/device-shared";
+
+        pushSubscriptionRepository.saveOrUpdate(new com.nutrition.backend.domain.entity.PushSubscription(null, alice.getId(), device, "k", "a"));
+        pushSubscriptionRepository.saveOrUpdate(new com.nutrition.backend.domain.entity.PushSubscription(null, bob.getId(), device, "k2", "a2"));
+
+        assertThat(pushSubscriptionRepository.findByUserId(alice.getId())).isEmpty();
+        assertThat(pushSubscriptionRepository.findByUserId(bob.getId())).hasSize(1);
+
+        pushSubscriptionRepository.deleteByEndpointForUser(device, alice.getId());
+        assertThat(pushSubscriptionRepository.findByUserId(bob.getId())).hasSize(1);
+        pushSubscriptionRepository.deleteByEndpointForUser(device, bob.getId());
+        assertThat(pushSubscriptionRepository.findByUserId(bob.getId())).isEmpty();
+    }
+
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────
 
     @Test

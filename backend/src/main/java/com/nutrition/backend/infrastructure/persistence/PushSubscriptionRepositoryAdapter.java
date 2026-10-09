@@ -24,6 +24,8 @@ public class PushSubscriptionRepositoryAdapter implements PushSubscriptionReposi
         PushSubscriptionJpaEntity entity;
         if (existing.isPresent()) {
             entity = existing.get();
+            // Appareil partagé : il appartient désormais à l'utilisateur qui vient de s'abonner.
+            entity.setUserId(subscription.userId());
             entity.setP256dh(subscription.p256dh());
             entity.setAuth(subscription.auth());
         } else {
@@ -38,8 +40,8 @@ public class PushSubscriptionRepositoryAdapter implements PushSubscriptionReposi
 
     @Override
     @Transactional
-    public void deleteByEndpoint(String endpoint) {
-        jpaRepository.deleteByEndpoint(endpoint);
+    public void deleteByEndpointForUser(String endpoint, Long userId) {
+        jpaRepository.deleteByEndpointAndUserId(endpoint, userId);
     }
 
     @Override
