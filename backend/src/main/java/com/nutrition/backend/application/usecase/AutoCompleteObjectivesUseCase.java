@@ -28,9 +28,8 @@ public class AutoCompleteObjectivesUseCase {
      * repasse à 0. Une coche manuelle n'est jamais retirée.
      */
     public void execute(Long userId, LocalDate date, int caloriesBurned) {
-        int dow = date.getDayOfWeek().getValue() - 1; // 0=Lundi ... 6=Dimanche
         for (Objective obj : objectiveRepository.findByUserId(userId)) {
-            if (!"SPORT".equals(obj.getType()) || (obj.getDayOfWeek() != dow && obj.getDayOfWeek() != -1)) {
+            if (!obj.isAutoCompletableOn(date)) {
                 continue;
             }
             if (caloriesBurned > 0) {
