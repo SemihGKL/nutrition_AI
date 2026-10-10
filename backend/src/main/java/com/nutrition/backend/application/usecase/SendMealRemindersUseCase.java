@@ -3,6 +3,7 @@ package com.nutrition.backend.application.usecase;
 import com.nutrition.backend.domain.entity.DailyEntry;
 import com.nutrition.backend.domain.entity.MealReminder;
 import com.nutrition.backend.domain.entity.PushSubscription;
+import com.nutrition.backend.domain.exception.PushSubscriptionExpiredException;
 import com.nutrition.backend.domain.ports.DailyEntryRepository;
 import com.nutrition.backend.domain.ports.MealReminderRepository;
 import com.nutrition.backend.domain.ports.PushNotificationPort;
@@ -49,6 +50,8 @@ public class SendMealRemindersUseCase {
                 try {
                     pushNotificationPort.send(sub, reminder.meal().label(), BODY);
                     sent++;
+                } catch (PushSubscriptionExpiredException e) {
+                    pushSubscriptionRepository.deleteByEndpointForUser(sub.endpoint(), sub.userId());
                 } catch (Exception e) {
                     log.error("[PUSH] Échec rappel repas {} → endpoint={} : {}", reminder.meal(), sub.endpoint(), e.getMessage());
                 }

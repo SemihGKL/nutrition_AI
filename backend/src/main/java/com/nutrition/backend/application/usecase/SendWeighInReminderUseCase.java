@@ -1,6 +1,7 @@
 package com.nutrition.backend.application.usecase;
 
 import com.nutrition.backend.domain.entity.PushSubscription;
+import com.nutrition.backend.domain.exception.PushSubscriptionExpiredException;
 import com.nutrition.backend.domain.ports.PushNotificationPort;
 import com.nutrition.backend.domain.ports.PushSubscriptionRepository;
 import org.slf4j.Logger;
@@ -33,6 +34,9 @@ public class SendWeighInReminderUseCase {
             try {
                 pushNotificationPort.send(sub, TITLE, BODY);
                 sent++;
+            } catch (PushSubscriptionExpiredException e) {
+                // Appareil désinstallé : on l'oublie au lieu de lui écrire chaque semaine.
+                pushSubscriptionRepository.deleteByEndpointForUser(sub.endpoint(), sub.userId());
             } catch (Exception e) {
                 log.error("[PUSH] Échec envoi rappel pesée → endpoint={} : {}", sub.endpoint(), e.getMessage());
             }

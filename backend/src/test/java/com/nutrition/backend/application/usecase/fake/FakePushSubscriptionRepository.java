@@ -9,6 +9,12 @@ import java.util.List;
 public class FakePushSubscriptionRepository implements PushSubscriptionRepository {
 
     private final List<PushSubscription> store = new ArrayList<>();
+    private List<PushSubscription> pendingWeighInReminders = List.of();
+
+    public void givenPendingWeighInReminders(List<PushSubscription> subscriptions) {
+        subscriptions.forEach(this::saveOrUpdate);
+        pendingWeighInReminders = subscriptions;
+    }
 
     @Override
     public PushSubscription saveOrUpdate(PushSubscription subscription) {
@@ -24,7 +30,7 @@ public class FakePushSubscriptionRepository implements PushSubscriptionRepositor
 
     @Override
     public List<PushSubscription> findPendingWeighInReminders(String dayOfWeek, String weekStartDate) {
-        return List.of();
+        return pendingWeighInReminders.stream().filter(store::contains).toList();
     }
 
     @Override

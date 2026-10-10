@@ -177,4 +177,29 @@ class MealRemindersUseCaseTest {
         assertThat(sendUseCase.execute(TODAY.atTime(NOON_THIRTY))).isEqualTo(1);
         assertThat(pushPort.sent()).extracting(SpyPushNotificationPort.Sent::endpoint).containsExactly("phone");
     }
+
+    @Test
+    void should_remove_a_device_that_was_uninstalled_and_not_count_it_as_sent() {
+        remind(USER, MealType.LUNCH, NOON_THIRTY, true);
+        subscribe(USER, "uninstalled");
+        subscribe(USER, "phone");
+        pushPort.expireFor("uninstalled");
+
+        int sent = sendUseCase.execute(TODAY.atTime(NOON_THIRTY));
+
+        assertThat(sent).isEqualTo(1);
+        assertThat(subscriptionRepository.findByUserId(USER))
+                .extracting(PushSubscription::endpoint).containsExactly("phone");
+    }
+
+    @Test
+    void should_keep_a_device_after_a_temporary_push_failure() {
+        remind(USER, MealType.LUNCH, NOON_THIRTY, true);
+        subscribe(USER, "flaky");
+        pushPort.failFor("flaky");
+
+        sendUseCase.execute(TODAY.atTime(NOON_THIRTY));
+
+        assertThat(subscriptionRepository.findByUserId(USER)).hasSize(1);
+    }
 }
