@@ -34,12 +34,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final String SUPPORT_PATH = "/api/support";
 
+    // Rafraîchissement de session : compteur à part et plus large, pour qu'un usage normal
+    // (plusieurs onglets, un foyer derrière la même box) n'empiète pas sur les connexions.
+    private static final String REFRESH_PATH = "/api/auth/refresh";
+
     private final RateLimiter authLimiter;
     private final RateLimiter supportLimiter;
+    private final RateLimiter refreshLimiter;
 
-    public RateLimitFilter(RateLimiter authLimiter, RateLimiter supportLimiter) {
+    public RateLimitFilter(RateLimiter authLimiter, RateLimiter supportLimiter, RateLimiter refreshLimiter) {
         this.authLimiter = authLimiter;
         this.supportLimiter = supportLimiter;
+        this.refreshLimiter = refreshLimiter;
     }
 
     @Override
@@ -69,6 +75,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
         if (SUPPORT_PATH.equals(path)) {
             return supportLimiter;
+        }
+        if (REFRESH_PATH.equals(path)) {
+            return refreshLimiter;
         }
         return null;
     }

@@ -12,9 +12,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RateLimitFilterTest {
 
     private RateLimitFilter filter(long authCapacity, long supportCapacity) {
+        return filter(authCapacity, supportCapacity, 100);
+    }
+
+    private RateLimitFilter filter(long authCapacity, long supportCapacity, long refreshCapacity) {
         return new RateLimitFilter(
                 new RateLimiter(authCapacity, Duration.ofMinutes(1)),
-                new RateLimiter(supportCapacity, Duration.ofMinutes(1)));
+                new RateLimiter(supportCapacity, Duration.ofMinutes(1)),
+                new RateLimiter(refreshCapacity, Duration.ofMinutes(1)));
     }
 
     private MockHttpServletRequest request(String method, String uri, String ip) {
@@ -133,5 +138,31 @@ class RateLimitFilterTest {
         filter.doFilter(second, blocked, new MockFilterChain());
 
         assertThat(blocked.getStatus()).isEqualTo(429);
+    }
+
+    // ── Rafraîchissement de session : limité, sur son propre compteur ──────────
+
+    @Test
+    void should_return_429_when_the_refresh_limit_is_exceeded() throws Exception {
+        RateLimitFilter filter = filter(5, 5, 1);
+        filter.doFilter(request("POST", "/api/auth/refresh", "1.2.3.4"), new MockHttpServletResponse(), new MockFilterChain());
+
+        MockHttpServletResponse blocked = new MockHttpServletResponse();
+        filter.doFilter(request("POST", "/api/auth/refresh", "1.2.3.4"), blocked, new MockFilterChain());
+
+        assertThat(blocked.getStatus()).isEqualTo(429);
+    }
+
+    @Test
+    void should_not_consume_login_attempts_when_refreshing() throws Exception {
+        RateLimitFilter filter = filter(1, 5, 10);
+        for (int i = 0; i < 5; i++) {
+            filter.doFilter(request("POST", "/api/auth/refresh", "1.2.3.4"), new MockHttpServletResponse(), new MockFilterChain());
+        }
+
+        MockHttpServletResponse login = new MockHttpServletResponse();
+        filter.doFilter(request("POST", "/api/auth/login", "1.2.3.4"), login, new MockFilterChain());
+
+        assertThat(login.getStatus()).isEqualTo(200);
     }
 }
