@@ -202,4 +202,68 @@ class MealRemindersUseCaseTest {
 
         assertThat(subscriptionRepository.findByUserId(USER)).hasSize(1);
     }
+
+    // ── Rattrapage après un redémarrage, sans doublon ───────────────────────
+
+    @Test
+    void should_catch_up_a_reminder_missed_during_a_restart() {
+        remind(USER, MealType.LUNCH, NOON_THIRTY, true);
+        subscribe(USER, "phone");
+
+        // Le serveur redémarrait à 12:30 : la vérification suivante a lieu à 12:34.
+        assertThat(sendUseCase.execute(TODAY.atTime(12, 34))).isEqualTo(1);
+    }
+
+    @Test
+    void should_send_a_reminder_only_once_a_day() {
+        remind(USER, MealType.LUNCH, NOON_THIRTY, true);
+        subscribe(USER, "phone");
+
+        sendUseCase.execute(TODAY.atTime(12, 30));
+        sendUseCase.execute(TODAY.atTime(12, 31));
+        sendUseCase.execute(TODAY.atTime(12, 35));
+
+        assertThat(pushPort.sent()).hasSize(1);
+    }
+
+    @Test
+    void should_send_the_reminder_again_the_next_day() {
+        remind(USER, MealType.LUNCH, NOON_THIRTY, true);
+        subscribe(USER, "phone");
+
+        sendUseCase.execute(TODAY.atTime(NOON_THIRTY));
+        sendUseCase.execute(TODAY.plusDays(1).atTime(NOON_THIRTY));
+
+        assertThat(pushPort.sent()).hasSize(2);
+    }
+
+    @Test
+    void should_not_send_a_reminder_that_is_more_than_ten_minutes_late() {
+        remind(USER, MealType.LUNCH, NOON_THIRTY, true);
+        subscribe(USER, "phone");
+
+        assertThat(sendUseCase.execute(TODAY.atTime(12, 41))).isZero();
+    }
+
+    @Test
+    void should_retry_the_next_minute_after_a_temporary_failure() {
+        remind(USER, MealType.LUNCH, NOON_THIRTY, true);
+        subscribe(USER, "flaky");
+        pushPort.failFor("flaky");
+        sendUseCase.execute(TODAY.atTime(12, 30));
+
+        pushPort.recover("flaky");
+        int sent = sendUseCase.execute(TODAY.atTime(12, 31));
+
+        assertThat(sent).isEqualTo(1);
+    }
+
+    @Test
+    void should_not_look_back_before_midnight() {
+        remind(USER, MealType.DINNER, LocalTime.of(23, 55), true);
+        subscribe(USER, "phone");
+
+        // 00:02 : le rappel de 23:55 appartenait à la veille.
+        assertThat(sendUseCase.execute(TODAY.atTime(0, 2))).isZero();
+    }
 }

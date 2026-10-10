@@ -195,7 +195,16 @@ class PersistenceConcurrencyTest {
                 new com.nutrition.backend.domain.entity.MealReminder(u.getId(), com.nutrition.backend.domain.model.MealType.LUNCH, noon, true)));
 
         assertThat(mealReminderRepository.findByUserId(u.getId())).hasSize(1);
-        assertThat(mealReminderRepository.findEnabledAt(noon))
+        java.time.LocalDate day = java.time.LocalDate.of(2026, 10, 10);
+        assertThat(mealReminderRepository.findDueBetween(noon.minusMinutes(9), noon, day))
+                .extracting(com.nutrition.backend.domain.entity.MealReminder::userId)
+                .contains(u.getId());
+
+        mealReminderRepository.markSent(u.getId(), com.nutrition.backend.domain.model.MealType.LUNCH, day);
+        assertThat(mealReminderRepository.findDueBetween(noon.minusMinutes(9), noon, day))
+                .extracting(com.nutrition.backend.domain.entity.MealReminder::userId)
+                .doesNotContain(u.getId());
+        assertThat(mealReminderRepository.findDueBetween(noon.minusMinutes(9), noon, day.plusDays(1)))
                 .extracting(com.nutrition.backend.domain.entity.MealReminder::userId)
                 .contains(u.getId());
     }

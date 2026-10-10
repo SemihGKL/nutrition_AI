@@ -21,6 +21,10 @@ public class SpyPushNotificationPort implements PushNotificationPort {
         failingEndpoints.add(endpoint);
     }
 
+    public void recover(String endpoint) {
+        failingEndpoints.remove(endpoint);
+    }
+
     /** Simule un appareil désinstallé : le service push répond 404/410. */
     public void expireFor(String endpoint) {
         expiredEndpoints.add(endpoint);

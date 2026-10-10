@@ -1,10 +1,12 @@
 package com.nutrition.backend.infrastructure.persistence;
 
 import com.nutrition.backend.domain.entity.MealReminder;
+import com.nutrition.backend.domain.model.MealType;
 import com.nutrition.backend.domain.ports.MealReminderRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -29,8 +31,14 @@ public class MealReminderRepositoryAdapter implements MealReminderRepository {
     }
 
     @Override
-    public List<MealReminder> findEnabledAt(LocalTime time) {
-        return jpaRepository.findByEnabledTrueAndReminderTime(time).stream().map(this::toDomain).toList();
+    public List<MealReminder> findDueBetween(LocalTime from, LocalTime to, LocalDate day) {
+        return jpaRepository.findDueBetween(from, to, day).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    @Transactional
+    public void markSent(Long userId, MealType meal, LocalDate day) {
+        jpaRepository.markSent(userId, meal, day);
     }
 
     private MealReminder toDomain(MealReminderJpaEntity e) {
