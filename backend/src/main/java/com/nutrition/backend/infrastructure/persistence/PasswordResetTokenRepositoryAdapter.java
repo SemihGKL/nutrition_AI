@@ -20,15 +20,15 @@ public class PasswordResetTokenRepositoryAdapter implements PasswordResetTokenRe
     @Override
     public PasswordResetToken save(PasswordResetToken token) {
         PasswordResetTokenJpaEntity entity = new PasswordResetTokenJpaEntity(
-                token.id(), token.userId(), token.token(), token.expiresAt(), token.used()
+                token.id(), token.userId(), TokenHasher.sha256Hex(token.token()), token.expiresAt(), token.used()
         );
         PasswordResetTokenJpaEntity saved = jpaRepository.save(entity);
-        return toDomain(saved);
+        return toDomain(saved, token.token());
     }
 
     @Override
     public Optional<PasswordResetToken> findByToken(String token) {
-        return jpaRepository.findByToken(token).map(this::toDomain);
+        return jpaRepository.findByToken(TokenHasher.sha256Hex(token)).map(e -> toDomain(e, token));
     }
 
     @Override
@@ -40,10 +40,11 @@ public class PasswordResetTokenRepositoryAdapter implements PasswordResetTokenRe
     @Override
     @Transactional
     public boolean claim(String token) {
-        return jpaRepository.claim(token, Instant.now()) == 1;
+        return jpaRepository.claim(TokenHasher.sha256Hex(token), Instant.now()) == 1;
     }
 
-    private PasswordResetToken toDomain(PasswordResetTokenJpaEntity entity) {
-        return new PasswordResetToken(entity.getId(), entity.getUserId(), entity.getToken(), entity.getExpiresAt(), entity.isUsed());
+    /** La base ne stocke que l'empreinte : le domaine continue de manipuler le jeton d'origine. */
+    private PasswordResetToken toDomain(PasswordResetTokenJpaEntity entity, String rawToken) {
+        return new PasswordResetToken(entity.getId(), entity.getUserId(), rawToken, entity.getExpiresAt(), entity.isUsed());
     }
 }

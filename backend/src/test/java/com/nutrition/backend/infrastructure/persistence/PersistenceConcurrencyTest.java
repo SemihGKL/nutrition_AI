@@ -257,6 +257,31 @@ class PersistenceConcurrencyTest {
         assertThat(claims).isEqualTo(1);
     }
 
+    // ── Jetons hachés au repos ──────────────────────────────────────────────
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    @Test
+    void should_hash_existing_tokens_with_the_same_digest_as_the_application() {
+        // La migration V21 convertit les jetons existants en SQL : même empreinte que Java.
+        String sqlDigest = jdbcTemplate.queryForObject(
+                "SELECT encode(sha256(convert_to('abc', 'UTF8')), 'hex')", String.class);
+
+        assertThat(sqlDigest).isEqualTo(TokenHasher.sha256Hex("abc"));
+    }
+
+    @Test
+    void should_never_store_a_refresh_token_in_clear() {
+        User u = newPersistedUser("hashed-token@test.com");
+        refreshTokenRepository.save(new RefreshToken(null, u.getId(), "clear-token", Instant.now().plus(1, ChronoUnit.DAYS)));
+
+        Integer clearRows = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM refresh_tokens WHERE token = 'clear-token'", Integer.class);
+
+        assertThat(clearRows).isZero();
+        assertThat(refreshTokenRepository.findByToken("clear-token")).isPresent();
+    }
+
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────
 
     @Test

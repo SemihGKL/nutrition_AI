@@ -19,15 +19,15 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
     @Override
     public RefreshToken save(RefreshToken token) {
         RefreshTokenJpaEntity entity = new RefreshTokenJpaEntity(
-                token.id(), token.userId(), token.token(), token.expiresAt()
+                token.id(), token.userId(), TokenHasher.sha256Hex(token.token()), token.expiresAt()
         );
         RefreshTokenJpaEntity saved = jpaRepository.save(entity);
-        return toDomain(saved);
+        return toDomain(saved, token.token());
     }
 
     @Override
     public Optional<RefreshToken> findByToken(String token) {
-        return jpaRepository.findByToken(token).map(this::toDomain);
+        return jpaRepository.findByToken(TokenHasher.sha256Hex(token)).map(e -> toDomain(e, token));
     }
 
     @Override
@@ -41,11 +41,12 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
     public void replaceUserTokens(Long userId, RefreshToken newToken) {
         jpaRepository.deleteByUserId(userId);
         jpaRepository.save(new RefreshTokenJpaEntity(
-                newToken.id(), newToken.userId(), newToken.token(), newToken.expiresAt()
+                newToken.id(), newToken.userId(), TokenHasher.sha256Hex(newToken.token()), newToken.expiresAt()
         ));
     }
 
-    private RefreshToken toDomain(RefreshTokenJpaEntity entity) {
-        return new RefreshToken(entity.getId(), entity.getUserId(), entity.getToken(), entity.getExpiresAt());
+    /** La base ne stocke que l'empreinte : le domaine continue de manipuler le jeton d'origine. */
+    private RefreshToken toDomain(RefreshTokenJpaEntity entity, String rawToken) {
+        return new RefreshToken(entity.getId(), entity.getUserId(), rawToken, entity.getExpiresAt());
     }
 }
