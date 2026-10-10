@@ -18,7 +18,9 @@ import java.util.Set;
  * (authentification) et de l'envoi de messages support.
  * <p>
  * Clé de comptage = identité authentifiée si disponible, sinon adresse IP du
- * client (en tenant compte de {@code X-Forwarded-For} derrière un proxy).
+ * client : {@code X-Real-IP} posé par nginx, à défaut l'adresse de connexion.
+ * {@code X-Forwarded-For} est ignoré : sa première valeur vient du client, qui
+ * pourrait la changer à chaque requête pour échapper à la limite.
  * Au-delà de la limite, répond {@code 429 Too Many Requests} sans exécuter la
  * suite de la chaîne.
  */
@@ -82,9 +84,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String resolveClientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
+        // nginx écrase X-Real-IP avec l'adresse TCP réelle (proxy_set_header X-Real-IP $remote_addr).
+        // Ne pas se fier à getRemoteAddr() seul : avec forward-headers-strategy=framework,
+        // Spring le déduit de X-Forwarded-For, donc d'une valeur fournie par le client.
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
         }
         return request.getRemoteAddr();
     }

@@ -87,20 +87,51 @@ class RateLimitFilterTest {
         assertThat(blocked.getStatus()).isEqualTo(429);
     }
 
-    @Test
-    void should_isolate_clients_behind_a_proxy_using_the_forwarded_ip() throws Exception {
-        RateLimitFilter filter = filter(1, 5);
+    // ── IP du client derrière nginx ─────────────────────────────────────────
+    // nginx écrase X-Real-IP avec l'adresse TCP réelle ; X-Forwarded-For, lui, contient
+    // ce que le client a envoyé (nginx y ajoute l'IP réelle à la fin).
 
-        MockHttpServletRequest first = request("POST", "/api/auth/login", "10.0.0.1");
-        first.addHeader("X-Forwarded-For", "203.0.113.1");
+    private MockHttpServletRequest viaNginx(String realIp, String spoofedForwardedFor) {
+        MockHttpServletRequest request = request("POST", "/api/auth/login", "127.0.0.1");
+        request.addHeader("X-Real-IP", realIp);
+        request.addHeader("X-Forwarded-For", spoofedForwardedFor + ", " + realIp);
+        return request;
+    }
+
+    @Test
+    void should_isolate_clients_behind_nginx_using_the_real_ip() throws Exception {
+        RateLimitFilter filter = filter(1, 5);
+        filter.doFilter(viaNginx("203.0.113.1", "203.0.113.1"), new MockHttpServletResponse(), new MockFilterChain());
+
+        MockHttpServletResponse otherClient = new MockHttpServletResponse();
+        filter.doFilter(viaNginx("203.0.113.2", "203.0.113.2"), otherClient, new MockFilterChain());
+
+        assertThat(otherClient.getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    void should_not_be_bypassed_by_changing_x_forwarded_for() throws Exception {
+        RateLimitFilter filter = filter(1, 5);
+        filter.doFilter(viaNginx("203.0.113.9", "1.1.1.1"), new MockHttpServletResponse(), new MockFilterChain());
+
+        MockHttpServletResponse blocked = new MockHttpServletResponse();
+        filter.doFilter(viaNginx("203.0.113.9", "2.2.2.2"), blocked, new MockFilterChain());
+
+        assertThat(blocked.getStatus()).isEqualTo(429);
+    }
+
+    @Test
+    void should_use_the_connection_address_without_proxy_header() throws Exception {
+        RateLimitFilter filter = filter(1, 5);
+        MockHttpServletRequest first = request("POST", "/api/auth/login", "198.51.100.7");
+        first.addHeader("X-Forwarded-For", "1.1.1.1");
         filter.doFilter(first, new MockHttpServletResponse(), new MockFilterChain());
 
-        MockHttpServletRequest second = request("POST", "/api/auth/login", "10.0.0.1");
-        second.addHeader("X-Forwarded-For", "203.0.113.2");
-        MockHttpServletResponse otherClient = new MockHttpServletResponse();
-        filter.doFilter(second, otherClient, new MockFilterChain());
+        MockHttpServletRequest second = request("POST", "/api/auth/login", "198.51.100.7");
+        second.addHeader("X-Forwarded-For", "2.2.2.2");
+        MockHttpServletResponse blocked = new MockHttpServletResponse();
+        filter.doFilter(second, blocked, new MockFilterChain());
 
-        // Deux clients distincts derrière le même proxy ne partagent pas le seau.
-        assertThat(otherClient.getStatus()).isEqualTo(200);
+        assertThat(blocked.getStatus()).isEqualTo(429);
     }
 }

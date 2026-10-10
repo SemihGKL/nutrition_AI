@@ -30,4 +30,10 @@ class ProdProfilePropertiesTest {
         assertThat(props.getProperty("app.vapid.private-key")).isEqualTo("${VAPID_PRIVATE_KEY}");
         assertThat(props.getProperty("app.vapid.subject")).startsWith("${VAPID_SUBJECT");
     }
+
+    @Test
+    void should_listen_on_loopback_only_so_that_x_real_ip_cannot_be_spoofed() throws IOException {
+        // Seul nginx (même machine) doit joindre le backend : X-Real-IP fait alors foi.
+        assertThat(prodProperties().getProperty("server.address")).isEqualTo("127.0.0.1");
+    }
 }
