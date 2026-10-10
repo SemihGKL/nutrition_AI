@@ -3,6 +3,8 @@ import { BottomNav, type NavTab } from '../components/ui/BottomNav';
 import { StreakChip } from '../components/ui/StreakChip';
 import { PipStrip } from '../components/ui/PipStrip';
 import { useAuth } from '../hooks/useAuth';
+import { useWeighIns } from '../hooks/useWeighIns';
+import { weightOn } from '../utils/bodyWeight';
 import type { DailyCalories } from '../types/api';
 import type { StreakInfo } from '../hooks/useStreak';
 import {
@@ -32,6 +34,7 @@ interface BarDay {
 
 export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Props) {
   const { user } = useAuth();
+  const weighIns = useWeighIns(!!user);
   const today = isoToday();
   const target = user?.dailyCalorieGoal ?? 1800;
   // Fenêtre glissante : les 7 derniers jours en terminant aujourd'hui (inclus),
@@ -50,7 +53,10 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
       const date = addDays(windowStart, i);
       const entry = entryMap.get(date);
       const isFuture = date > today;
-      const weightKg = user?.currentWeight ?? 70;
+      // Poids de ce jour-là (comme le récap serveur), pas le poids actuel.
+      const weightKg = user
+        ? weightOn(date, weighIns, user.startWeight ?? user.currentWeight, user.currentWeight)
+        : 70;
       const steps = stepsToKcal(entry?.steps ?? 0, weightKg);
       const net = entry ? entry.caloriesConsumed - (entry.caloriesBurned ?? 0) - steps : 0;
       const hasEntry = !!entry;
@@ -58,7 +64,7 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
       const partial = hasEntry && !entry.confirmed;
       return { label: frenchDayLetter(date), date, net, met, future: isFuture, hasEntry, partial };
     });
-  }, [windowStart, entryMap, target, today]);
+  }, [windowStart, entryMap, target, today, weighIns, user]);
 
   // Moyenne sur les seuls jours confirmés (comme le Bilan), y compris un net ≤ 0.
   const confirmedBars = bars.filter(b => !b.future && b.hasEntry && !b.partial);

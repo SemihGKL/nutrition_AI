@@ -1,17 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type { User, DailyCalories } from '../../types/api';
 import type { StreakInfo } from '../../hooks/useStreak';
 
 const TODAY = '2026-07-05';
 
 vi.mock('../../hooks/useAuth', () => ({ useAuth: vi.fn() }));
+vi.mock('../../api/weighIn', () => ({
+  weighInApi: { getAll: vi.fn(), getLatest: vi.fn(), save: vi.fn() },
+}));
 vi.mock('../../utils/format', async () => {
   const actual = await vi.importActual<typeof import('../../utils/format')>('../../utils/format');
   return { ...actual, isoToday: () => TODAY };
 });
 
 import { useAuth } from '../../hooks/useAuth';
+import { weighInApi } from '../../api/weighIn';
 import { SemainePage } from '../../pages/SemainePage';
 
 const user: User = {
@@ -23,8 +27,8 @@ const user: User = {
 
 const streak: StreakInfo = { current: 0, best: 0, last14: Array(14).fill('miss') };
 
-const day = (date: string, consumed: number, burned: number, confirmed: boolean): DailyCalories => ({
-  date, caloriesConsumed: consumed, caloriesBurned: burned, steps: 0, confirmed, userId: 1,
+const day = (date: string, consumed: number, burned: number, confirmed: boolean, steps = 0): DailyCalories => ({
+  date, caloriesConsumed: consumed, caloriesBurned: burned, steps, confirmed, userId: 1,
 });
 
 function renderSemaine(entries: DailyCalories[]) {
@@ -36,6 +40,7 @@ const stat = (label: string) => screen.getByText(label).parentElement!;
 describe('SemainePage — moyenne et deficit', () => {
   beforeEach(() => {
     (useAuth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ user });
+    (weighInApi.getAll as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   });
 
   it('compte un jour confirme au net negatif (beaucoup de sport) dans la moyenne', () => {
@@ -58,5 +63,16 @@ describe('SemainePage — moyenne et deficit', () => {
   it('affiche un tiret sans aucun jour confirme', () => {
     renderSemaine([day('2026-07-04', 1500, 0, false)]);
     expect(stat('moy.')).toHaveTextContent('—');
+  });
+
+  it('calcule les kcal des pas d\'un jour passe avec le poids de ce jour-la', async () => {
+    (weighInApi.getAll as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: 1, date: '2026-07-01', weight: 140 },
+      { id: 2, date: '2026-07-05', weight: 76 },
+    ]);
+    renderSemaine([day('2026-07-03', 2000, 0, true, 8000)]);
+
+    // 200 kcal de pas à 140 kg → moyenne 1 800 (et non 1 891 au poids actuel)
+    await waitFor(() => expect(stat('moy.')).toHaveTextContent(/1\s?800/));
   });
 });

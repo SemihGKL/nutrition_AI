@@ -28,8 +28,8 @@ const baseUser: User = {
   weighInDay: null, dailyStepsGoal: null,
 };
 
-const day = (date: string, consumed: number, confirmed = true): DailyCalories => ({
-  date, caloriesConsumed: consumed, caloriesBurned: 0, steps: 0, confirmed, userId: 1,
+const day = (date: string, consumed: number, confirmed = true, steps = 0): DailyCalories => ({
+  date, caloriesConsumed: consumed, caloriesBurned: 0, steps, confirmed, userId: 1,
 });
 
 function renderBilan(entries: DailyCalories[], user: Partial<User> = {}) {
@@ -65,5 +65,17 @@ describe('BilanPage — calculs', () => {
     renderBilan([], { startWeight: 60, currentWeight: 60, weightGoal: 65 });
     await waitFor(() => expect(screen.getByText(/prise de poids/)).toBeInTheDocument());
     expect(screen.queryByText(/poids cible atteint/)).not.toBeInTheDocument();
+  });
+
+  it('calcule les kcal des pas d\'un jour passe avec le poids de ce jour-la', async () => {
+    // Pesée à 140 kg le 01/07, puis 76 kg aujourd'hui (05/07) : le 03/07 se calcule à 140 kg.
+    (weighInApi.getAll as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: 1, date: '2026-07-01', weight: 140 },
+      { id: 2, date: '2026-07-05', weight: 76 },
+    ]);
+    renderBilan([day('2026-07-03', 2000, true, 8000)]);
+
+    // 4 000 pas effectifs × (140 / 70) × 0,025 = 200 kcal → net 1 800 (et non 1 891 à 76 kg)
+    expect(await screen.findByText(/1\s?800/)).toBeInTheDocument();
   });
 });
