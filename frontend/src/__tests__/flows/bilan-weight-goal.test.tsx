@@ -63,8 +63,9 @@ describe('BilanPage — cap sur le poids cible', () => {
       { id: 2, date: '2026-07-05', weight: 76 }, // 3 kg en 28 j → rythme rapide
     ]);
     renderBilan();
-    await waitFor(() => expect(screen.getByText("cap sur l'objectif")).toBeInTheDocument());
-    expect(screen.getByText('en avance')).toBeInTheDocument();
+    // La carte s'affiche d'abord avec l'estimation du plan, puis passe au rythme réel une
+    // fois les pesées chargées : on attend ce second état au lieu de le supposer immédiat.
+    expect(await screen.findByText('en avance')).toBeInTheDocument();
     expect(screen.getByText(/au rythme du plan/)).toBeInTheDocument();
   });
 });
