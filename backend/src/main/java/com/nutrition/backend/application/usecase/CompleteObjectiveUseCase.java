@@ -4,6 +4,7 @@ import com.nutrition.backend.domain.entity.Objective;
 import com.nutrition.backend.domain.entity.ObjectiveCompletion;
 import com.nutrition.backend.domain.exception.ObjectiveAccessDeniedException;
 import com.nutrition.backend.domain.exception.ObjectiveNotFoundException;
+import com.nutrition.backend.domain.exception.ObjectiveNotScheduledException;
 import com.nutrition.backend.domain.model.CompletionSource;
 import com.nutrition.backend.domain.ports.ObjectiveCompletionRepository;
 import com.nutrition.backend.domain.ports.ObjectiveRepository;
@@ -38,6 +39,9 @@ public class CompleteObjectiveUseCase {
 
         if (!objective.getUserId().equals(userId)) {
             throw new ObjectiveAccessDeniedException(objectiveId);
+        }
+        if (!objective.isScheduledOn(date)) {
+            throw new ObjectiveNotScheduledException(objectiveId);
         }
 
         // Insertion idempotente : plus de check-then-act. Deux appels concurrents

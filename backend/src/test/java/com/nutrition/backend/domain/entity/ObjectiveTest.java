@@ -31,4 +31,11 @@ class ObjectiveTest {
         assertThat(objective(0, "CUSTOM").isAutoCompletableOn(MONDAY)).isFalse();
         assertThat(objective(-1, "CUSTOM").isAutoCompletableOn(MONDAY)).isFalse();
     }
+
+    @Test
+    void should_be_scheduled_on_its_day_or_every_day_whatever_its_type() {
+        assertThat(objective(0, "CUSTOM").isScheduledOn(MONDAY)).isTrue();
+        assertThat(objective(0, "CUSTOM").isScheduledOn(MONDAY.plusDays(1))).isFalse();
+        assertThat(objective(-1, "CUSTOM").isScheduledOn(MONDAY.plusDays(3))).isTrue();
+    }
 }

@@ -196,6 +196,16 @@ class ObjectiveControllerTest {
 
     @Test
     @WithMockUser(username = "user")
+    void should_return_400_when_checking_an_objective_on_a_day_it_is_not_planned_for() throws Exception {
+        org.mockito.Mockito.doThrow(new com.nutrition.backend.domain.exception.ObjectiveNotScheduledException(5L))
+                .when(completeObjectiveUseCase).execute(anyLong(), anyLong(), any());
+
+        mockMvc.perform(post("/api/objectives/5/completions/2026-06-10").with(csrf()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
     void should_return_completions_map_indexed_by_date_when_authenticated_user_queries_a_date_range() throws Exception {
         Map<String, List<Long>> completions = Map.of(
                 "2026-06-03", List.of(10L, 11L),

@@ -20,7 +20,8 @@ class CompleteObjectiveUseCaseTest {
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 2L;
     private static final Long OBJECTIVE_ID = 5L;
-    private static final LocalDate DATE = LocalDate.of(2026, 6, 10);
+    // Jeudi : jour prévu des objectifs de test (dayOfWeek = 3).
+    private static final LocalDate DATE = LocalDate.of(2026, 6, 11);
 
     FakeObjectiveRepository objectiveRepository;
     FakeObjectiveCompletionRepository objectiveCompletionRepository;
@@ -131,5 +132,26 @@ class CompleteObjectiveUseCaseTest {
 
         assertThatThrownBy(() -> useCase.executeAutomatic(OBJECTIVE_ID, USER_ID, DATE))
                 .isInstanceOf(ObjectiveAccessDeniedException.class);
+    }
+
+    // ── Un objectif ne se coche que le jour prévu ───────────────────────────
+
+    @Test
+    void should_reject_checking_an_objective_on_a_day_it_is_not_planned_for() {
+        objectiveRepository.add(new Objective(OBJECTIVE_ID, USER_ID, 3, "Running", 1, "SPORT", 30)); // jeudi
+
+        assertThatThrownBy(() -> useCase.execute(OBJECTIVE_ID, USER_ID, DATE.minusDays(1)))     // mercredi
+                .isInstanceOf(com.nutrition.backend.domain.exception.ObjectiveNotScheduledException.class);
+        assertThat(objectiveCompletionRepository.getAll()).isEmpty();
+    }
+
+    @Test
+    void should_accept_checking_a_daily_objective_on_any_day() {
+        objectiveRepository.add(new Objective(OBJECTIVE_ID, USER_ID, -1, "Boire 2 L", 1, "CUSTOM", null));
+
+        useCase.execute(OBJECTIVE_ID, USER_ID, DATE.minusDays(1));
+        useCase.execute(OBJECTIVE_ID, USER_ID, DATE.plusDays(2));
+
+        assertThat(objectiveCompletionRepository.getAll()).hasSize(2);
     }
 }

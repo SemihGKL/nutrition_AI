@@ -30,9 +30,14 @@ public final class Objective {
     public String getType() { return type; }
     public Integer getTargetValue() { return targetValue; }
 
-    /** Seuls les objectifs SPORT se cochent tout seuls, le jour prévu ou tous les jours (-1). */
-    public boolean isAutoCompletableOn(LocalDate date) {
+    /** Prévu ce jour-là : son jour de la semaine, ou tous les jours (-1). */
+    public boolean isScheduledOn(LocalDate date) {
         int dow = date.getDayOfWeek().getValue() - 1; // 0 = lundi … 6 = dimanche
-        return "SPORT".equals(type) && (dayOfWeek == dow || dayOfWeek == -1);
+        return dayOfWeek == dow || dayOfWeek == -1;
+    }
+
+    /** Seuls les objectifs SPORT se cochent tout seuls, les jours où ils sont prévus. */
+    public boolean isAutoCompletableOn(LocalDate date) {
+        return "SPORT".equals(type) && isScheduledOn(date);
     }
 }
