@@ -19,7 +19,7 @@ vi.mock('../../auth/session', () => ({
 }));
 
 import { dailyApi } from '../../api/daily';
-import { useDailyEntry, waitForPendingDailySaves } from '../../hooks/useDailyEntry';
+import { useDailyEntry, waitForPendingDailySaves, clearDailySaveState } from '../../hooks/useDailyEntry';
 import type { DailyCalories, DailyRecap } from '../../types/api';
 
 const TODAY = '2026-06-22';
@@ -63,6 +63,7 @@ function deferred<T>() {
 describe('useDailyEntry', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearDailySaveState();
   });
 
   afterEach(() => {
@@ -604,6 +605,154 @@ describe('useDailyEntry', () => {
 
       expect(result.current.error).toBeNull();
       expect(result.current.entry).toEqual(mockEntry);
+    });
+  });
+
+  describe('revue : echecs, rechargements et anciennes saisies', () => {
+    it('retrouve une saisie non enregistree apres avoir quitte puis rouvert le dashboard', async () => {
+      vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
+      vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+      vi.mocked(dailyApi.save).mockRejectedValueOnce(new Error('offline'));
+
+      const first = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+      act(() => { first.result.current.setMeal('dinner', 600); });
+      first.unmount();                                  // changement d'onglet : envoi… qui échoue
+      await act(async () => { await waitForPendingDailySaves(); });
+
+      const second = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(second.result.current.isLoading).toBe(false));
+
+      expect(second.result.current.entry?.meals?.dinner).toBe(600);
+      expect(second.result.current.saveFailed).toBe(true);
+
+      vi.mocked(dailyApi.save).mockImplementation(async e => e);
+      await act(async () => { await second.result.current.retrySave(); });
+      const saves = vi.mocked(dailyApi.save).mock.calls;
+      expect(saves[saves.length - 1][0].meals?.dinner).toBe(600);
+      expect(second.result.current.saveFailed).toBe(false);
+    });
+
+    it('ne renvoie pas un echec deja remplace par une sauvegarde plus recente en cours', async () => {
+      const inFlight = deferred<DailyCalories>();
+      vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
+      vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+      vi.mocked(dailyApi.save)
+        .mockRejectedValueOnce(new Error('offline'))   // A échoue
+        .mockReturnValueOnce(inFlight.promise)          // B part et reste en vol
+        .mockImplementation(async e => e);
+
+      const { result } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      vi.useFakeTimers();
+      act(() => { result.current.setMeal('lunch', 500); });           // A
+      await act(async () => { vi.advanceTimersByTime(800); });
+      act(() => { result.current.setMeal('lunch', 700); });           // B
+      await act(async () => { vi.advanceTimersByTime(800); });
+      vi.useRealTimers();
+
+      act(() => { result.current.retrySave(); });                    // l'utilisateur réessaie
+      await act(async () => { inFlight.resolve(vi.mocked(dailyApi.save).mock.calls[1][0]); });
+      await act(async () => { await waitForPendingDailySaves(); });
+
+      const lunches = vi.mocked(dailyApi.save).mock.calls.map(c => c[0].meals?.lunch);
+      expect(lunches[lunches.length - 1]).toBe(700);                                 // B reste la dernière version
+      expect(result.current.entry?.meals?.lunch).toBe(700);
+    });
+
+    it('attend la sauvegarde en cours du jour avant de le recharger', async () => {
+      const save = deferred<DailyCalories>();
+      vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
+      vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+      vi.mocked(dailyApi.save).mockReturnValueOnce(save.promise);
+
+      const first = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+      act(() => { first.result.current.setMeal('lunch', 650); });
+      first.unmount();                                                 // envoi au démontage, en vol
+      vi.mocked(dailyApi.getByDate).mockClear();
+
+      renderHook(() => useDailyEntry(USER_ID, TODAY));                 // retour immédiat sur Jour
+      await act(async () => { await Promise.resolve(); });
+      expect(vi.mocked(dailyApi.getByDate)).not.toHaveBeenCalled();
+
+      await act(async () => { save.resolve(vi.mocked(dailyApi.save).mock.calls[0][0]); });
+      await waitFor(() => expect(vi.mocked(dailyApi.getByDate)).toHaveBeenCalledTimes(1));
+    });
+
+    it('ne modifie pas une ancienne saisie sans detail quand un repas reste a 0', async () => {
+      vi.mocked(dailyApi.getByDate).mockResolvedValue({ ...mockEntry, caloriesConsumed: 1800 });
+      vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+
+      const { result } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      vi.useFakeTimers();
+      act(() => { result.current.setMeal('lunch', 0); });            // case cochée puis décochée
+      await act(async () => { vi.advanceTimersByTime(800); });
+      vi.useRealTimers();
+
+      expect(result.current.entry?.caloriesConsumed).toBe(1800);
+      expect(vi.mocked(dailyApi.save)).not.toHaveBeenCalled();
+    });
+
+    it('ne cree pas de journee vide quand on coche puis decoche sur un jour sans saisie', async () => {
+      vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
+
+      const { result } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      vi.useFakeTimers();
+      act(() => { result.current.setBurned(0); });
+      act(() => { result.current.setMeal('dinner', 0); });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      vi.useRealTimers();
+
+      expect(result.current.entry).toBeNull();
+      expect(vi.mocked(dailyApi.save)).not.toHaveBeenCalled();
+    });
+
+    it('envoie aussitot la derniere version quand la page passe en arriere-plan pendant une sauvegarde', async () => {
+      const inFlight = deferred<DailyCalories>();
+      vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
+      vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+      vi.mocked(dailyApi.save).mockReturnValueOnce(inFlight.promise).mockImplementation(async e => e);
+
+      const { result } = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      vi.useFakeTimers();
+      act(() => { result.current.setMeal('lunch', 500); });
+      await act(async () => { vi.advanceTimersByTime(800); });        // 1re sauvegarde en vol
+      vi.useRealTimers();
+      act(() => { result.current.setMeal('dinner', 600); });          // version plus récente
+
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      try {
+        await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+      } finally {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+      }
+
+      // iOS peut tuer l'app aussitôt : la dernière version part sans attendre la 1re.
+      expect(vi.mocked(dailyApi.save)).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(dailyApi.save).mock.calls[1][0].meals).toMatchObject({ lunch: 500, dinner: 600 });
+      inFlight.resolve(vi.mocked(dailyApi.save).mock.calls[0][0]);
+    });
+
+    it('oublie les echecs a la deconnexion (clearDailySaveState)', async () => {
+      vi.mocked(dailyApi.getByDate).mockResolvedValue(null);
+      vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+      vi.mocked(dailyApi.save).mockRejectedValueOnce(new Error('offline'));
+      const first = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+      act(() => { first.result.current.setMeal('dinner', 600); });
+      first.unmount();
+      await act(async () => { await waitForPendingDailySaves(); });
+
+      clearDailySaveState();
+
+      const second = renderHook(() => useDailyEntry(USER_ID, TODAY));
+      await waitFor(() => expect(second.result.current.isLoading).toBe(false));
+      expect(second.result.current.entry).toBeNull();
+      expect(second.result.current.saveFailed).toBe(false);
     });
   });
 });

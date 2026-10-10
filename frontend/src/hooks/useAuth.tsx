@@ -13,6 +13,7 @@ import { refreshSession } from '../api/client';
 import { authApi } from '../api/auth';
 import { sessionBus } from '../auth/sessionBus';
 import { attachDeviceToCurrentUser, detachDeviceFromCurrentUser } from '../push/deviceSubscription';
+import { clearDailySaveState } from './useDailyEntry';
 
 interface AuthState {
   token: string | null;
@@ -79,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await detachDeviceFromCurrentUser().catch(() => {});
     // Révoque le refresh token côté serveur (fire-and-forget), efface localement tout de suite.
     authApi.logout().catch(() => {});
+    // Une saisie non enregistrée de ce compte ne doit pas repartir sous le compte suivant.
+    clearDailySaveState();
     clearAuthSession();
     setState({ token: null, user: null, isLoading: false, sessionExpired: false });
   }, []);

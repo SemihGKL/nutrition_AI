@@ -7,9 +7,11 @@ vi.mock('../../push/deviceSubscription', () => ({
 }));
 vi.mock('../../api/auth', () => ({ authApi: { logout: vi.fn() } }));
 vi.mock('../../api/client', () => ({ refreshSession: vi.fn() }));
+vi.mock('../../hooks/useDailyEntry', () => ({ clearDailySaveState: vi.fn() }));
 
 import { attachDeviceToCurrentUser, detachDeviceFromCurrentUser } from '../../push/deviceSubscription';
 import { authApi } from '../../api/auth';
+import { clearDailySaveState } from '../../hooks/useDailyEntry';
 import { AuthProvider, useAuth } from '../../hooks/useAuth';
 import { readPersistedToken } from '../../auth/session';
 import type { User } from '../../types/api';
@@ -64,5 +66,15 @@ describe('AuthProvider — appareil et notifications', () => {
 
     expect(readPersistedToken()).toBeNull();
     expect(screen.getByTestId('state')).toHaveTextContent('deconnecte');
+  });
+
+  it('oublie les sauvegardes non abouties a la deconnexion (rien ne repart sous le compte suivant)', async () => {
+    vi.mocked(detachDeviceFromCurrentUser).mockResolvedValue(undefined);
+    render(<AuthProvider><Probe /></AuthProvider>);
+    act(() => { auth.login('jwt-token', user); });
+
+    await act(async () => { await auth.logout(); });
+
+    expect(clearDailySaveState).toHaveBeenCalledTimes(1);
   });
 });

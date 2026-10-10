@@ -108,7 +108,8 @@ describe('dailyApi', () => {
 
     await dailyApi.save(entry);
 
-    expect(vi.mocked(api.post).mock.calls[0][2]).toEqual({ keepalive: true });
+    expect(vi.mocked(api.post).mock.calls[0][2]).toMatchObject({ keepalive: true });
+    expect(vi.mocked(api.post).mock.calls[0][2]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it('getRecap calls GET /api/daily-kcal/{date}/recap with the exact date string', async () => {

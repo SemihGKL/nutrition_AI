@@ -1,6 +1,8 @@
 import { api, ApiError } from './client';
 import type { DailyCalories, DailyRecap } from '../types/api';
 
+const SAVE_TIMEOUT_MS = 15_000;
+
 export const dailyApi = {
   getByDate: (date: string): Promise<DailyCalories | null> =>
     api.get<DailyCalories>(`/api/daily-kcal/${date}`).catch(e => {
@@ -20,7 +22,11 @@ export const dailyApi = {
       steps: entry.steps,
       caloriesBurned: entry.caloriesBurned,
       confirmed: entry.confirmed,
-    }, { keepalive: true }), // la requête doit survivre au passage en arrière-plan / à la fermeture
+    }, {
+      keepalive: true, // la requête doit survivre au passage en arrière-plan / à la fermeture
+      // Une requête sans réponse ne doit pas bloquer indéfiniment la file de sauvegarde.
+      signal: AbortSignal.timeout(SAVE_TIMEOUT_MS),
+    }),
 
   getRecap: (date: string): Promise<DailyRecap> =>
     api.get<DailyRecap>(`/api/daily-kcal/${date}/recap`),
