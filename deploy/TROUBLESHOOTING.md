@@ -69,6 +69,25 @@ plante après le fork (`Type=simple`). Toujours confirmer avec §3 (health direc
 
 ---
 
+## Déploiement raté : retour arrière automatique
+
+Depuis `deploy/release.sh`, une release est déposée **à côté** de la version en place
+(`/opt/nutritionIA/app.jar.new`, `/opt/nutritionIA/frontend-new/`), puis :
+
+- backend sain (`/actuator/health` = 200) → front publié, ancienne version gardée en
+  `/opt/nutritionIA/app.jar.prev` ;
+- backend KO → `app.jar.prev` est restauré et redémarré, le front n'est pas touché, le
+  job GitHub échoue (les logs du service sont dans la sortie de l'étape « Release »).
+
+Revenir à la main à la version précédente (si `app.jar.prev` existe encore) :
+
+```bash
+cd /opt/nutritionIA && mv -f app.jar.prev app.jar && sudo systemctl restart nutritionIA
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/actuator/health   # attendu : 200
+```
+
+Le script est testé sur un faux VPS : `bash deploy/tests/release.test.sh`.
+
 ## Incident du 07/2026 — post-mortem
 
 **Symptôme** : 502 à la création de compte. **En réalité** : le backend n'avait
