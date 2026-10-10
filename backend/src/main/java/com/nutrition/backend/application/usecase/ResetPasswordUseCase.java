@@ -4,6 +4,7 @@ import com.nutrition.backend.domain.entity.PasswordResetToken;
 import com.nutrition.backend.domain.exception.InvalidPasswordResetTokenException;
 import com.nutrition.backend.domain.ports.PasswordEncoderPort;
 import com.nutrition.backend.domain.ports.PasswordResetTokenRepository;
+import com.nutrition.backend.domain.ports.RefreshTokenRepository;
 import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.service.PasswordPolicy;
 
@@ -13,11 +14,14 @@ public class ResetPasswordUseCase {
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoderPort passwordEncoder;
     private final PasswordPolicy passwordPolicy;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public ResetPasswordUseCase(UserRepository userRepository,
                                 PasswordResetTokenRepository tokenRepository,
                                 PasswordEncoderPort passwordEncoder,
-                                PasswordPolicy passwordPolicy) {
+                                PasswordPolicy passwordPolicy,
+                                RefreshTokenRepository refreshTokenRepository) {
+        this.refreshTokenRepository = refreshTokenRepository;
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -41,5 +45,9 @@ public class ResetPasswordUseCase {
         var usedToken = new PasswordResetToken(
                 resetToken.id(), resetToken.userId(), resetToken.token(), resetToken.expiresAt(), true);
         tokenRepository.save(usedToken);
+
+        // Nouveau mot de passe = toutes les sessions ouvertes sont coupées (dont une session
+        // volée, qui sinon se prolongerait indéfiniment par rotation du refresh token).
+        refreshTokenRepository.deleteByUserId(user.getId());
     }
 }

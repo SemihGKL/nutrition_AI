@@ -6,6 +6,7 @@ import com.nutrition.backend.application.usecase.SendSupportMessageUseCase;
 import com.nutrition.backend.domain.ports.EmailPort;
 import com.nutrition.backend.domain.ports.PasswordEncoderPort;
 import com.nutrition.backend.domain.ports.PasswordResetTokenRepository;
+import com.nutrition.backend.domain.ports.RefreshTokenRepository;
 import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.service.MbrCalculator;
 import com.nutrition.backend.domain.service.PasswordPolicy;
@@ -45,8 +46,10 @@ public class DomainConfig {
     public ResetPasswordUseCase resetPasswordUseCase(UserRepository userRepository,
                                                      PasswordResetTokenRepository tokenRepository,
                                                      PasswordEncoderPort passwordEncoder,
-                                                     PasswordPolicy passwordPolicy) {
-        return new ResetPasswordUseCase(userRepository, tokenRepository, passwordEncoder, passwordPolicy);
+                                                     PasswordPolicy passwordPolicy,
+                                                     RefreshTokenRepository refreshTokenRepository) {
+        return new ResetPasswordUseCase(userRepository, tokenRepository, passwordEncoder, passwordPolicy,
+                refreshTokenRepository);
     }
 
     @Bean

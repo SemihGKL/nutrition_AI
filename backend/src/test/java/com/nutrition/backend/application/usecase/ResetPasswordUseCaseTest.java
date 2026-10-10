@@ -2,6 +2,8 @@ package com.nutrition.backend.application.usecase;
 
 import com.nutrition.backend.application.usecase.fake.FakePasswordEncoder;
 import com.nutrition.backend.application.usecase.fake.FakePasswordResetTokenRepository;
+import com.nutrition.backend.application.usecase.fake.FakeRefreshTokenRepository;
+import com.nutrition.backend.domain.entity.RefreshToken;
 import com.nutrition.backend.application.usecase.fake.FakeUserRepository;
 import com.nutrition.backend.domain.entity.PasswordResetToken;
 import com.nutrition.backend.domain.entity.User;
@@ -23,6 +25,7 @@ class ResetPasswordUseCaseTest {
     private FakeUserRepository userRepository;
     private FakePasswordResetTokenRepository tokenRepository;
     private FakePasswordEncoder passwordEncoder;
+    private FakeRefreshTokenRepository refreshTokenRepository;
     private PasswordPolicy passwordPolicy;
     private ResetPasswordUseCase useCase;
 
@@ -32,7 +35,9 @@ class ResetPasswordUseCaseTest {
         tokenRepository = new FakePasswordResetTokenRepository();
         passwordEncoder = new FakePasswordEncoder();
         passwordPolicy = new PasswordPolicy();
-        useCase = new ResetPasswordUseCase(userRepository, tokenRepository, passwordEncoder, passwordPolicy);
+        refreshTokenRepository = new FakeRefreshTokenRepository();
+        useCase = new ResetPasswordUseCase(userRepository, tokenRepository, passwordEncoder, passwordPolicy,
+                refreshTokenRepository);
     }
 
     private User buildUser(String email) {
@@ -155,5 +160,47 @@ class ResetPasswordUseCaseTest {
         // Then — le mot de passe de l'utilisateur n'a pas été modifié
         User userAfter = userRepository.findById(user.getId()).orElseThrow();
         assertThat(userAfter.getPasswordHash()).isEqualTo(originalPasswordHash);
+    }
+
+    // ── Sessions ouvertes coupées ───────────────────────────────────────────
+
+    private void openSession(Long userId, String token) {
+        refreshTokenRepository.save(new RefreshToken(null, userId, token, Instant.now().plus(7, ChronoUnit.DAYS)));
+    }
+
+    @Test
+    void should_revoke_every_open_session_of_the_user_when_password_is_reset() {
+        User user = userRepository.save(buildUser("alice@example.com"));
+        tokenRepository.save(validToken(user.getId()));
+        openSession(user.getId(), "session-phone");
+        openSession(user.getId(), "session-stolen");
+
+        useCase.execute("valid-token-uuid", "new_secure_password");
+
+        assertThat(refreshTokenRepository.findByToken("session-phone")).isEmpty();
+        assertThat(refreshTokenRepository.findByToken("session-stolen")).isEmpty();
+    }
+
+    @Test
+    void should_keep_sessions_of_other_users_when_password_is_reset() {
+        User alice = userRepository.save(buildUser("alice@example.com"));
+        User bob = userRepository.save(buildUser("bob@example.com"));
+        tokenRepository.save(validToken(alice.getId()));
+        openSession(bob.getId(), "session-bob");
+
+        useCase.execute("valid-token-uuid", "new_secure_password");
+
+        assertThat(refreshTokenRepository.findByToken("session-bob")).isPresent();
+    }
+
+    @Test
+    void should_keep_sessions_when_the_reset_is_rejected() {
+        User user = userRepository.save(buildUser("alice@example.com"));
+        tokenRepository.save(validToken(user.getId()));
+        openSession(user.getId(), "session-phone");
+
+        assertThatThrownBy(() -> useCase.execute("valid-token-uuid", "123"))
+                .isInstanceOf(com.nutrition.backend.domain.exception.WeakPasswordException.class);
+        assertThat(refreshTokenRepository.findByToken("session-phone")).isPresent();
     }
 }
