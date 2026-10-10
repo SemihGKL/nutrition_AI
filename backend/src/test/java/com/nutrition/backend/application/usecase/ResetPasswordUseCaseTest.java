@@ -203,4 +203,29 @@ class ResetPasswordUseCaseTest {
                 .isInstanceOf(com.nutrition.backend.domain.exception.WeakPasswordException.class);
         assertThat(refreshTokenRepository.findByToken("session-phone")).isPresent();
     }
+
+    // ── Lien à usage unique, même en cas de requêtes simultanées ─────────────
+
+    @Test
+    void should_reject_the_reset_when_another_request_used_the_link_in_the_meantime() {
+        User user = userRepository.save(buildUser("alice@example.com"));
+        tokenRepository.save(validToken(user.getId()));
+        tokenRepository.simulateConcurrentUseAfterRead("valid-token-uuid");
+
+        assertThatThrownBy(() -> useCase.execute("valid-token-uuid", "new_secure_password"))
+                .isInstanceOf(InvalidPasswordResetTokenException.class);
+        assertThat(userRepository.findById(user.getId()).orElseThrow().getPasswordHash())
+                .isEqualTo("encoded_old_password");
+    }
+
+    @Test
+    void should_not_consume_the_link_when_the_new_password_is_too_weak() {
+        User user = userRepository.save(buildUser("alice@example.com"));
+        tokenRepository.save(validToken(user.getId()));
+
+        assertThatThrownBy(() -> useCase.execute("valid-token-uuid", "123"))
+                .isInstanceOf(com.nutrition.backend.domain.exception.WeakPasswordException.class);
+
+        useCase.execute("valid-token-uuid", "new_secure_password"); // le lien sert encore
+    }
 }

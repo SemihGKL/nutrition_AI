@@ -1,6 +1,5 @@
 package com.nutrition.backend.application.usecase;
 
-import com.nutrition.backend.domain.entity.PasswordResetToken;
 import com.nutrition.backend.domain.exception.InvalidPasswordResetTokenException;
 import com.nutrition.backend.domain.ports.PasswordEncoderPort;
 import com.nutrition.backend.domain.ports.PasswordResetTokenRepository;
@@ -38,13 +37,15 @@ public class ResetPasswordUseCase {
 
         passwordPolicy.validate(newPassword);
 
+        // Réservation atomique du lien : deux requêtes simultanées ne peuvent pas toutes
+        // les deux l'utiliser (la vérification ci-dessus seule laisse passer la seconde).
+        if (!tokenRepository.claim(token)) {
+            throw new InvalidPasswordResetTokenException();
+        }
+
         var user = userRepository.findById(resetToken.userId()).orElseThrow();
         String encoded = passwordEncoder.encode(newPassword);
         userRepository.save(user.withPasswordHash(encoded));
-
-        var usedToken = new PasswordResetToken(
-                resetToken.id(), resetToken.userId(), resetToken.token(), resetToken.expiresAt(), true);
-        tokenRepository.save(usedToken);
 
         // Nouveau mot de passe = toutes les sessions ouvertes sont coupées (dont une session
         // volée, qui sinon se prolongerait indéfiniment par rotation du refresh token).

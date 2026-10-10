@@ -239,6 +239,24 @@ class PersistenceConcurrencyTest {
         assertThat(pushSubscriptionRepository.findByUserId(bob.getId())).isEmpty();
     }
 
+    // ── Lien de réinitialisation : réservé une seule fois ───────────────────
+
+    @Autowired com.nutrition.backend.domain.ports.PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Test
+    void should_claim_a_reset_link_only_once_even_concurrently() {
+        User u = newPersistedUser("reset-claim@test.com");
+        passwordResetTokenRepository.save(new com.nutrition.backend.domain.entity.PasswordResetToken(
+                null, u.getId(), "claim-me", Instant.now().plus(1, ChronoUnit.HOURS), false));
+
+        var claims = java.util.stream.IntStream.range(0, 8).parallel()
+                .mapToObj(i -> passwordResetTokenRepository.claim("claim-me"))
+                .filter(Boolean::booleanValue)
+                .count();
+
+        assertThat(claims).isEqualTo(1);
+    }
+
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────
 
     @Test

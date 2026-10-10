@@ -5,6 +5,7 @@ import com.nutrition.backend.domain.ports.PasswordResetTokenRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Component
@@ -34,6 +35,12 @@ public class PasswordResetTokenRepositoryAdapter implements PasswordResetTokenRe
     @Transactional
     public void deleteByUserId(Long userId) {
         jpaRepository.deleteByUserId(userId);
+    }
+
+    @Override
+    @Transactional
+    public boolean claim(String token) {
+        return jpaRepository.claim(token, Instant.now()) == 1;
     }
 
     private PasswordResetToken toDomain(PasswordResetTokenJpaEntity entity) {

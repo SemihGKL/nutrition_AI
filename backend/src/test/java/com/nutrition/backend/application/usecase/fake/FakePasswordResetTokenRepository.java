@@ -13,6 +13,15 @@ import java.util.concurrent.atomic.AtomicLong;
 public class FakePasswordResetTokenRepository implements PasswordResetTokenRepository {
 
     private final Map<String, PasswordResetToken> store = new HashMap<>();
+    private final java.util.Set<String> usedRightAfterRead = new java.util.HashSet<>();
+
+    /**
+     * Simule une requête concurrente : la prochaine lecture renvoie le jeton encore
+     * valide, mais une autre requête l'utilise aussitôt après.
+     */
+    public void simulateConcurrentUseAfterRead(String token) {
+        usedRightAfterRead.add(token);
+    }
     private final AtomicLong idSequence = new AtomicLong(1);
 
     @Override
@@ -25,7 +34,19 @@ public class FakePasswordResetTokenRepository implements PasswordResetTokenRepos
 
     @Override
     public Optional<PasswordResetToken> findByToken(String token) {
-        return Optional.ofNullable(store.get(token));
+        Optional<PasswordResetToken> read = Optional.ofNullable(store.get(token));
+        if (usedRightAfterRead.remove(token)) {
+            read.ifPresent(t -> store.put(token, new PasswordResetToken(t.id(), t.userId(), t.token(), t.expiresAt(), true)));
+        }
+        return read;
+    }
+
+    @Override
+    public boolean claim(String token) {
+        PasswordResetToken t = store.get(token);
+        if (t == null || !t.isValid()) return false;
+        store.put(token, new PasswordResetToken(t.id(), t.userId(), t.token(), t.expiresAt(), true));
+        return true;
     }
 
     @Override
