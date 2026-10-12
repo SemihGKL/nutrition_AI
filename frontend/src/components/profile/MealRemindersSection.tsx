@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { mealRemindersApi, type MealReminder, type MealReminderMeal } from '../../api/mealReminders';
 
 const MEALS: Record<MealReminderMeal, { label: string; switchLabel: string; timeLabel: string }> = {
@@ -14,24 +14,62 @@ interface Props {
 }
 
 /** Rappels pour renseigner chaque repas à son heure habituelle (si le repas n'est pas déjà saisi). */
+// La roue d'heure d'iOS émet un changement à chaque cran : on attend qu'elle s'arrête.
+const TIME_SAVE_DELAY_MS = 600;
+
 export function MealRemindersSection({ notificationsEnabled }: Props) {
   const [reminders, setReminders] = useState<MealReminder[]>([]);
   const [saveFailed, setSaveFailed] = useState(false);
+  // Dernière configuration confirmée par le serveur : base d'un retour arrière.
+  const confirmedRef = useRef<MealReminder[]>([]);
+  // Une requête à la fois, dans l'ordre : une réponse ancienne n'écrase jamais une plus récente.
+  const chainRef = useRef<Promise<void>>(Promise.resolve());
+  const latestRequestRef = useRef(0);
+  const timeTimersRef = useRef(new Map<MealReminderMeal, ReturnType<typeof setTimeout>>());
 
   useEffect(() => {
-    mealRemindersApi.getAll().then(setReminders).catch(() => {});
+    mealRemindersApi.getAll()
+      .then(loaded => { confirmedRef.current = loaded; setReminders(loaded); })
+      .catch(() => {});
+    const timers = timeTimersRef.current;
+    return () => timers.forEach(clearTimeout);
   }, []);
 
-  const save = async (changed: MealReminder) => {
-    const previous = reminders;
-    setReminders(rs => rs.map(r => (r.meal === changed.meal ? changed : r)));
+  const persist = (changed: MealReminder) => {
+    const request = ++latestRequestRef.current;
     setSaveFailed(false);
-    try {
-      setReminders(await mealRemindersApi.update([changed]));
-    } catch {
-      setReminders(previous);
-      setSaveFailed(true);
-    }
+    chainRef.current = chainRef.current.then(async () => {
+      try {
+        const saved = await mealRemindersApi.update([changed]);
+        confirmedRef.current = saved;
+        if (request === latestRequestRef.current) setReminders(saved);
+      } catch {
+        if (request === latestRequestRef.current) {
+          setReminders(confirmedRef.current);
+          setSaveFailed(true);
+        }
+      }
+    });
+  };
+
+  const show = (changed: MealReminder) =>
+    setReminders(rs => rs.map(r => (r.meal === changed.meal ? changed : r)));
+
+  const toggle = (reminder: MealReminder) => {
+    const changed = { ...reminder, enabled: !reminder.enabled };
+    show(changed);
+    persist(changed);
+  };
+
+  const changeTime = (reminder: MealReminder, time: string) => {
+    const changed = { ...reminder, time };
+    show(changed);
+    const timers = timeTimersRef.current;
+    clearTimeout(timers.get(reminder.meal));
+    timers.set(reminder.meal, setTimeout(() => {
+      timers.delete(reminder.meal);
+      persist(changed);
+    }, TIME_SAVE_DELAY_MS));
   };
 
   return (
@@ -60,7 +98,7 @@ export function MealRemindersSection({ notificationsEnabled }: Props) {
               aria-label={meal.timeLabel}
               value={r.time}
               disabled={!notificationsEnabled}
-              onChange={e => { if (e.target.value) save({ ...r, time: e.target.value }); }}
+              onChange={e => { if (e.target.value) changeTime(r, e.target.value); }}
               style={{
                 fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--ink)',
                 background: 'var(--paper-2)', border: '1px solid var(--hairline-2)',
@@ -72,7 +110,7 @@ export function MealRemindersSection({ notificationsEnabled }: Props) {
               aria-checked={r.enabled}
               aria-label={meal.switchLabel}
               disabled={!notificationsEnabled}
-              onClick={() => save({ ...r, enabled: !r.enabled })}
+              onClick={() => toggle(r)}
               style={{
                 width: 42, height: 24, borderRadius: 999, border: 'none', padding: 2,
                 background: r.enabled ? 'var(--orange)' : 'var(--paper-3)',
