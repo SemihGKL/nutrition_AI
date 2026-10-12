@@ -18,7 +18,10 @@ public class FakeDailyEntryRepository implements DailyEntryRepository {
 
     @Override
     public DailyEntry save(DailyEntry entry) {
-        Long id = entry.getId() != null ? entry.getId() : idSequence.getAndIncrement();
+        // Même sémantique que l'adapter réel : upsert sur (utilisateur, date).
+        Long id = findByUserIdAndDate(entry.getUserId(), entry.getDate())
+                .map(DailyEntry::getId)
+                .orElseGet(() -> entry.getId() != null ? entry.getId() : idSequence.getAndIncrement());
         DailyEntry stored = DailyEntry.reconstitute(id, entry.getUserId(), entry.getDate(),
                 entry.getCaloriesConsumed(), entry.getMeals(), entry.getSteps(),
                 entry.getCaloriesBurned(), entry.isConfirmed());
