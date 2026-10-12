@@ -338,4 +338,40 @@ class DailyCaloriesControllerTest {
                 {"date":"2026-09-29","caloriesConsumed":20001,"steps":0,"caloriesBurned":0,"confirmed":false}
                 """).andExpect(status().isBadRequest());
     }
+
+    // ── Anciennes saisies sans détail par repas ─────────────────────────────
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_keep_the_direct_total_of_a_legacy_entry_when_meals_are_all_zero() throws Exception {
+        // L'app renvoie les repas reçus ({0,0,0,0}) avec le total d'origine en modifiant les pas.
+        LocalDate date = LocalDate.of(2026, 9, 20);
+        when(recordDailyEntryUseCase.execute(any(DailyEntry.class))).thenReturn(entry(10L, date, 1800, 9000, 0, false));
+
+        postBody("""
+                {"date":"2026-09-20","caloriesConsumed":1800,"steps":9000,"caloriesBurned":0,"confirmed":false,
+                 "meals":{"breakfast":0,"lunch":0,"snack":0,"dinner":0}}
+                """).andExpect(status().isOk());
+
+        ArgumentCaptor<DailyEntry> captor = ArgumentCaptor.forClass(DailyEntry.class);
+        verify(recordDailyEntryUseCase).execute(captor.capture());
+        assertThat(captor.getValue().getCaloriesConsumed()).isEqualTo(1800);
+        assertThat(captor.getValue().getMeals()).isEqualTo(Meals.none());
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    void should_record_zero_when_every_meal_is_unchecked_on_a_detailed_entry() throws Exception {
+        LocalDate date = LocalDate.of(2026, 9, 29);
+        when(recordDailyEntryUseCase.execute(any(DailyEntry.class))).thenReturn(entry(10L, date, 0, 0, 0, false));
+
+        postBody("""
+                {"date":"2026-09-29","caloriesConsumed":0,"steps":0,"caloriesBurned":0,"confirmed":false,
+                 "meals":{"breakfast":0,"lunch":0,"snack":0,"dinner":0}}
+                """).andExpect(status().isOk());
+
+        ArgumentCaptor<DailyEntry> captor = ArgumentCaptor.forClass(DailyEntry.class);
+        verify(recordDailyEntryUseCase).execute(captor.capture());
+        assertThat(captor.getValue().getCaloriesConsumed()).isZero();
+    }
 }

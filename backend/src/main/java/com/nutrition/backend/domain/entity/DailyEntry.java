@@ -40,8 +40,9 @@ public final class DailyEntry {
     }
 
     /**
-     * Reconstitution depuis la persistance : les entrées antérieures à la saisie
-     * par repas n'ont aucun repas renseigné et conservent leur total stocké.
+     * Entrée à partir d'un total direct et d'un détail par repas éventuel : sans aucun repas
+     * renseigné (saisie antérieure à la saisie par repas), le total direct est conservé ;
+     * sinon le total est la somme des repas. Sert à la relecture en base et à la saisie.
      */
     public static DailyEntry reconstitute(Long id, Long userId, LocalDate date, int storedCaloriesConsumed,
                                           Meals meals, int steps, int caloriesBurned, boolean confirmed) {

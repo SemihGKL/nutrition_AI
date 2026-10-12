@@ -27,11 +27,13 @@ public final class DailyEntryMapper {
     }
 
     public static DailyEntry toDomain(CreateDailyCaloriesRequest request, Long userId) {
-        return Optional.ofNullable(request.meals())
-                .map(m -> new DailyEntry(request.id(), userId, request.date(),
-                        new Meals(m.breakfast(), m.lunch(), m.snack(), m.dinner()),
-                        request.steps(), request.caloriesBurned(), request.confirmed()))
-                .orElseGet(() -> new DailyEntry(request.id(), userId, request.date(),
-                        request.caloriesConsumed(), request.steps(), request.caloriesBurned(), request.confirmed()));
+        // Repas absents (ancien client) ou tous à 0 (ancienne saisie sans détail renvoyée
+        // telle quelle par l'app) : le total direct reçu fait foi. Sinon, le total est la
+        // somme des repas. Même règle qu'à la relecture en base (DailyEntry.reconstitute).
+        Meals meals = Optional.ofNullable(request.meals())
+                .map(m -> new Meals(m.breakfast(), m.lunch(), m.snack(), m.dinner()))
+                .orElseGet(Meals::none);
+        return DailyEntry.reconstitute(request.id(), userId, request.date(), request.caloriesConsumed(),
+                meals, request.steps(), request.caloriesBurned(), request.confirmed());
     }
 }
