@@ -59,6 +59,9 @@ jobs:
       - name: Tests du script de mise en ligne (faux VPS)
         run: bash deploy/tests/release.test.sh
 
+      - name: Tests du script de version (faux dépôt distant)
+        run: bash deploy/tests/release-version.test.sh
+
   deploy:
     name: Build & Deploy
     needs: [test, frontend-test, deploy-script-test]   # aucun déploiement si un test échoue
@@ -89,14 +92,12 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      # Règle de version : chaque push sur main = +0.1 (0.1.0 → 0.2.0 → 0.3.0…).
-      # Le numéro n'est commité qu'après un déploiement réussi (étape « Commit version »).
+      # Règle de version : chaque push sur main = +0.1 (0.1.0 → 0.2.0 → 0.3.0…), calculée à
+      # partir du numéro déjà publié sur main (cf. deploy/release-version.sh). Le numéro
+      # n'est commité qu'après un déploiement réussi (étape « Commit version »).
       - name: Bump version
         id: version
-        working-directory: frontend
-        run: |
-          npm version minor --no-git-tag-version
-          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(bash deploy/release-version.sh next)" >> "$GITHUB_OUTPUT"
 
       - name: Build frontend
         working-directory: frontend
@@ -153,7 +154,4 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/package.json frontend/package-lock.json
-          git commit -m "chore(release): v${{ steps.version.outputs.version }} [skip ci]"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          bash deploy/release-version.sh publish "${{ steps.version.outputs.version }}"

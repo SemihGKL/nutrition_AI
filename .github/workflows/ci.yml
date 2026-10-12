@@ -62,3 +62,6 @@ jobs:
 
       - name: Tests du script de mise en ligne (faux VPS)
         run: bash deploy/tests/release.test.sh
+
+      - name: Tests du script de version (faux dépôt distant)
+        run: bash deploy/tests/release-version.test.sh
