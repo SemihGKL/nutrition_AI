@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UrlPathHelper;
 
 import java.io.IOException;
 import java.util.Set;
@@ -37,6 +38,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     // Rafraîchissement de session : compteur à part et plus large, pour qu'un usage normal
     // (plusieurs onglets, un foyer derrière la même box) n'empiète pas sur les connexions.
     private static final String REFRESH_PATH = "/api/auth/refresh";
+
+    private static final UrlPathHelper PATH_HELPER = new UrlPathHelper();
 
     private final RateLimiter authLimiter;
     private final RateLimiter supportLimiter;
@@ -69,7 +72,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (!"POST".equalsIgnoreCase(request.getMethod())) {
             return null;
         }
-        String path = request.getRequestURI();
+        // Chemin décodé et nettoyé, comme le voient Spring MVC et Spring Security : comparer
+        // l'URI brute laissait « /api/auth/%6Cogin » ou « /api/auth/login;x » échapper à la limite.
+        String path = PATH_HELPER.getLookupPathForRequest(request);
         if (RATE_LIMITED_AUTH_PATHS.contains(path)) {
             return authLimiter;
         }

@@ -165,4 +165,28 @@ class RateLimitFilterTest {
 
         assertThat(login.getStatus()).isEqualTo(200);
     }
+
+    // ── Chemin décodé : une URL encodée ne contourne pas la limite ───────────
+
+    @Test
+    void should_count_a_percent_encoded_login_path_as_a_login_attempt() throws Exception {
+        RateLimitFilter filter = filter(1, 5);
+        filter.doFilter(request("POST", "/api/auth/login", "1.2.3.4"), new MockHttpServletResponse(), new MockFilterChain());
+
+        MockHttpServletResponse blocked = new MockHttpServletResponse();
+        filter.doFilter(request("POST", "/api/auth/%6Cogin", "1.2.3.4"), blocked, new MockFilterChain());
+
+        assertThat(blocked.getStatus()).isEqualTo(429);
+    }
+
+    @Test
+    void should_count_a_login_path_with_path_parameters_as_a_login_attempt() throws Exception {
+        RateLimitFilter filter = filter(1, 5);
+        filter.doFilter(request("POST", "/api/auth/login", "1.2.3.4"), new MockHttpServletResponse(), new MockFilterChain());
+
+        MockHttpServletResponse blocked = new MockHttpServletResponse();
+        filter.doFilter(request("POST", "/api/auth/login;x=1", "1.2.3.4"), blocked, new MockFilterChain());
+
+        assertThat(blocked.getStatus()).isEqualTo(429);
+    }
 }
