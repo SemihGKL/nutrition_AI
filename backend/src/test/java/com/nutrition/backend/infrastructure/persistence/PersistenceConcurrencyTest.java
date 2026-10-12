@@ -16,6 +16,7 @@ import com.nutrition.backend.domain.ports.RefreshTokenRepository;
 import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.ports.WeightEntryRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -24,6 +25,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.DockerClientFactory;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -35,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
- * Tests d'intégration sur un vrai Postgres (Testcontainers). Skip proprement si
+ * Tests d'intégration sur un vrai Postgres (Testcontainers). Ignorés en local si
  * Docker est absent ; s'exécute en CI (ubuntu-latest a Docker).
  *
  * Couvre les comportements que les fakes en HashMap ne peuvent pas reproduire :
@@ -45,8 +47,18 @@ import static org.assertj.core.api.Assertions.assertThatCode;
  */
 @SpringBootTest
 @ActiveProfiles("test")
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
+@EnabledIf("dockerAvailableOrRunningInCi")
 class PersistenceConcurrencyTest {
+
+    /**
+     * En local sans Docker, la classe est ignorée. En CI (variable CI posée par GitHub),
+     * elle est obligatoire : si Docker est injoignable, elle échoue au lieu d'être sautée
+     * sans bruit — c'est le seul test qui joue les migrations sur un vrai Postgres.
+     */
+    static boolean dockerAvailableOrRunningInCi() {
+        return System.getenv("CI") != null || DockerClientFactory.instance().isDockerAvailable();
+    }
 
     @Container
     @ServiceConnection
