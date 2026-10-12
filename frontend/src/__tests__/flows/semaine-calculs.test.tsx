@@ -75,4 +75,10 @@ describe('SemainePage — moyenne et deficit', () => {
     // 200 kcal de pas à 140 kg → moyenne 1 800 (et non 1 891 au poids actuel)
     await waitFor(() => expect(stat('moy.')).toHaveTextContent(/1\s?800/));
   });
+
+  it('affiche le deficit par jour sous la depense du jour (TDEE)', () => {
+    // Femme 30 ans, 165 cm, 76 kg : TDEE ≈ 1 776 ; net 1 500 → déficit ≈ 276 (et non 1 800 − 1 500)
+    renderSemaine([day('2026-07-04', 1500, 0, true)]);
+    expect(stat('déficit/j')).toHaveTextContent('−276');
+  });
 });

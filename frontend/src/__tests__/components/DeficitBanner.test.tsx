@@ -42,4 +42,19 @@ describe('DeficitBanner', () => {
     render(<DeficitBanner net={2000} target={1800} tdee={2000} />);
     expect(screen.getByText('Objectif dépassé — déficit préservé')).toBeInTheDocument();
   });
+
+  it('estime la graisse perdue a partir du deficit sous le TDEE', () => {
+    render(<DeficitBanner net={1500} target={1800} tdee={2000} />);
+    expect(screen.getByText(/≈ −65 g de graisse/)).toBeInTheDocument(); // 500 / 7,7
+  });
+
+  it('estime la graisse prise a partir du depassement du TDEE', () => {
+    render(<DeficitBanner net={2200} target={1800} tdee={2000} />);
+    expect(screen.getByText(/≈ \+26 g de graisse/)).toBeInTheDocument(); // 200 / 7,7
+  });
+
+  it('estime la graisse perdue aussi quand l\'objectif est depasse mais le deficit preserve', () => {
+    render(<DeficitBanner net={1900} target={1800} tdee={2000} />);
+    expect(screen.getByText(/≈ −13 g de graisse/)).toBeInTheDocument(); // 100 / 7,7
+  });
 });

@@ -38,6 +38,10 @@ export function DeficitBanner({ net, target, tdee }: Props) {
   const tint  = TINT[state];
 
   const diffFromTarget = Math.abs(net - target);
+  // Graisse estimée à partir du déficit réel sous la dépense du jour (1 g ≈ 7,7 kcal) ;
+  // sans TDEE connu, on retombe sur l'écart à l'objectif.
+  const energyBalance = tdee !== undefined ? tdee - net : target - net;
+  const fatGrams = Math.round(Math.abs(energyBalance) / 7.7);
 
   const title = {
     'on-track': 'Objectif respecté',
@@ -52,9 +56,9 @@ export function DeficitBanner({ net, target, tdee }: Props) {
   }[state];
 
   const footnote = {
-    'on-track': `≈ −${Math.round(diffFromTarget / 7.7)} g de graisse · continue comme ça pour progresser`,
-    'partial':  '',
-    'over':     `≈ +${Math.round(diffFromTarget / 7.7)} g de graisse · un écart ponctuel, ça se rattrape`,
+    'on-track': `≈ −${fatGrams} g de graisse · continue comme ça pour progresser`,
+    'partial':  `≈ −${fatGrams} g de graisse · le déficit du jour est préservé`,
+    'over':     `≈ +${fatGrams} g de graisse · un écart ponctuel, ça se rattrape`,
   }[state];
 
   return (

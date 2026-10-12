@@ -103,11 +103,10 @@ export function ConfirmationView({ date, recap, streak, onEdit, onOpenCalendar }
               : <><span className="tabular" style={{ fontWeight: 600 }}>+{formatNumber(absEcart)} kcal</span>{isPartial ? ' · tu restes en déficit' : ' au-dessus de ton objectif'}</>
             }
           </div>
-          {!isPartial && (
-            <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 3 }}>
-              ≈ {isOnTarget ? '−' : '+'}{Math.round(absEcart / 7.7)} g de graisse
-            </div>
-          )}
+          {/* Graisse estimée à partir du déficit réel sous la dépense du jour (TDEE). */}
+          <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 3 }}>
+            ≈ {recap.deficit >= 0 ? '−' : '+'}{Math.round(Math.abs(recap.deficit) / 7.7)} g de graisse
+          </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div className="tabular" style={{ fontSize: 22, fontWeight: 700, color: resultColor, lineHeight: 1 }}>

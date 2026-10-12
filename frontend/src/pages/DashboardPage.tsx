@@ -16,6 +16,8 @@ import { useDailyEntry } from '../hooks/useDailyEntry';
 import { computeStreak } from '../hooks/useStreak';
 import { isoToday, addDays, stepsToKcal } from '../utils/format';
 import { computeMbr, computeTdee } from '../utils/mbr';
+import { useWeighIns } from '../hooks/useWeighIns';
+import { weightOn } from '../utils/bodyWeight';
 import type { DailyCalories } from '../types/api';
 import type { StreakInfo } from '../hooks/useStreak';
 
@@ -29,6 +31,7 @@ interface Props {
 
 export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Props) {
   const { user } = useAuth();
+  const weighIns = useWeighIns(!!user);
   const [viewedDate, setViewedDate] = useState(isoToday);
   const [isEditing, setIsEditing] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -48,14 +51,18 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
   const burned   = entry?.caloriesBurned ?? 0;
   const target   = user?.dailyCalorieGoal ?? 1800;
 
-  const stepsKcal = stepsToKcal(steps, user?.currentWeight ?? 70);
+  // Poids du jour affiché (un jour passé se calcule avec le poids de l'époque, comme le récap).
+  const weightKg  = user
+    ? weightOn(viewedDate, weighIns, user.startWeight ?? user.currentWeight, user.currentWeight)
+    : 70;
+  const stepsKcal = stepsToKcal(steps, weightKg);
   const net       = calories - stepsKcal - burned;
 
   // Référence du déficit : la dépense du jour (TDEE), celle du recap serveur dès qu'il existe.
   const tdeeValue = recap?.tdee !== undefined
     ? Math.round(recap.tdee)
     : user
-      ? Math.round(computeTdee(computeMbr(user.currentWeight ?? 70, user.height ?? 170, user.age ?? 30, user.gender as 'MALE' | 'FEMALE')))
+      ? Math.round(computeTdee(computeMbr(weightKg, user.height ?? 170, user.age ?? 30, user.gender as 'MALE' | 'FEMALE')))
       : undefined;
 
   const openCalendar = () => setIsCalendarOpen(true);
@@ -137,7 +144,7 @@ export function DashboardPage({ onTabChange, allEntries, onEntriesRefresh }: Pro
           calories={calories}
           steps={steps}
           burned={burned}
-          weightKg={user?.currentWeight ?? 70}
+          weightKg={weightKg}
           stepsGoal={user?.dailyStepsGoal}
           isSaving={isSaving}
           saveFailed={saveFailed}

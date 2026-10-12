@@ -20,6 +20,10 @@ vi.mock('../../api/daily', () => ({
   },
 }));
 
+vi.mock('../../api/weighIn', () => ({
+  weighInApi: { getAll: vi.fn().mockResolvedValue([]), getLatest: vi.fn(), save: vi.fn() },
+}));
+
 vi.mock('../../auth/session', () => ({
   readPersistedToken: () => 'mock-token',
   hasActiveSession: () => true,
@@ -37,6 +41,7 @@ vi.mock('../../utils/format', async () => {
 
 import { useAuth } from '../../hooks/useAuth';
 import { dailyApi } from '../../api/daily';
+import { weighInApi } from '../../api/weighIn';
 import { DashboardPage } from '../../pages/DashboardPage';
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
@@ -335,5 +340,26 @@ describe('DashboardPage — parcours saisie quotidienne', () => {
     expect(screen.queryByRole('button', { name: /Mettre à jour/ })).not.toBeInTheDocument();
     expect(screen.getByText(/Déficit de/)).toHaveTextContent('450 kcal');
     expect(onEntriesRefresh).toHaveBeenCalled();
+  });
+
+  it('calcule les kcal des pas d\'un jour passe avec le poids de ce jour-la', async () => {
+    const YESTERDAY = '2026-06-21';
+    vi.mocked(weighInApi.getAll).mockResolvedValue([
+      { id: 1, date: '2026-06-20', weight: 140 },
+      { id: 2, date: TODAY, weight: 72 },
+    ]);
+    vi.mocked(dailyApi.getByDate).mockImplementation(async date => (date === YESTERDAY ? {
+      id: 3, date: YESTERDAY, caloriesConsumed: 2000, caloriesBurned: 0, steps: 8000, confirmed: false, userId: 1,
+      meals: { breakfast: 0, lunch: 2000, snack: 0, dinner: 0 },
+    } : null));
+    vi.mocked(dailyApi.getRecap).mockResolvedValue(mockRecap);
+    vi.mocked(dailyApi.getAll).mockResolvedValue([]);
+
+    render(<DashboardPage onTabChange={vi.fn()} allEntries={[]} onEntriesRefresh={vi.fn()} />);
+    await waitFor(() => screen.getByText('saisie du jour'));
+    await userEvent.click(screen.getByRole('button', { name: 'jour précédent' }));
+
+    // 4 000 pas effectifs × (140 / 70) × 0,025 = 200 kcal (et non 103 au poids actuel)
+    await waitFor(() => expect(screen.getByText('pas (est.)').previousElementSibling).toHaveTextContent('200'));
   });
 });

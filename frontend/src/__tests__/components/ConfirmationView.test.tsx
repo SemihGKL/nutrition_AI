@@ -145,4 +145,17 @@ describe('ConfirmationView — bannière résultat', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Changer de jour' }));
     expect(onOpenCalendar).toHaveBeenCalledTimes(1);
   });
+
+  it('estime la graisse a partir du deficit reel sous le TDEE, pas de l\'ecart a l\'objectif', () => {
+    render(
+      <ConfirmationView
+        date="2026-06-22"
+        recap={recap({ netCalories: 1800, dailyCalorieGoal: 1800, tdee: 2200, deficit: 400 })}
+        streak={streak}
+        onEdit={vi.fn()}
+        onOpenCalendar={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/≈ −52 g de graisse/)).toBeInTheDocument(); // 400 / 7,7
+  });
 });

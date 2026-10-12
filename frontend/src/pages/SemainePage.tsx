@@ -5,6 +5,7 @@ import { PipStrip } from '../components/ui/PipStrip';
 import { useAuth } from '../hooks/useAuth';
 import { useWeighIns } from '../hooks/useWeighIns';
 import { weightOn } from '../utils/bodyWeight';
+import { computeMbr, computeTdee } from '../utils/mbr';
 import type { DailyCalories } from '../types/api';
 import type { StreakInfo } from '../hooks/useStreak';
 import {
@@ -24,6 +25,8 @@ interface BarDay {
   label: string;
   date: string;
   net: number;
+  /** Déficit du jour sous la dépense du jour (TDEE − net). */
+  deficit: number;
   met: boolean;
   future: boolean;
   /** Une saisie existe ce jour-là (un net ≤ 0 n'est pas une journée vide). */
@@ -59,10 +62,13 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
         : 70;
       const steps = stepsToKcal(entry?.steps ?? 0, weightKg);
       const net = entry ? entry.caloriesConsumed - (entry.caloriesBurned ?? 0) - steps : 0;
+      const tdee = user
+        ? computeTdee(computeMbr(weightKg, user.height, user.age, user.gender as 'MALE' | 'FEMALE'))
+        : 2000;
       const hasEntry = !!entry;
       const met = hasEntry && net <= target;
       const partial = hasEntry && !entry.confirmed;
-      return { label: frenchDayLetter(date), date, net, met, future: isFuture, hasEntry, partial };
+      return { label: frenchDayLetter(date), date, net, deficit: tdee - net, met, future: isFuture, hasEntry, partial };
     });
   }, [windowStart, entryMap, target, today, weighIns, user]);
 
@@ -72,7 +78,10 @@ export function SemainePage({ onTabChange, streakCount, streak, allEntries }: Pr
   const avgKcal = hasAverage
     ? Math.round(confirmedBars.reduce((s, b) => s + b.net, 0) / confirmedBars.length)
     : 0;
-  const avgDeficit = target - avgKcal;
+  // Déficit moyen sous la dépense du jour (TDEE), comme partout ailleurs dans l'app.
+  const avgDeficit = hasAverage
+    ? Math.round(confirmedBars.reduce((s, b) => s + b.deficit, 0) / confirmedBars.length)
+    : 0;
 
   const maxVal = Math.max(target * 1.25, ...bars.map(b => b.net));
 
