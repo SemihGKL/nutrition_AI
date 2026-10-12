@@ -116,4 +116,15 @@ class RequestPasswordResetUseCaseTest {
 
         assertThat(emailPort.wasEmailSent()).isTrue();
     }
+
+    @Test
+    void should_send_the_reset_link_to_the_exact_legacy_account_when_two_differ_only_by_case() {
+        userRepository.save(buildUser("dup@example.com"));
+        User upper = userRepository.save(buildUser("Dup@example.com"));
+
+        useCase.execute("Dup@example.com", "https://app.example.com");
+
+        assertThat(tokenRepository.getAll()).singleElement()
+                .extracting(com.nutrition.backend.domain.entity.PasswordResetToken::userId).isEqualTo(upper.getId());
+    }
 }

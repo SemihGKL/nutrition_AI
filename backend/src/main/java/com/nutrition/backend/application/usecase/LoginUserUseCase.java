@@ -1,7 +1,6 @@
 package com.nutrition.backend.application.usecase;
 
 import com.nutrition.backend.domain.entity.User;
-import com.nutrition.backend.domain.model.EmailAddress;
 import com.nutrition.backend.domain.ports.PasswordEncoderPort;
 import com.nutrition.backend.domain.ports.UserRepository;
 import org.springframework.stereotype.Component;
@@ -18,7 +17,9 @@ public class LoginUserUseCase {
     }
 
     public User execute(String email, String rawPassword) {
-        User user = userRepository.findByEmail(EmailAddress.normalize(email))
+        // Saisie exacte d'abord (comptes anciens ne différant que par la casse), puis sans
+        // tenir compte de la casse : c'est le contrat de findByEmail.
+        User user = userRepository.findByEmail(email.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Email non enregistré : " + email));
         if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
             throw new IllegalArgumentException("Mot de passe incorrect");
