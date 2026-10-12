@@ -14,6 +14,8 @@ setup() {
   cat > "$ROOT/bin/systemctl" <<'STUB'
 #!/usr/bin/env bash
 echo "$*" >> "$STATE/systemctl.log"
+# Simule un redémarrage refusé (ex. règle sudoers qui ne correspond pas) pour ce JAR.
+if [ -n "${RESTART_REFUSED_FOR:-}" ] && grep -qx "$RESTART_REFUSED_FOR" "$APP_DIR/app.jar"; then exit 1; fi
 cp "$APP_DIR/app.jar" "$STATE/running"
 STUB
   cat > "$ROOT/bin/curl" <<'STUB'
@@ -73,6 +75,26 @@ check "l'ancienne version tourne à nouveau" content_is "$STATE/running" "v1"
 check "le front en place n'est pas touché" content_is "$WEB_DIR/index.html" "index v1"
 check "aucun nouvel asset publié" [ ! -e "$WEB_DIR/assets/new.js" ]
 check "les logs du service sont affichés" grep -q "journal simulé" "$ROOT/out.log"
+
+echo "Redémarrage refusé pour la nouvelle version"
+setup; current_release; new_release "v2"; export RESTART_REFUSED_FOR="v2"
+bash "$SCRIPT" > "$ROOT/out.log" 2>&1; status=$?
+unset RESTART_REFUSED_FOR
+check "le déploiement échoue" [ "$status" -ne 0 ]
+check "l'ancien JAR est remis en place" content_is "$APP_DIR/app.jar" "v1"
+check "l'ancienne version est redémarrée" content_is "$STATE/running" "v1"
+check "le front en place n'est pas touché" content_is "$WEB_DIR/index.html" "index v1"
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Publication du front impossible (backend sain)"
+  setup; current_release; new_release "v2"; chmod -R a-w "$WEB_DIR"
+  bash "$SCRIPT" > "$ROOT/out.log" 2>&1; status=$?
+  chmod -R u+w "$WEB_DIR"
+  check "le déploiement est signalé en échec" [ "$status" -ne 0 ]
+  check "le nouveau backend sain reste en ligne" content_is "$STATE/running" "v2"
+  check "l'ancien front reste servi" content_is "$WEB_DIR/index.html" "index v1"
+  check "le problème est expliqué" grep -q "front" "$ROOT/out.log"
+fi
 
 echo "Fichiers de la release absents"
 setup; current_release
