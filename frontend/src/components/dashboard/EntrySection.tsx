@@ -172,6 +172,8 @@ export function EntrySection({
 function CheckRow({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
   return (
     <button
+      role="checkbox"
+      aria-checked={checked}
       onClick={onToggle}
       style={{
         display: 'flex',

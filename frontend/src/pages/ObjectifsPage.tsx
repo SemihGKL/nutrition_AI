@@ -48,6 +48,7 @@ export function ObjectifsPage({ onTabChange }: Props) {
   const [addingForDay, setAddingForDay] = useState<number | null>(null);
   const [newLabel, setNewLabel] = useState('');
   const [loadError, setLoadError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const suggestions = useMemo(() => buildSuggestions(user?.currentWeight), [user?.currentWeight]);
 
@@ -70,6 +71,8 @@ export function ObjectifsPage({ onTabChange }: Props) {
       setCompletions(fetchedCompletions);
     } catch {
       setLoadError(true);
+    } finally {
+      setIsLoading(false);
     }
   }, [monday, sunday]);
 
@@ -172,6 +175,20 @@ export function ObjectifsPage({ onTabChange }: Props) {
   })();
 
   // ─── render ───────────────────────────────────────────────────────────────────
+
+  // Tant que les objectifs ne sont pas chargés, pas de liste vide : elle inviterait à
+  // recréer des objectifs qui existent déjà.
+  if (isLoading) {
+    return (
+      <PageShell>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-3)', fontSize: 14 }}>
+          chargement…
+        </div>
+        <BottomNav active="objectifs" onChange={onTabChange} />
+        <HomeIndicator />
+      </PageShell>
+    );
+  }
 
   if (loadError) {
     return (

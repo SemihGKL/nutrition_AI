@@ -172,4 +172,14 @@ describe('CalendarModal — navigation entre mois', () => {
 
     expect(screen.getByRole('button', { name: 'mois suivant' })).toBeDisabled();
   });
+
+  it('est annonce comme une boite de dialogue et se ferme avec Echap', async () => {
+    const onClose = vi.fn();
+    render(<CalendarModal selectedDate="2026-06-22" todayDate="2026-06-22" onSelect={vi.fn()} onClose={onClose} />);
+
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
+    await userEvent.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalled();
+  });
 });

@@ -258,4 +258,15 @@ describe('EntrySection — cocher, decocher, recocher', () => {
 
     expect(screen.getByTestId('burned')).toHaveTextContent(/^10000$/);
   });
+
+  it('expose les cases comme de vraies cases a cocher (lecteurs d\'ecran)', async () => {
+    render(<StatefulEntry />);
+    const dinner = screen.getByRole('checkbox', { name: 'Dîner' });
+    expect(dinner).toHaveAttribute('aria-checked', 'false');
+
+    await userEvent.click(dinner);
+
+    expect(screen.getByRole('checkbox', { name: 'Dîner' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('checkbox', { name: 'Séance de sport effectuée' })).toBeInTheDocument();
+  });
 });

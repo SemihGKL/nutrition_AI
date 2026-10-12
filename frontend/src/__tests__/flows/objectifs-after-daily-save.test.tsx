@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, act, waitFor } from '@testing-library/react';
+import { render, act, waitFor, screen } from '@testing-library/react';
 
 vi.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 1, currentWeight: 70 } }) }));
 
@@ -36,6 +36,8 @@ describe('ObjectifsPage — après une saisie du jour', () => {
     render(<ObjectifsPage onTabChange={vi.fn()} />);
     await act(async () => { await Promise.resolve(); });
     expect(vi.mocked(objectivesApi.getCompletions)).not.toHaveBeenCalled();
+    // Pendant l'attente : un chargement, pas une liste vide qui inviterait à recréer des objectifs.
+    expect(screen.getByText('chargement…')).toBeInTheDocument();
 
     await act(async () => { resolveSaves(); });
     await waitFor(() => expect(vi.mocked(objectivesApi.getCompletions)).toHaveBeenCalledTimes(1));

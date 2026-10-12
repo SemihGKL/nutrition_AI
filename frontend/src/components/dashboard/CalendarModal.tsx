@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Chevron } from '../ui/icons';
 import { frenchMonthLabel, monthGrid, shiftMonth } from '../../utils/calendar';
 
@@ -39,6 +39,17 @@ export function CalendarModal({ selectedDate, todayDate, onSelect, onClose }: Pr
 
   const weeks = monthGrid(viewedMonth);
   const month = viewedMonth.slice(0, 7);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Boîte de dialogue accessible : focus à l'ouverture (une seule fois), fermeture avec Échap.
+  useEffect(() => {
+    dialogRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <div
@@ -53,7 +64,13 @@ export function CalendarModal({ selectedDate, todayDate, onSelect, onClose }: Pr
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Choisir un jour"
+        tabIndex={-1}
         style={{
+          outline: 'none',
           background: 'var(--paper)',
           border: '1px solid var(--hairline-2)',
           borderRadius: 'var(--radius-lg)',
