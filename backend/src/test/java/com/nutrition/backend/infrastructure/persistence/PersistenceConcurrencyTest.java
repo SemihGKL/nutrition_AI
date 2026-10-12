@@ -291,6 +291,20 @@ class PersistenceConcurrencyTest {
         assertThat(refreshTokenRepository.findByToken("clear-token")).isPresent();
     }
 
+    @Autowired StoredTokenHashing storedTokenHashing;
+
+    @Test
+    void should_recover_sessions_stored_in_clear_by_an_older_version_after_a_rollback() {
+        User u = newPersistedUser("rollback-session@test.com");
+        // Une version antérieure à V21 (retour arrière) a stocké ce jeton en clair.
+        jdbcTemplate.update("INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, now() + interval '1 day')",
+                u.getId(), "11111111-2222-3333-4444-555555555555");
+
+        storedTokenHashing.hashTokensStoredInClear();
+
+        assertThat(refreshTokenRepository.findByToken("11111111-2222-3333-4444-555555555555")).isPresent();
+    }
+
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────
 
     @Test
