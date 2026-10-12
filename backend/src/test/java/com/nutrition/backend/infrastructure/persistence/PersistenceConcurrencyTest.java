@@ -331,6 +331,23 @@ class PersistenceConcurrencyTest {
         assertThat(weightEntryRepository.existsAfter(u.getId(), first.plusDays(120))).isFalse();
     }
 
+    @Test
+    void should_mark_reminders_already_due_today_as_sent_when_upgrading() throws Exception {
+        User u = newPersistedUser("v23-reminders@test.com");
+        jdbcTemplate.update("INSERT INTO meal_reminders (user_id, meal, reminder_time, enabled) VALUES (?, 'BREAKFAST', '00:00', true)", u.getId());
+        jdbcTemplate.update("INSERT INTO meal_reminders (user_id, meal, reminder_time, enabled) VALUES (?, 'DINNER', '23:59:59', true)", u.getId());
+        jdbcTemplate.update("UPDATE meal_reminders SET last_sent_on = NULL WHERE user_id = ?", u.getId());
+        String v23 = new String(getClass().getResourceAsStream("/db/migration/V23__meal_reminders_already_sent_today.sql").readAllBytes());
+
+        jdbcTemplate.execute(v23);
+
+        // 00:00 est passé (déjà envoyé par l'ancienne version) ; 23:59:59 est encore à venir.
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT last_sent_on IS NOT NULL FROM meal_reminders WHERE user_id = ? AND meal = 'BREAKFAST'", Boolean.class, u.getId())).isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT last_sent_on IS NULL FROM meal_reminders WHERE user_id = ? AND meal = 'DINNER'", Boolean.class, u.getId())).isTrue();
+    }
+
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────
 
     @Test
