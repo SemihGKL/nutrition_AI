@@ -18,6 +18,9 @@ Internet ──HTTPS──▶ nginx ─┬─ /            → /var/www/nutritio
 | `nutritionIA.service` | `/etc/systemd/system/` | Lance le JAR avec le profil `prod` + secrets + heap borné |
 | `nutritionIA.env.example` | `/etc/nutritionIA/nutritionIA.env` (rempli, `chmod 600`) | Profil `prod`, DB, `JWT_SECRET`, SMTP (`MAIL_*`), `APP_BASE_URL` |
 | `nginx-nutritionIA.conf` | `/etc/nginx/sites-available/` | Front statique + proxy `/api` même origine |
+| `release.sh` | `/opt/nutritionIA/` (déposé par la CI) | Mise en ligne : bascule du JAR, sonde readiness, publication du front, retour arrière automatique |
+| `release-version.sh` | (exécuté par la CI) | Numéro de version +0.1 calculé depuis `main`, commit de release |
+| `tests/*.test.sh` | — | Tests des deux scripts (faux VPS, faux dépôt distant), lancés en CI |
 
 ## Étapes
 

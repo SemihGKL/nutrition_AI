@@ -1,7 +1,10 @@
 # Checklist de mise en place du VPS
 
 À faire **une seule fois** sur le VPS avant le premier déploiement. Le workflow
-`deploy.yml` ne fait QUE : build JAR + front → `scp` vers le VPS → `systemctl restart`.
+`deploy.yml` ne fait QUE : tests → build JAR + front → dépôt de la release à côté de la
+version en place (`app.jar.new`, `frontend-new/`) → `deploy/release.sh` (bascule, sonde
+`/actuator/health/readiness`, publication du front, ou retour automatique à la version
+précédente si le backend ne démarre pas).
 Il **n'installe ni la base, ni les secrets, ni le service, ni nginx** — c'est le rôle
 de cette checklist.
 
@@ -72,10 +75,12 @@ sudo chown -R $DEPLOY_USER:$DEPLOY_USER /opt/nutritionIA /var/www/nutritionIA
 ```
 - [ ] Dossiers créés, `DEPLOY_USER` propriétaire de `/opt/nutritionIA` et `/var/www/nutritionIA`.
 
-> **Décision utilisateur du service** : le plus simple est de faire tourner le
-> backend sous `DEPLOY_USER` (il possède déjà le JAR). Dans `nutritionIA.service`,
-> mets `User=DEPLOY_USER`. (Alternative : créer un user dédié `nutritionia` et lui
-> donner le droit de lecture sur `/opt/nutritionIA` + accès au socket/port DB.)
+> **Utilisateur du service** : `nutritionIA.service` tourne sous un user dédié
+> `nutritionia`, qui doit pouvoir **lire** `/opt/nutritionIA/app.jar` (déposé par
+> `DEPLOY_USER`). Les fichiers déposés sont en `0644` avec l'umask par défaut ; si
+> l'umask de `DEPLOY_USER` est restrictif, ajouter `nutritionia` au groupe de
+> `DEPLOY_USER` (`sudo usermod -aG $DEPLOY_USER nutritionia`) ou faire tourner le
+> service sous `DEPLOY_USER` (`User=DEPLOY_USER`).
 
 ## 4. Base de données Postgres (Docker) — NON gérée par deploy.yml
 ```bash
@@ -170,14 +175,14 @@ sudo ufw enable
 ## 9. Premier déploiement
 - [ ] Étapes 1→8 terminées.
 - [ ] Merger la **PR #1** (`develop → main`) — ou `git push origin develop:main` — déclenche `deploy.yml`.
-- [ ] Suivre l'Action GitHub : job `test` (dont les 6 tests Testcontainers) → puis `deploy` (scp + restart + `is-active`).
-- [ ] Sur le VPS : `sudo journalctl -u nutritionIA -f` pendant le redémarrage (voir Flyway migrer V1→V15 puis le démarrage Spring).
+- [ ] Suivre l'Action GitHub : jobs de tests (backend avec Testcontainers, frontend, scripts de déploiement) → puis `deploy` (dépôt de la release + `release.sh`).
+- [ ] Sur le VPS : `sudo journalctl -u nutritionIA -f` pendant le redémarrage (voir Flyway appliquer les migrations jusqu'à la dernière, puis le démarrage Spring).
 
 ## 10. Vérifications post-déploiement (smoke test)
-- [ ] `sudo systemctl is-active nutritionIA` → `active`
+- [ ] `curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/actuator/health/readiness` → `200` (application + base ; le serveur mail n'en fait pas partie)
 - [ ] `curl -sS https://DOMAIN/ | head` → l'index du front
 - [ ] Inscription via l'UI, connexion, saisie d'un jour, pesée → fonctionne
-- [ ] En base : `docker exec -it nutritionIA-db psql -U gkl -d nutritionAI -c "\dt"` → tables présentes (dont `password_reset_tokens`) ; `flyway_schema_history` va jusqu'à **V15**
+- [ ] En base : `docker exec -it nutritionIA-db psql -U gkl -d nutritionAI -c "\dt"` → tables présentes (dont `password_reset_tokens`, `meal_reminders`) ; `flyway_schema_history` va jusqu'à la **dernière migration** du dépôt
 - [ ] Le seed de test (`testuser@example.com`) **n'existe PAS** (confirme le profil `prod`)
 - [ ] **Reset de mot de passe** : depuis l'écran de connexion → « mot de passe oublié ? », saisir un email existant → le mail arrive (vérifier les spams) → le lien ouvre `/reset-password?token=...` → changement de mot de passe OK
 
@@ -192,6 +197,8 @@ sudo ufw enable
 
 ## Rappels / pièges
 - `deploy.yml` ne touche PAS à la DB / aux secrets / au service / à nginx → tout ça = étapes 4→8, manuelles, une fois.
+- Déploiement raté : la version précédente est restaurée automatiquement (voir `TROUBLESHOOTING.md`). Les migrations Flyway, elles, ne sont pas annulées : une version antérieure redémarre sur le schéma plus récent (Flyway ignore les migrations « futures »).
+- La sonde du déploiement est `/actuator/health/readiness` (application + base). La santé globale `/actuator/health` inclut aussi le serveur mail.
 - `JWT_SECRET` < 32 car. → l'app ne démarre pas.
 - `DB_USERNAME`/`DB_PASSWORD` doivent être identiques entre le `.env` docker et `nutritionIA.env`.
 - Reboot du VPS : Postgres revient (`restart: unless-stopped`), et le backend retente au démarrage (`Restart=on-failure`).
