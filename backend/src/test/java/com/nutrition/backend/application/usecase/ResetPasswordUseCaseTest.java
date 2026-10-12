@@ -228,4 +228,12 @@ class ResetPasswordUseCaseTest {
 
         useCase.execute("valid-token-uuid", "new_secure_password"); // le lien sert encore
     }
+
+    @Test
+    void should_reserve_the_link_and_change_the_password_in_a_single_transaction() throws NoSuchMethodException {
+        // Sinon une erreur à l'enregistrement du mot de passe laisserait le lien « utilisé »
+        // sans que le mot de passe ait changé.
+        assertThat(ResetPasswordUseCase.class.getMethod("execute", String.class, String.class)
+                .isAnnotationPresent(org.springframework.transaction.annotation.Transactional.class)).isTrue();
+    }
 }

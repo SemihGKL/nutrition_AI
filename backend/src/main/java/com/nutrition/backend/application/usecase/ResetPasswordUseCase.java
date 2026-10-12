@@ -6,6 +6,7 @@ import com.nutrition.backend.domain.ports.PasswordResetTokenRepository;
 import com.nutrition.backend.domain.ports.RefreshTokenRepository;
 import com.nutrition.backend.domain.ports.UserRepository;
 import com.nutrition.backend.domain.service.PasswordPolicy;
+import org.springframework.transaction.annotation.Transactional;
 
 public class ResetPasswordUseCase {
 
@@ -27,6 +28,9 @@ public class ResetPasswordUseCase {
         this.passwordPolicy = passwordPolicy;
     }
 
+    // Une seule transaction : réservation du lien, nouveau mot de passe, révocation des
+    // sessions. Une erreur au milieu annule tout (le lien reste utilisable).
+    @Transactional
     public void execute(String token, String newPassword) {
         var resetToken = tokenRepository.findByToken(token)
                 .orElseThrow(InvalidPasswordResetTokenException::new);
