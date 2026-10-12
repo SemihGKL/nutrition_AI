@@ -42,8 +42,9 @@ public class GetDailyRecapUseCase {
                 .orElseThrow(() -> new IllegalStateException("User not found for id: " + userId));
 
         // Poids de ce jour-là : le récap d'un jour passé ne bouge pas à chaque pesée.
-        double weightOnDate = BodyWeightHistory.weightOn(date,
-                weightEntryRepository.findByUserIdOrderByDateDesc(userId),
+        double weightOnDate = BodyWeightHistory.weightOn(
+                weightEntryRepository.findLatestOnOrBefore(userId, date),
+                weightEntryRepository.existsAfter(userId, date),
                 user.getStartWeight(), user.getCurrentWeight());
 
         UserProfile profile = new UserProfile(

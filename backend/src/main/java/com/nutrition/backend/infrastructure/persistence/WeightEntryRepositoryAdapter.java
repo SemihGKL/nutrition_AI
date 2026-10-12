@@ -5,7 +5,9 @@ import com.nutrition.backend.domain.ports.WeightEntryRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -33,6 +35,17 @@ public class WeightEntryRepositoryAdapter implements WeightEntryRepository {
                 .orElseThrow(() -> new IllegalStateException(
                         "Pesée introuvable après upsert : userId="
                                 + entry.getUserId() + " date=" + entry.getDate()));
+    }
+
+    @Override
+    public Optional<WeightEntry> findLatestOnOrBefore(Long userId, LocalDate date) {
+        return weeklyWeighInJpaRepository.findFirstByUserIdAndDateLessThanEqualOrderByDateDesc(userId, date)
+                .map(WeightEntryEntityMapper::toDomain);
+    }
+
+    @Override
+    public boolean existsAfter(Long userId, LocalDate date) {
+        return weeklyWeighInJpaRepository.existsByUserIdAndDateAfter(userId, date);
     }
 
     @Override

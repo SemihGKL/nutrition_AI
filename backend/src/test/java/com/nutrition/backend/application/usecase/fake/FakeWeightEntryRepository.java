@@ -3,6 +3,7 @@ package com.nutrition.backend.application.usecase.fake;
 import com.nutrition.backend.domain.entity.WeightEntry;
 import com.nutrition.backend.domain.ports.WeightEntryRepository;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -34,5 +35,17 @@ public class FakeWeightEntryRepository implements WeightEntryRepository {
         }
         result.sort(Comparator.comparing(WeightEntry::getDate).reversed());
         return result;
+    }
+
+    @Override
+    public java.util.Optional<WeightEntry> findLatestOnOrBefore(Long userId, LocalDate date) {
+        return store.values().stream()
+                .filter(e -> e.getUserId().equals(userId) && !e.getDate().isAfter(date))
+                .max(java.util.Comparator.comparing(WeightEntry::getDate));
+    }
+
+    @Override
+    public boolean existsAfter(Long userId, LocalDate date) {
+        return store.values().stream().anyMatch(e -> e.getUserId().equals(userId) && e.getDate().isAfter(date));
     }
 }

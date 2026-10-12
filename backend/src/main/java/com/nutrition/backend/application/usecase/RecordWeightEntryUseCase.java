@@ -30,8 +30,7 @@ public class RecordWeightEntryUseCase {
         if (entry.getDate().isAfter(LocalDate.now(clock).plusDays(1))) {
             throw new IllegalArgumentException("La date de pesée ne peut pas être dans le futur");
         }
-        boolean isMostRecent = weightEntryRepository.findByUserIdOrderByDateDesc(entry.getUserId()).stream()
-                .noneMatch(existing -> existing.getDate().isAfter(entry.getDate()));
+        boolean isMostRecent = !weightEntryRepository.existsAfter(entry.getUserId(), entry.getDate());
 
         WeightEntry saved = weightEntryRepository.save(entry);
         // Une pesée plus ancienne complète l'historique sans changer le poids actuel.

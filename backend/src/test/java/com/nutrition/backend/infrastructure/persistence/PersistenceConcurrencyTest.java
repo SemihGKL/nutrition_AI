@@ -317,6 +317,20 @@ class PersistenceConcurrencyTest {
         assertThat(refreshTokenRepository.findByToken("11111111-2222-3333-4444-555555555555")).isPresent();
     }
 
+    @Test
+    void should_find_the_weigh_in_of_an_old_day_even_with_many_later_weigh_ins() {
+        User u = newPersistedUser("many-weighins@test.com");
+        LocalDate first = LocalDate.of(2026, 1, 1);
+        weightEntryRepository.save(new WeightEntry(null, u.getId(), first, 95.0, null));
+        for (int i = 1; i <= 120; i++) {                       // plus que les 104 lues par la liste
+            weightEntryRepository.save(new WeightEntry(null, u.getId(), first.plusDays(i), 95.0 - i * 0.1, null));
+        }
+
+        assertThat(weightEntryRepository.findLatestOnOrBefore(u.getId(), first)).map(WeightEntry::getWeight).contains(95.0);
+        assertThat(weightEntryRepository.existsAfter(u.getId(), first)).isTrue();
+        assertThat(weightEntryRepository.existsAfter(u.getId(), first.plusDays(120))).isFalse();
+    }
+
     // ── C4 : verrouillage optimiste sur users ───────────────────────────────
 
     @Test

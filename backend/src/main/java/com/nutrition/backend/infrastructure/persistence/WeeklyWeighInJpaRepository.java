@@ -14,6 +14,10 @@ public interface WeeklyWeighInJpaRepository extends JpaRepository<WeeklyWeighInJ
 
     Optional<WeeklyWeighInJpaEntity> findByUserIdAndDate(Long userId, LocalDate date);
 
+    Optional<WeeklyWeighInJpaEntity> findFirstByUserIdAndDateLessThanEqualOrderByDateDesc(Long userId, LocalDate date);
+
+    boolean existsByUserIdAndDateAfter(Long userId, LocalDate date);
+
     /** Upsert atomique sur (user_id, date) : la re-pesée du même jour met à jour au lieu de dupliquer. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
