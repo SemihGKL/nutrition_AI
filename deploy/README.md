@@ -57,3 +57,23 @@ Mettre en place un `pg_dump` planifié copié hors-VPS, par ex. dans une crontab
 ```
 
 (et synchroniser `/var/backups` vers un stockage externe).
+
+## Reprise des totaux effacés (bug v0.2.0 → v0.4.0)
+
+Jusqu'à la v0.4.0, modifier les pas, la séance ou confirmer une **ancienne** saisie (total
+direct, sans détail par repas) remettait son total à 0 en base. Corrigé en v0.5.0 ; les totaux
+déjà effacés se reprennent d'une sauvegarde faite **avant** la perte, depuis le clone du dépôt
+sur le VPS (`cd /opt/nutritionIA/src && git pull`), **après** le déploiement de la v0.5.0 :
+
+```bash
+bash deploy/restore-legacy-totals.sh /var/backups/nutritionAI-2026-10-01.sql.gz          # simulation
+bash deploy/restore-legacy-totals.sh /var/backups/nutritionAI-2026-10-01.sql.gz --apply  # restauration
+```
+
+- Seuls les jours **aujourd'hui vides** (total et repas à 0) qui étaient une ancienne saisie
+  avec un total dans la sauvegarde sont restaurés ; tout ce qui a été saisi depuis est conservé.
+  Relançable sans risque. Comptes rapprochés par email.
+- Dump SQL attendu (`.sql` / `.sql.gz`) ; un dump au format personnalisé se convertit avec
+  `pg_restore -f sauvegarde.sql <fichier>`.
+- Connexion par défaut : `docker exec -i nutritionIA-db psql -U gkl -d nutritionAI`, à adapter
+  via `PSQL=…` (ex. `PSQL="sudo docker exec -i nutritionIA-db psql -U gkl -d nutritionAI"`).

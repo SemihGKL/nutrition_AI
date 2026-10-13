@@ -57,6 +57,14 @@ jobs:
   deploy-script-test:
     name: Script de déploiement
     runs-on: ubuntu-latest
+    services:
+      postgres:   # base jetable pour le script de reprise des données (même version que la prod)
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: [ '5432:5432' ]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v7
 
@@ -65,3 +73,11 @@ jobs:
 
       - name: Tests du script de version (faux dépôt distant)
         run: bash deploy/tests/release-version.test.sh
+
+      - name: Tests du script de reprise des totaux (vrai Postgres)
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash deploy/tests/restore-legacy-totals.test.sh
