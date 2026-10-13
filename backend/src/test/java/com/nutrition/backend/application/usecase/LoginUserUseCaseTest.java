@@ -81,14 +81,4 @@ class LoginUserUseCaseTest {
 
         assertThat(result.getId()).isEqualTo(saved.getId());
     }
-
-    @Test
-    void should_still_authenticate_each_of_two_legacy_accounts_differing_only_by_case() {
-        // Comptes créés avant la normalisation : seule la casse les distingue.
-        User lower = userRepository.save(buildUser("dup@example.com", "secret123"));
-        User upper = userRepository.save(buildUser("Dup@example.com", "secret456"));
-
-        assertThat(loginUserUseCase.execute("Dup@example.com", "secret456").getId()).isEqualTo(upper.getId());
-        assertThat(loginUserUseCase.execute("dup@example.com", "secret123").getId()).isEqualTo(lower.getId());
-    }
 }

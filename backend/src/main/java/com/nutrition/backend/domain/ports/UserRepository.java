@@ -10,7 +10,7 @@ public interface UserRepository {
     Optional<User> findById(Long id);
     /**
      * Recherche insensible à la casse (des comptes anciens peuvent contenir des majuscules) ;
-     * en cas de variantes de casse, la correspondance exacte est préférée.
+     * deux comptes ne peuvent pas différer que par la casse.
      */
     Optional<User> findByEmail(String email);
     List<User> findAll();

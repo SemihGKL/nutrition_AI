@@ -20,6 +20,7 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -231,11 +232,11 @@ class PersistenceConcurrencyTest {
     }
 
     @Test
-    void should_prefer_exact_email_match_when_case_variants_exist() {
+    void should_reject_second_account_when_email_differs_only_by_case() {
         newPersistedUser("dup@test.com");
-        User exact = newPersistedUser("Dup@Test.com");
 
-        assertThat(userRepository.findByEmail("Dup@Test.com")).map(User::getId).contains(exact.getId());
+        assertThatThrownBy(() -> newPersistedUser("Dup@Test.com"))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     // ── Abonnements push : appareil partagé ─────────────────────────────────

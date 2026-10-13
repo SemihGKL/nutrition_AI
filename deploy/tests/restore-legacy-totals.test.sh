@@ -42,8 +42,9 @@ add_user() { # $1 = base, $2 = email → id
 }
 
 # Prod avant la perte : anciennes saisies (total direct, repas à 0) et une saisie par repas.
+# $1 = dernière migration appliquée en prod (toutes par défaut).
 prod_before_loss() {
-  new_db PROD
+  new_db PROD "${1:-9999}"
   ALICE=$(add_user "$PROD" alice@example.com); BOB=$(add_user "$PROD" bob@example.com)
   sql "$PROD" "INSERT INTO daily_calories (user_id, date, calories_consumed, is_confirmed, steps, calories_burned, lunch_kcal) VALUES
     ($ALICE, '2026-09-01', 1800, false, 5000, 0, 0),
@@ -130,8 +131,22 @@ check "termine avec succès" [ "$status" -eq 0 ]
 check "Alice retrouve son total (rapprochement par email)" day_is "$ALICE" 2026-09-01 calories_consumed 1800
 check "Bob retrouve son total" day_is "$BOB" 2026-09-01 calories_consumed 2200
 
-echo "Email ambigu en prod (deux comptes ne différant que par la casse)"
-prod_before_loss; pg_dump -d "$PROD" -f "$WORK/sauvegarde.sql"; prod_after_loss
+echo "Email ambigu dans la sauvegarde (comptes ne différant que par la casse, possible avant V24)"
+new_db AMBIGUOUS 23
+OLD_ALICE=$(add_user "$AMBIGUOUS" alice@example.com); OLD_ALICE_BIS=$(add_user "$AMBIGUOUS" Alice@Example.com)
+OLD_BOB=$(add_user "$AMBIGUOUS" bob@example.com)
+sql "$AMBIGUOUS" "INSERT INTO daily_calories (user_id, date, calories_consumed, is_confirmed, steps, calories_burned) VALUES
+  ($OLD_ALICE, '2026-09-01', 1800, false, 0, 0), ($OLD_ALICE_BIS, '2026-09-01', 2500, false, 0, 0),
+  ($OLD_BOB, '2026-09-01', 2200, false, 0, 0)"
+pg_dump -d "$AMBIGUOUS" -f "$WORK/ambigue.sql"
+prod_before_loss; prod_after_loss
+restore "$WORK/ambigue.sql" --apply
+check "termine avec succès" [ "$status" -eq 0 ]
+check "le compte ambigu n'est pas restauré" day_is "$ALICE" 2026-09-01 calories_consumed 0
+check "les autres comptes le sont" day_is "$BOB" 2026-09-01 calories_consumed 2200
+
+echo "Email ambigu en prod (v0.5.0 : migrations jusqu'à V23, avant l'unicité sans casse)"
+prod_before_loss 23; pg_dump -d "$PROD" -f "$WORK/sauvegarde.sql"; prod_after_loss
 ALICE_BIS=$(add_user "$PROD" Alice@Example.com)
 sql "$PROD" "INSERT INTO daily_calories (user_id, date, calories_consumed, is_confirmed, steps, calories_burned)
              VALUES ($ALICE_BIS, '2026-09-01', 0, false, 0, 0)"

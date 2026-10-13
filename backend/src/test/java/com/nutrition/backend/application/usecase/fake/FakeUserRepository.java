@@ -34,13 +34,10 @@ public class FakeUserRepository implements UserRepository {
 
     @Override
     public Optional<User> findByEmail(String email) {
-        // Même contrat que l'adapter : exact d'abord, sinon insensible à la casse.
+        // Même contrat que l'adapter : insensible à la casse.
         return store.values().stream()
-                .filter(u -> u.getEmail().equals(email))
-                .findFirst()
-                .or(() -> store.values().stream()
-                        .filter(u -> u.getEmail().equalsIgnoreCase(email))
-                        .min(java.util.Comparator.comparing(User::getId)));
+                .filter(u -> u.getEmail().equalsIgnoreCase(email))
+                .findFirst();
     }
 
     @Override

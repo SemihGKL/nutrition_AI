@@ -17,8 +17,7 @@ public class LoginUserUseCase {
     }
 
     public User execute(String email, String rawPassword) {
-        // Saisie exacte d'abord (comptes anciens ne différant que par la casse), puis sans
-        // tenir compte de la casse : c'est le contrat de findByEmail.
+        // Sans tenir compte de la casse : c'est le contrat de findByEmail.
         User user = userRepository.findByEmail(email.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Email non enregistré : " + email));
         if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
